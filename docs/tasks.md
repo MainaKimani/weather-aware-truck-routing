@@ -49,7 +49,7 @@ link to their sections instead of repeating them.
 | SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | In review |
 | SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | To do     |
+| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | In review |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | To do     |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | To do     |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | To do     |
@@ -958,24 +958,47 @@ Spec: RFC §9, §18.2, §18.3, §18.4.
 
 ### SPOT-36 · Provider resilience
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-31, SPOT-34 |
 
 Spec: RFC §18.3.
 
 **Sub-tasks**
-- [ ] Shared `httpx` client with 3 s connect / 10 s read timeouts.
-- [ ] One retry with jitter on timeout and 5xx, GET only.
-- [ ] Per-provider circuit breaker (5 failures → open 30 s → half-open).
-- [ ] Map failures to `routing_unavailable` / `weather_unavailable`.
+- [x] Shared `httpx` client with 3 s connect / 10 s read timeouts.
+- [x] One retry with jitter on timeout and 5xx, GET only.
+- [x] Per-provider circuit breaker (5 failures → open 30 s → half-open).
+- [x] Map failures to `routing_unavailable` / `weather_unavailable`.
 
 **Acceptance criteria**
 - Tests: timeout retried once; 4xx not retried; breaker opens after 5 failures and fails fast;
   closes after a successful half-open call.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `providers/http.py`.
+  - **Timeouts:** 3 s connect / 10 s read on the shared `HttpClient`.
+  - **Retries:** one retry after a 0.1–0.4 s random pause, only on timeouts, transport errors
+    and 5xx (every provider call is a GET). 4xx responses and bad JSON aren't retried.
+  - **Breaker:** a `CircuitBreaker` per provider name, shared through `breaker_for`, since
+    adapters are created per request. Five failed calls in a row open it for 30 s; then one
+    trial call at a time is allowed (half-open). Success closes it; failure reopens it.
+    `CircuitOpen` fails fast without a request.
+  - **Error mapping:** adapters already turn `HttpError` into `routing_unavailable`,
+    `weather_unavailable` or `geocoding_unavailable`, and `CircuitOpen` is an `HttpError`, so
+    an open breaker surfaces with the same code.
+- Decisions:
+  - A 4xx counts as a success for the breaker. The provider answered; the request was wrong,
+    and opening the breaker would block good requests.
+  - A failed call counts once, even though it made two attempts.
+  - The breaker is the API's only in-process state (RFC §18.2), so each worker trips on its own.
+- Verified (17 tests): a timeout is retried once and gives up; 5xx then success; a connection
+  error is retried; 400/401/404/429 and bad JSON make one call each. The breaker opens after 5
+  failures with no request going out, stays open before 30 s, closes after a successful
+  half-open call, reopens after a failed one, allows one trial at a time, isn't opened by 4xx,
+  and resets its count on success. Open-Meteo surfaces an open breaker as
+  `weather_unavailable`.
+- Tests zero the retry pause (`tests/providers/conftest.py`), so the suite stays at about 10 s;
+  one test checks the real jitter range.
 
 ---
 
