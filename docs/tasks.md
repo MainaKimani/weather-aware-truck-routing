@@ -42,7 +42,7 @@ link to their sections instead of repeating them.
 | SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | In review |
 | SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | In review |
 | SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | To do     |
@@ -651,17 +651,17 @@ Spec: PRD §7.5, RFC §6.5.
 
 ### SPOT-26 · Ranking and recommendation reason
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-25 |
 
 Spec: PRD §7.6, RFC §6.6.
 
 **Sub-tasks**
-- [ ] Sort key: No Travel miles, Severe miles, High miles (rounded), quantised average risk,
+- [x] Sort key: No Travel miles, Severe miles, High miles (rounded), quantised average risk,
   duration (trip duration when HOS is on).
-- [ ] Reason sentence from the first differing key against the runner-up.
-- [ ] No recommendation when no route is drivable; warning when > 20% Unknown.
+- [x] Reason sentence from the first differing key against the runner-up.
+- [x] No recommendation when no route is drivable; warning when > 20% Unknown.
 
 **Acceptance criteria**
 - One test per criterion where all earlier criteria tie and that one decides.
@@ -670,7 +670,28 @@ Spec: PRD §7.6, RFC §6.6.
 - Reason text tested for each criterion.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/ranking.py`. `rank_routes(candidates)` returns a `Ranking`:
+  - `ranked`, sorted by `rank_key`: No Travel, Severe and High miles (whole miles, half up),
+    `risk_step(avg)` in 0.05 bands, whole minutes of trip time, then route id;
+  - `recommended_id`, plus `reason_code` and a `reason` sentence taken from the first criterion
+    that differs against the runner-up;
+  - `high_unknown` warnings when more than 20% of a route has no forecast.
+  - No drivable route gives `no_drivable_route` with a "try a later departure" message; the
+    routes are still ranked. A single route gives `only_route`.
+- Decisions:
+  - Risk bands use `floor(avg / 0.05)`, so 1.02 and 1.04 share a band as the acceptance criteria
+    require. Rounding would split them (20 vs 21). An epsilon covers float error, since
+    0.15 / 0.05 is 2.999….
+  - Travel time compares in whole minutes, so a few seconds' difference falls through to
+    route id rather than giving "0 min faster".
+  - An all-Unknown average sorts after any known one: missing data never helps a route.
+  - Reason sentences: "Fewest No Travel / severe / high-risk miles (a vs b)", "Lowest average
+    risk (0.40 vs 1.20)", "Same risk, 25 min faster", "Same risk and travel time as the next
+    route", "Only route found".
+- Verified (27 tests): one test per criterion where every earlier one ties; 1.02 vs 1.04 ties
+  and time decides; 1.04 vs 1.06 doesn't tie; rounded miles; Unknown average; deterministic
+  order by id; no drivable route; single route; the 20% warning boundary; reason text for
+  each criterion.
 
 ---
 
