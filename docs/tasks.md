@@ -34,8 +34,8 @@ link to their sections instead of repeating them.
 | SPOT-10  | Monorepo scaffold and local dev                   | E1 Foundation        | DevOps · 2     | P0  | In review |
 | SPOT-11  | Quality gates (lint, types, pre-commit)           | E1 Foundation        | DevOps · 1     | P0  | Done      |
 | SPOT-12  | CI pipeline                                       | E1 Foundation        | DevOps · 2     | P0  | Done      |
-| SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | In review |
-| SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | In review |
+| SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done      |
+| SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | To do     |
@@ -341,7 +341,7 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | In review | SPOT-10 |
+| Backend · 1 | P0 | Done | SPOT-10 |
 
 **Sub-tasks**
 - [x] Split settings `base/local/prod`; all config from env (12-factor) with typed parsing
@@ -371,12 +371,13 @@ after every P0 in E9 is done.
   django-environ keeps inline `# comments` as part of the value, so `.env.example` keeps
   comments on their own lines.
 - Left: HSTS, secure cookies and the proxy SSL header belong to SPOT-45. Done once CI is green.
+- 2026-10-11: CI green on `dev-backend` (`25b710f`). Done.
 
 ### SPOT-14 · Postgres and custom user model
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | In review | SPOT-10, SPOT-13 |
+| Backend · 1 | P0 | Done | SPOT-10, SPOT-13 |
 
 Must be done **before the first `migrate`**: switching to a custom user model later means
 rewriting migrations.
@@ -404,6 +405,7 @@ rewriting migrations.
   `monkeypatch()` to be subscriptable at runtime. mypy turned out to apply the per-module
   `strict` override project-wide, so the config now says `strict = true` globally (see SPOT-11).
 - Left: Done once CI is green.
+- 2026-10-11: CI green on `dev-backend` (`25b710f`), Postgres service included. Done.
 
 ---
 
