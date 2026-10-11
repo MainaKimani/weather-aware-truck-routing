@@ -45,7 +45,7 @@ link to their sections instead of repeating them.
 | SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | To do     |
 | SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | To do     |
@@ -794,16 +794,16 @@ Spec: RFC §5.1.
 
 ### SPOT-32 · Route alternatives: dedupe and via-point fallback
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-31 |
 
 Spec: RFC §5.1.
 
 **Sub-tasks**
-- [ ] Overlap measure on resampled polylines; drop routes > 85% overlapping a better one.
-- [ ] Via-point fallback at ±10% of trip length perpendicular to the midpoint.
-- [ ] `only_n_routes_found` warning when still short.
+- [x] Overlap measure on resampled polylines; drop routes > 85% overlapping a better one.
+- [x] Via-point fallback at ±10% of trip length perpendicular to the midpoint.
+- [x] `only_n_routes_found` warning when still short.
 
 **Acceptance criteria**
 - Two identical routes are reduced to one.
@@ -811,7 +811,25 @@ Spec: RFC §5.1.
   routes or a warning.
 
 **Progress log**
-- _Not started._
+- 2026-10-11:
+  - `domain/alternatives.py`: `overlap(a, b)` is the share of route A within 0.3 mi of route B,
+    sampled every 2 mi. B's segments are bucketed in a 0.1° grid, so each sample checks only
+    nearby segments. `is_duplicate` means more than 85%.
+  - `services/routing.py`:
+    - `find_routes(provider, request)` asks for 4 alternatives and keeps the fastest
+      non-duplicates (at most 3).
+    - When short, it requests routes through via points 10% of the trip length either side of
+      the midpoint, then de-duplicates again.
+    - When still short, it returns what it has with an `only_n_routes_found` warning.
+    - A failed via request is skipped; a failed main request propagates.
+  - `geo.offset_from_midpoint` replaces the private helper in the fakes, so both share it.
+- Decision: overlap isn't symmetric. A detour that contains a whole short route overlaps it only
+  partly, which is correct, since the detour is a real alternative.
+- Verified (12 tests): identical and re-vertexed copies of a road overlap 100%; a road 10 mi
+  away 0%; a shared first half 30–60%. Overlap on a coast-to-coast route with 10k vertices runs
+  in under 2 s. Two identical routes reduce to one, the fallback fills the set to three, the
+  fastest three are kept, a failed fallback gives the warning, and via points sit 10% either
+  side of the midpoint.
 
 ### SPOT-33 · HERE autosuggest adapter
 

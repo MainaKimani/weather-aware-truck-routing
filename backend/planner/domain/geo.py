@@ -186,3 +186,24 @@ def lattice_near(
                     if distance_to_segment_mi(q, a, b) <= radius_mi:
                         found.add((i, j))
     return [LatLon(round(i * step_deg, 6), round(j * step_deg, 6)) for i, j in sorted(found)]
+
+
+def offset_from_midpoint(a: LatLon, b: LatLon, fraction: float) -> LatLon:
+    """A point beside the midpoint of a-b, `fraction` of the a-b distance away.
+
+    Positive is to the left when travelling from a to b, negative to the
+    right. Used for via points that push a router onto a different corridor.
+    """
+    mid = interpolate(a, b, 0.5)
+    ax, ay = _xy(a, mid)
+    bx, by = _xy(b, mid)
+    dx, dy = bx - ax, by - ay
+    norm = math.hypot(dx, dy)
+    if norm == 0:
+        return mid
+    d = fraction * haversine_mi(a, b)
+    east, north = -dy / norm * d, dx / norm * d
+    return LatLon(
+        mid.lat + north / MI_PER_DEG_LAT,
+        mid.lon + east / (MI_PER_DEG_LAT * math.cos(math.radians(mid.lat))),
+    )

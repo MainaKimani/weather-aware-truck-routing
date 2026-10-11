@@ -20,7 +20,7 @@ from itertools import pairwise
 from typing import Final, Literal
 
 from planner.domain.forecast import ForecastSeries
-from planner.domain.geo import EARTH_RADIUS_MI, haversine_mi, interpolate
+from planner.domain.geo import EARTH_RADIUS_MI, haversine_mi, interpolate, offset_from_midpoint
 from planner.domain.types import Forecast, LatLon, Route, Span
 from planner.providers.base import NoRoute, Place, RouteRequest
 
@@ -90,22 +90,6 @@ def _build_route(waypoints: Sequence[tuple[LatLon, float]], label: str) -> Route
     )
 
 
-def _offset(a: LatLon, b: LatLon, side: float) -> LatLon:
-    """A point beside the midpoint of a-b, `side` of the trip length to the left (+) or right."""
-    mid = interpolate(a, b, 0.5)
-    trip = haversine_mi(a, b)
-    # Unit vector a->b in miles east/north, rotated 90 degrees.
-    east = math.radians(b.lon - a.lon) * EARTH_RADIUS_MI * math.cos(math.radians(mid.lat))
-    north = math.radians(b.lat - a.lat) * EARTH_RADIUS_MI
-    norm = math.hypot(east, north) or 1.0
-    d = side * trip
-    d_east, d_north = -north / norm * d, east / norm * d
-    return LatLon(
-        mid.lat + math.degrees(d_north / EARTH_RADIUS_MI),
-        mid.lon + math.degrees(d_east / (EARTH_RADIUS_MI * math.cos(math.radians(mid.lat)))),
-    )
-
-
 class FakeRouting:
     """Scripted Dallas-Denver routes, or a direct route plus two bowed ones."""
 
@@ -128,8 +112,10 @@ class FakeRouting:
         else:
             routes = [
                 _build_route([(o, 0), (d, 63)], "direct"),
-                _build_route([(o, 0), (_offset(o, d, 0.12), 64), (d, 64)], "northern"),
-                _build_route([(o, 0), (_offset(o, d, -0.12), 64), (d, 64)], "southern"),
+                _build_route([(o, 0), (offset_from_midpoint(o, d, 0.12), 64), (d, 64)], "northern"),
+                _build_route(
+                    [(o, 0), (offset_from_midpoint(o, d, -0.12), 64), (d, 64)], "southern"
+                ),
             ]
         routes.sort(key=lambda r: r.duration_s)
         return routes[: 1 + alternatives]
