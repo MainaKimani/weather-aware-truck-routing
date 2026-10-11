@@ -14,81 +14,89 @@ link to their sections instead of repeating them.
   progress log saying what was done, what's left and any decision made. Tick sub-tasks as they
   finish. Branches and commits carry the task id, e.g. `feat(risk): apply load rules [SPOT-23]`.
 - **Done means** every acceptance criterion is met, tests pass in CI, and the progress log says so.
+- **Branches:** backend work goes on `dev-backend`, frontend work on `dev-frontend`. Feature
+  branches merge into a dev branch, and `main` accepts PRs only from `dev-backend` or
+  `dev-frontend` (enforced by the `branch policy` CI job). Every merge needs a PR with `ci-ok`
+  green. Full-stack tasks land their backend half first. After each merge to `main`, merge
+  `main` back into both dev branches so they don't drift.
+- **CI:** `.github/workflows/ci.yml` is the only entry point. It detects which side changed and
+  calls `backend.yml` and/or `frontend.yml`. `ci-ok` always runs and is the one check to mark as
+  required, so a side skipped for having no changes never leaves a check pending.
 
 ## Board
 
-| ID | Task | Epic | Effort | Pri | Status |
-|---|---|---|---|---|---|
-| SPOT-1 | Assess brief, write PRD | E0 Planning | Docs · 2 | P0 | Done |
-| SPOT-2 | Write technical RFC | E0 Planning | Docs · 3 | P0 | Done |
-| SPOT-3 | Write UI prototype prompts (Lovable, AI Studio) | E0 Planning | Docs · 1 | P0 | Done |
-| SPOT-4 | Build UI prototype in AI Studio and review | E0 Planning | Frontend · 2 | P0 | In review |
-| SPOT-10 | Monorepo scaffold and local dev | E1 Foundation | DevOps · 2 | P0 | In review |
-| SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | Done |
-| SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | Done |
-| SPOT-13 | Settings and configuration | E1 Foundation | Backend · 1 | P0 | In review |
-| SPOT-14 | Postgres and custom user model | E1 Foundation | Backend · 1 | P0 | In review |
-| SPOT-20 | Units and geo utilities | E2 Domain | Backend · 2 | P0 | To do |
-| SPOT-21 | Checkpoint sampling and owned miles | E2 Domain | Backend · 2 | P0 | To do |
-| SPOT-22 | ETA interpolation | E2 Domain | Backend · 2 | P0 | To do |
-| SPOT-23 | Risk classification and load rules | E2 Domain | Backend · 3 | P0 | To do |
-| SPOT-24 | Hours of Service planner | E2 Domain | Backend · 5 | P1 | To do |
-| SPOT-25 | Route metrics | E2 Domain | Backend · 2 | P0 | To do |
-| SPOT-26 | Ranking and recommendation reason | E2 Domain | Backend · 2 | P0 | To do |
-| SPOT-30 | Provider protocols, fakes and demo scenarios | E3 Providers | Backend · 3 | P0 | To do |
-| SPOT-31 | HERE truck routing adapter | E3 Providers | Backend · 3 | P0 | To do |
-| SPOT-32 | Route alternatives: dedupe and via-point fallback | E3 Providers | Backend · 3 | P0 | To do |
-| SPOT-33 | HERE autosuggest adapter | E3 Providers | Backend · 1 | P0 | To do |
-| SPOT-34 | Open-Meteo forecast adapter | E3 Providers | Backend · 3 | P0 | To do |
-| SPOT-35 | Forecast cache | E3 Providers | Backend · 3 | P0 | To do |
-| SPOT-36 | Provider resilience | E3 Providers | Backend · 2 | P0 | To do |
-| SPOT-40 | Plan service orchestration | E4 API | Backend · 3 | P0 | To do |
-| SPOT-41 | `POST /api/v1/plans` endpoint | E4 API | Backend · 2 | P0 | To do |
-| SPOT-42 | Corridor grid and heatmap endpoint | E4 API | Backend · 3 | P0 | To do |
-| SPOT-43 | Geocode suggest endpoint | E4 API | Backend · 1 | P0 | To do |
-| SPOT-44 | OpenAPI schema and TS type generation | E4 API | Full stack · 1 | P0 | To do |
-| SPOT-45 | Security settings, throttling, health checks | E4 API | Backend · 2 | P0 | To do |
-| SPOT-46 | Structured logging and request ids | E4 API | Backend · 1 | P0 | To do |
-| SPOT-50 | App shell, theme and design tokens | E5 Frontend base | Frontend · 2 | P0 | To do |
-| SPOT-51 | API client, query layer and UI state | E5 Frontend base | Frontend · 2 | P0 | To do |
-| SPOT-60 | Trip form with autosuggest | E6 Planning UI | Frontend · 3 | P0 | To do |
-| SPOT-61 | Hours of Service fields | E6 Planning UI | Frontend · 2 | P1 | To do |
-| SPOT-62 | Route cards and recommendation | E6 Planning UI | Frontend · 3 | P0 | To do |
-| SPOT-63 | Checkpoint table | E6 Planning UI | Frontend · 2 | P0 | To do |
-| SPOT-64 | Empty, loading, partial and error states | E6 Planning UI | Frontend · 2 | P0 | To do |
-| SPOT-70 | Map view, basemap and camera | E7 Map | Frontend · 2 | P0 | To do |
-| SPOT-71 | Routes layer with risk-coloured segments | E7 Map | Frontend · 3 | P0 | To do |
-| SPOT-72 | Checkpoints layer, tooltip and popup | E7 Map | Frontend · 3 | P0 | To do |
-| SPOT-73 | HOS stops layer | E7 Map | Frontend · 1 | P1 | To do |
-| SPOT-74 | Legend and layer toggles | E7 Map | Frontend · 1 | P0 | To do |
-| SPOT-80 | Corridor heatmap layer | E8 Heatmap | Frontend · 3 | P0 | To do |
-| SPOT-81 | 48-hour slider and playback | E8 Heatmap | Frontend · 3 | P0 | To do |
-| SPOT-82 | Truck position while scrubbing | E8 Heatmap | Frontend · 2 | P1 | To do |
-| SPOT-83 | Heatmap metric switcher | E8 Heatmap | Full stack · 2 | P1 | To do |
-| SPOT-90 | End-to-end smoke test | E9 Hardening | Full stack · 2 | P0 | To do |
-| SPOT-91 | Accessibility pass | E9 Hardening | Frontend · 2 | P0 | To do |
-| SPOT-92 | Performance check against budgets | E9 Hardening | Full stack · 2 | P0 | To do |
-| SPOT-100 | Deploy backend and Redis | E10 Delivery | DevOps · 2 | P0 | To do |
-| SPOT-101 | Deploy frontend | E10 Delivery | DevOps · 1 | P0 | To do |
-| SPOT-102 | README | E10 Delivery | Docs · 2 | P0 | To do |
-| SPOT-103 | Loom walkthrough | E10 Delivery | Docs · 2 | P0 | To do |
-| SPOT-110 | Trip models, constraints, migrations and admin | E11 Trips & accounts | Backend · 3 | P0 | To do |
-| SPOT-111 | Save plans as trips | E11 Trips & accounts | Backend · 2 | P0 | To do |
-| SPOT-112 | Guest identity and access layer | E11 Trips & accounts | Backend · 2 | P0 | To do |
-| SPOT-113 | Trip read endpoints | E11 Trips & accounts | Backend · 2 | P0 | To do |
-| SPOT-114 | Accounts (sign up, log in, log out, session) | E11 Trips & accounts | Backend · 3 | P1 | To do |
-| SPOT-115 | Move guest trips into the account on sign-in | E11 Trips & accounts | Backend · 1 | P1 | To do |
-| SPOT-116 | Trip actions API | E11 Trips & accounts | Backend · 2 | P1 | To do |
-| SPOT-117 | Delete account | E11 Trips & accounts | Backend · 1 | P1 | To do |
-| SPOT-118 | Retention purge | E11 Trips & accounts | Backend · 1 | P0 | To do |
-| SPOT-119 | Demo account seed | E11 Trips & accounts | Backend · 1 | P1 | To do |
-| SPOT-120 | Routing and session handling | E11 Trips & accounts | Frontend · 2 | P0 | To do |
-| SPOT-121 | Trip page | E11 Trips & accounts | Frontend · 2 | P0 | To do |
-| SPOT-122 | Recent trips menu (guest) | E11 Trips & accounts | Frontend · 1 | P0 | To do |
-| SPOT-123 | Log in and sign-up pages | E11 Trips & accounts | Frontend · 2 | P1 | To do |
-| SPOT-124 | My trips page | E11 Trips & accounts | Frontend · 3 | P1 | To do |
-| SPOT-125 | Trip actions UI | E11 Trips & accounts | Frontend · 2 | P1 | To do |
-| SPOT-126 | Account page | E11 Trips & accounts | Frontend · 1 | P1 | To do |
+| ID       | Task                                              | Epic                 | Effort         | Pri | Status    |
+| -------- | ------------------------------------------------- | -------------------- | -------------- | --- | --------- |
+| SPOT-1   | Assess brief, write PRD                           | E0 Planning          | Docs · 2       | P0  | Done      |
+| SPOT-2   | Write technical RFC                               | E0 Planning          | Docs · 3       | P0  | Done      |
+| SPOT-3   | Write UI prototype prompts (Lovable, AI Studio)   | E0 Planning          | Docs · 1       | P0  | Done      |
+| SPOT-4   | Build UI prototype in AI Studio and review        | E0 Planning          | Frontend · 2   | P0  | In review |
+| SPOT-10  | Monorepo scaffold and local dev                   | E1 Foundation        | DevOps · 2     | P0  | In review |
+| SPOT-11  | Quality gates (lint, types, pre-commit)           | E1 Foundation        | DevOps · 1     | P0  | Done      |
+| SPOT-12  | CI pipeline                                       | E1 Foundation        | DevOps · 2     | P0  | Done      |
+| SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | In review |
+| SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | In review |
+| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | To do     |
+| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | To do     |
+| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | To do     |
+| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | To do     |
+| SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | To do     |
+| SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | To do     |
+| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | To do     |
+| SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | To do     |
+| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | To do     |
+| SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | To do     |
+| SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | To do     |
+| SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | To do     |
+| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | To do     |
+| SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | To do     |
+| SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | To do     |
+| SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | To do     |
+| SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | To do     |
+| SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | To do     |
+| SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | To do     |
+| SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | To do     |
+| SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | To do     |
+| SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | To do     |
+| SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | To do     |
+| SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | To do     |
+| SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | To do     |
+| SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | To do     |
+| SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | To do     |
+| SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | To do     |
+| SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | To do     |
+| SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | To do     |
+| SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | To do     |
+| SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do     |
+| SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do     |
+| SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do     |
+| SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | To do     |
+| SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | To do     |
+| SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | To do     |
+| SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | To do     |
+| SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | To do     |
+| SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | To do     |
+| SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | To do     |
+| SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | To do     |
+| SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | To do     |
+| SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | To do     |
+| SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do     |
+| SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do     |
+| SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do     |
+| SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | To do     |
+| SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | To do     |
+| SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do     |
+| SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do     |
 
 **Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 3 (6 points).
 
@@ -321,6 +329,13 @@ after every P0 in E9 is done.
   and SPOT-11 to Done; OpenAPI drift check in SPOT-44.
 - 2026-10-11: First run on GitHub passed for `88e5017`. Done; the drift check is tracked in
   SPOT-44.
+- 2026-10-11: Restructured for the dev-branch flow. `ci.yml` now runs on pushes to `main`,
+  `dev-backend` and `dev-frontend` and on all PRs. Its jobs: `branch policy` (PRs into `main`
+  only from `dev-*`; PRs only target `main` or `dev-*`), `detect changes` (git diff; shared
+  files such as CI, Makefile and hooks count as both sides; a new branch runs everything), the
+  reusable `backend.yml` and `frontend.yml` (each with its own dependency audit), `conventional
+  commits`, and the `ci-ok` aggregate. Simulated locally: all six branch pairs and five diff
+  cases behave as intended. Branch rulesets requiring `ci-ok` are set in the GitHub UI.
 
 ### SPOT-13 · Settings and configuration
 

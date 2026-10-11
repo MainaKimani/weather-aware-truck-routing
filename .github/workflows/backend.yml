@@ -1,0 +1,64 @@
+# Backend gates. Called from ci.yml when backend files change; not run directly.
+name: Backend
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: lint, types, tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: spotter
+          POSTGRES_PASSWORD: spotter
+          POSTGRES_DB: spotter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U spotter"
+          --health-interval 2s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://spotter:spotter@localhost:5432/spotter
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --frozen
+      - name: ruff
+        run: |
+          uv run ruff check --output-format=github .
+          uv run ruff format --check .
+      - name: mypy
+        run: uv run mypy .
+      - name: Migrations up to date
+        run: uv run python manage.py makemigrations --check --dry-run
+      - name: pytest
+        run: uv run pytest --cov --cov-report=term
+      - name: Domain coverage ≥ 95%
+        run: uv run coverage report --include='planner/domain/*' --fail-under=95
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - name: pip-audit
+        run: |
+          uv export --frozen --no-emit-project --format requirements-txt -o "$RUNNER_TEMP/requirements.txt"
+          uvx pip-audit --strict --disable-pip -r "$RUNNER_TEMP/requirements.txt"
