@@ -34,3 +34,14 @@ class Forecast:
     snow_in_hr: float | None  # snowfall depth over the hour
     wind_mph: float | None = None
     weather_code: int | None = None
+
+
+@dataclass(frozen=True)
+class Route:
+    """One routing option as the provider returned it."""
+
+    geometry: tuple[LatLon, ...]
+    distance_mi: float  # the provider's reported distance
+    duration_s: float  # the provider's driving time (traffic-aware when available)
+    spans: tuple[Span, ...] = ()
+    label: str | None = None  # e.g. "via Amarillo" or the main roads

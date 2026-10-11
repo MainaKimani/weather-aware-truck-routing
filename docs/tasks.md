@@ -43,7 +43,7 @@ link to their sections instead of repeating them.
 | SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | In review |
 | SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | To do     |
@@ -699,15 +699,15 @@ Spec: PRD §7.6, RFC §6.6.
 
 ### SPOT-30 · Provider protocols, fakes and demo scenarios
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-20 |
 
 **Sub-tasks**
-- [ ] `RoutingProvider`, `WeatherProvider`, `Geocoder` protocols in `providers/base.py`.
-- [ ] Fakes: fixed Dallas → Denver routes and a deterministic moving-storm weather model
+- [x] `RoutingProvider`, `WeatherProvider`, `Geocoder` protocols in `providers/base.py`.
+- [x] Fakes: fixed Dallas → Denver routes and a deterministic moving-storm weather model
   (same story as the UI prototype prompts), plus the stronger "No Travel" scenario.
-- [ ] `PROVIDERS=fake|real` setting; responses flag `"demo": true` when fakes are used.
+- [x] `PROVIDERS=fake|real` setting; responses flag `"demo": true` when fakes are used.
 
 **Acceptance criteria**
 - The whole app runs with no API keys and no network in fake mode.
@@ -715,7 +715,33 @@ Spec: PRD §7.6, RFC §6.6.
   Route B not drivable.
 
 **Progress log**
-- _Not started._
+- 2026-10-11:
+  - **Protocols** (`providers/base.py`): `RoutingProvider`, `WeatherProvider` and `Geocoder`,
+    with `RouteRequest`, `Place` and a `ProviderError` family (`RoutingUnavailable`,
+    `WeatherUnavailable`, `GeocodingUnavailable`, `NoRoute`, each with its API error code).
+  - **Domain types:** `types.Route`, and `domain/forecast.ForecastSeries` (`at(hour)`,
+    `for_eta(t)`).
+  - **Fakes** (`providers/fakes.py`):
+    - `FakeRouting` gives three scripted Dallas–Denver routes (via Amarillo, Wichita and
+      Lubbock, as in the prototype), or a direct route plus two bowed ones for any other pair,
+      and honours via points.
+    - `FakeWeather` models storm cells as a pure function of place and time.
+    - `FakeGeocoder` holds 15 cities with time zones.
+  - **Selection:** `PROVIDERS=fake|real` (fake by default locally, real in prod) and
+    `FAKE_SCENARIO=demo|strong`. `providers/registry.get_providers()` returns them with
+    `demo=True` for fakes, and the API sets the response flag from that in SPOT-41.
+  - `tests/pipeline.py` chains the domain modules for provider tests. SPOT-40 builds the real
+    plan service.
+- Decision: storm cells **circle** their centres instead of drifting. With drift, the result
+  depended on exactly when the reviewer departed. Circling cells keep the heatmap moving and
+  the outcome fixed.
+- Verified: the scenario outcomes were checked by script over 19 departures in the 48 h window ×
+  3 intervals × 4 loads (1 lb to 80,000 lb). Demo always recommends Route A for "Fewest severe
+  miles"; strong always makes Route B not drivable. The tests keep a cross-section of that
+  (33 tests).
+- Fixed along the way: `geo.interpolate` returned the endpoints with float noise
+  (-96.79700000000001); it now returns them exactly.
+- Left: the `real` branch of the registry is wired in SPOT-31/33/34.
 
 ### SPOT-31 · HERE truck routing adapter
 
