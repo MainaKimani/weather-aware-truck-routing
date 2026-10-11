@@ -40,7 +40,7 @@ link to their sections instead of repeating them.
 | SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | In review |
-| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | To do     |
+| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | In review |
 | SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | To do     |
@@ -577,18 +577,18 @@ Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
 
 ### SPOT-24 · Hours of Service planner
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 5 | P1 | To do | SPOT-22 |
 
 Spec: PRD §7.3.1, RFC §6.2.1.
 
 **Sub-tasks**
-- [ ] `HosRules`, `HosClocks`, `Cycle`, `Stop`, `HosPlan` types in integer seconds.
-- [ ] Simulation loop with longest-stop-first ordering and an iteration guard.
-- [ ] `clock_offset(drive_s)`.
-- [ ] Map stops to miles and coordinates with the reverse lookup from SPOT-22.
-- [ ] Table tests and Hypothesis invariants.
+- [x] `HosRules`, `HosClocks`, `Cycle`, `Stop`, `HosPlan` types in integer seconds.
+- [x] Simulation loop with longest-stop-first ordering and an iteration guard.
+- [x] `clock_offset(drive_s)`.
+- [x] Map stops to miles and coordinates with the reverse lookup from SPOT-22.
+- [x] Table tests and Hypothesis invariants.
 
 **Acceptance criteria**
 - Rested driver, 12 h drive: break at 8 h, rest at 11 h, arrival = 12 h + 0.5 h + 10 h.
@@ -600,7 +600,24 @@ Spec: PRD §7.3.1, RFC §6.2.1.
   overlap.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/hos.py`.
+  - Types: `HosRules` (`DEFAULT_RULES`), `Cycle`, `HosClocks` (range-validated, with
+    `rested()`), `StopKind`, `Stop` and `HosPlan`, with `clock_offset`, `trip_duration_s` and
+    `count`. All in integer seconds.
+  - `plan_hos` checks limits longest stop first, with a 1,000-iteration guard.
+  - `place_stops` maps each stop to a mile (reverse ETA lookup), a position and a start time.
+- Decision (written into RFC §6.2.1): if a 30 min break would use up the rest of the 14 h
+  window, the planner takes the 10 h rest instead. That rest also counts as the break. Taken
+  literally, the RFC loop scheduled a break and then a rest at the same point. As a result,
+  stops are strictly increasing in driving time.
+- Verified (23 tests):
+  - Every acceptance scenario: rested 12 h trip (break at 8 h, rest at 11 h, +10.5 h), window
+    exhausted at 3 h, cycle restart at 5 h, coinciding limits giving one stop, and a trip ending
+    on a limit adding none.
+  - Also: starting with no drive time, the 60 h cycle, and a 30 h trip.
+  - Hypothesis, up to 120 h with random clocks: an independent replay checks that no driving
+    stretch breaks any limit; stops are strictly ordered within the trip; `clock_offset` is
+    monotonic and ends at `trip_duration_s`.
 
 ### SPOT-25 · Route metrics
 
