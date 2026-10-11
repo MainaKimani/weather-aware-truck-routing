@@ -22,7 +22,7 @@ link to their sections instead of repeating them.
 | SPOT-1 | Assess brief, write PRD | E0 Planning | Docs · 2 | P0 | Done |
 | SPOT-2 | Write technical RFC | E0 Planning | Docs · 3 | P0 | Done |
 | SPOT-3 | Write UI prototype prompts (Lovable, AI Studio) | E0 Planning | Docs · 1 | P0 | Done |
-| SPOT-4 | Build UI prototype in AI Studio and review | E0 Planning | Frontend · 2 | P0 | To do |
+| SPOT-4 | Build UI prototype in AI Studio and review | E0 Planning | Frontend · 2 | P0 | In review |
 | SPOT-10 | Monorepo scaffold and local dev | E1 Foundation | DevOps · 2 | P0 | In review |
 | SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | Done |
 | SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | Done |
@@ -192,14 +192,14 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-3 |
+| Frontend · 2 | P0 | In review | SPOT-3 |
 
 **Sub-tasks**
-- [ ] Run `docs/ai-studio-prompt.md` in AI Studio (Build); fix weak areas with the prompts in
+- [x] Run `docs/ai-studio-prompt.md` in AI Studio (Build); fix weak areas with the prompts in
   `docs/ai-studio-followups.md`.
-- [ ] Review against PRD §7–§9: every screen and state present, palette and labels right,
+- [x] Review against PRD §7–§9: every screen and state present, palette and labels right,
   including guest vs signed-in header, login/sign-up, My trips and the trip page.
-- [ ] Decide what to keep: layout, components, tokens. Record changes to the PRD/RFC if the
+- [x] Decide what to keep: layout, components, tokens. Record changes to the PRD/RFC if the
   design changes a requirement.
 - [ ] Download the AI Studio project (or push it to GitHub) for reference in SPOT-50.
 
@@ -208,7 +208,14 @@ after every P0 in E9 is done.
 - Any requirement changes are written back into the PRD.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: Prototype built in AI Studio and published at
+  <https://spotter-weather-routing.ai.studio>. Reviewed every screen and state against PRD §7–§9:
+  planning (both presets, with and without HOS), the error preset, slider, layers, checkpoint
+  table, Recent trips, login, My trips and account. Findings are in
+  [design-review.md](./design-review.md): what to keep per task, plus 10 fixes for the real build.
+  The biggest is that the heatmap must be the RFC §8 corridor grid, not blurred blobs. No
+  requirement changes, so the PRD is unchanged.
+- Left: owner to agree the review, and export the AI Studio project for reference in SPOT-50.
 
 ---
 
