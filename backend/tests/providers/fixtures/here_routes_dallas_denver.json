@@ -1,0 +1,308 @@
+{
+ "routes": [
+  {
+   "id": "route-1",
+   "sections": [
+    {
+     "id": "section-1-0",
+     "type": "vehicle",
+     "transport": {
+      "mode": "truck"
+     },
+     "summary": {
+      "duration": 27824,
+      "length": 857949,
+      "baseDuration": 27824
+     },
+     "polyline": "BFs2hoGn15uSkytQnwsEwwxNsskB8mhHj-2BkzHnhvK",
+     "spans": [
+      {
+       "offset": 0,
+       "length": 285983,
+       "duration": 7134,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 40.09,
+        "baseSpeed": 40.09,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 1,
+       "length": 285983,
+       "duration": 9275,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 30.83,
+        "baseSpeed": 30.83,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 3,
+       "length": 285983,
+       "duration": 11415,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 25.05,
+        "baseSpeed": 25.05,
+        "turnTime": 0
+       }
+      }
+     ]
+    },
+    {
+     "id": "section-1-1",
+     "type": "vehicle",
+     "transport": {
+      "mode": "truck"
+     },
+     "summary": {
+      "duration": 16786,
+      "length": 517588,
+      "baseDuration": 16786
+     },
+     "polyline": "BFgzptHv4n-SsxpB1kpNgzhBhvrN068Cjx9H",
+     "spans": [
+      {
+       "offset": 0,
+       "length": 172529,
+       "duration": 4304,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 40.09,
+        "baseSpeed": 40.09,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 1,
+       "length": 172529,
+       "duration": 5595,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 30.84,
+        "baseSpeed": 30.84,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 2,
+       "length": 172530,
+       "duration": 6887,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 25.05,
+        "baseSpeed": 25.05,
+        "turnTime": 0
+       }
+      }
+     ]
+    }
+   ],
+   "routeLabels": [
+    {
+     "label_type": "Name",
+     "name": {
+      "value": "I-35",
+      "language": "en"
+     }
+    },
+    {
+     "label_type": "Name",
+     "name": {
+      "value": "I-70",
+      "language": "en"
+     }
+    }
+   ]
+  },
+  {
+   "id": "route-0",
+   "sections": [
+    {
+     "id": "section-0-0",
+     "type": "vehicle",
+     "transport": {
+      "mode": "truck"
+     },
+     "summary": {
+      "duration": 42253,
+      "length": 1194812,
+      "baseDuration": 42253
+     },
+     "polyline": "BFs2hoGn15uSoi-GvqrKu_hE7sjKux9D_woKwylFx-7Ho6iF5shI47nI7lhB8lxD7upBk6wFz_gB",
+     "spans": [
+      {
+       "offset": 0,
+       "length": 199135,
+       "duration": 5417,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 36.76,
+        "baseSpeed": 36.76,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 1,
+       "length": 199135,
+       "duration": 7042,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 28.28,
+        "baseSpeed": 28.28,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 3,
+       "length": 199135,
+       "duration": 8667,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 22.98,
+        "baseSpeed": 22.98,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 4,
+       "length": 199135,
+       "duration": 5417,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 36.76,
+        "baseSpeed": 36.76,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 5,
+       "length": 199135,
+       "duration": 7042,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 28.28,
+        "baseSpeed": 28.28,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 7,
+       "length": 199137,
+       "duration": 8668,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 22.97,
+        "baseSpeed": 22.97,
+        "turnTime": 0
+       }
+      }
+     ]
+    }
+   ],
+   "routeLabels": [
+    {
+     "label_type": "Name",
+     "name": {
+      "value": "US-287",
+      "language": "en"
+     }
+    },
+    {
+     "label_type": "Name",
+     "name": {
+      "value": "I-25",
+      "language": "en"
+     }
+    }
+   ]
+  },
+  {
+   "id": "route-2",
+   "sections": [
+    {
+     "id": "section-2-0",
+     "type": "vehicle",
+     "transport": {
+      "mode": "truck"
+     },
+     "summary": {
+      "duration": 46545,
+      "length": 1324606,
+      "baseDuration": 46545
+     },
+     "polyline": "BFs2hoGn15uS7_dz-7IjiiB_vhJwx8Gjv-MkwhFv1nIk51E3wlDknyK3vrE47pRr0rD",
+     "spans": [
+      {
+       "offset": 0,
+       "length": 220768,
+       "duration": 5967,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 37.0,
+        "baseSpeed": 37.0,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 1,
+       "length": 220768,
+       "duration": 7757,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 28.46,
+        "baseSpeed": 28.46,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 2,
+       "length": 220768,
+       "duration": 9548,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 23.12,
+        "baseSpeed": 23.12,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 4,
+       "length": 220768,
+       "duration": 5967,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 37.0,
+        "baseSpeed": 37.0,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 5,
+       "length": 220768,
+       "duration": 7757,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 28.46,
+        "baseSpeed": 28.46,
+        "turnTime": 0
+       }
+      },
+      {
+       "offset": 6,
+       "length": 220766,
+       "duration": 9549,
+       "dynamicSpeedInfo": {
+        "trafficSpeed": 23.12,
+        "baseSpeed": 23.12,
+        "turnTime": 0
+       }
+      }
+     ]
+    }
+   ],
+   "routeLabels": [
+    {
+     "label_type": "Name",
+     "name": {
+      "value": "US-84",
+      "language": "en"
+     }
+    },
+    {
+     "label_type": "Name",
+     "name": {
+      "value": "US-87",
+      "language": "en"
+     }
+    }
+   ]
+  }
+ ],
+ "_comment": "Synthetic: shaped to HERE Routing v8 docs, generated from the fake Dallas-Denver routes with flexpolyline.encode. Replace with a recorded response once a key is available."
+}

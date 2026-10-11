@@ -44,7 +44,7 @@ link to their sections instead of repeating them.
 | SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | To do     |
 | SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | To do     |
@@ -745,17 +745,17 @@ Spec: PRD §7.6, RFC §6.6.
 
 ### SPOT-31 · HERE truck routing adapter
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-30 |
 
 Spec: RFC §5.1.
 
 **Sub-tasks**
-- [ ] Request with `transportMode=truck`, gross weight in kg, `departureTime`,
+- [x] Request with `transportMode=truck`, gross weight in kg, `departureTime`,
   `alternatives=4`, polyline, summary and duration/length spans.
-- [ ] Parse to domain `Route`; reject responses missing geometry or durations.
-- [ ] Recorded-fixture tests with `respx`.
+- [x] Parse to domain `Route`; reject responses missing geometry or durations.
+- [x] Recorded-fixture tests with `respx`.
 - [ ] Verify quota and free-tier terms; note result in progress log (PRD Q3).
 
 **Acceptance criteria**
@@ -763,7 +763,34 @@ Spec: RFC §5.1.
 - Changing load weight is passed through to the request (asserted in a test).
 
 **Progress log**
-- _Not started._
+- 2026-10-11:
+  - `providers/http.py` holds the shared `HttpClient`: 3 s connect / 10 s read timeouts, and
+    `HttpError` for transport failures, non-2xx responses and non-JSON bodies. SPOT-36 adds
+    retries and the breaker.
+  - `providers/here.py` holds `HereRouting`. It requests `transportMode=truck`, origin and
+    destination, an ISO `departureTime`, `vehicle[grossWeight]` in kg (via `units.lb_to_kg`),
+    `alternatives`, `return=polyline,summary,routeLabels`,
+    `spans=dynamicSpeedInfo,length,duration`, and pass-through `via` points.
+  - `parse_routes` decodes each section's flexible polyline, joins sections without repeating
+    the join point, converts metres to miles, and labels routes from `routeLabels`
+    ("via I-35, I-70"). Routes come back sorted fastest first.
+  - An empty `routes` list raises `NoRoute` with HERE's notice. Missing geometry or durations
+    raise `RoutingUnavailable`, never a zero-length route.
+- Decision (written into RFC §5.1): spans are split by `dynamicSpeedInfo`. HERE's docs say
+  `length` and `duration` never start a span on their own, so the original
+  `spans=length,duration` would have given one span per section and lost every speed change.
+- Verified (24 tests, respx): request parameters, load pass-through in kg (42,000 lb →
+  19,051 kg; 80,000 → 36,287), via points, parsing, section joins, sections without spans, and
+  malformed responses (no geometry, no duration, bad polyline, no sections). HTTP
+  401/429/500/503, timeouts and non-JSON bodies all become `RoutingUnavailable`.
+- **Not verified:** a real request. There's no HERE key, so the fixture is synthetic: shaped to
+  HERE's documented response and built with `flexpolyline.encode`. The acceptance check "a real
+  Dallas → Denver request returns ≥ 2 routes" is still open.
+- **PRD Q3 (free tier), what I could confirm:** HERE retired the no-payment "Limited" plan on
+  31 Aug 2025. The Base Plan needs a payment method at sign-up and has a monthly free
+  allocation per service, but HERE's plans page wouldn't load (TLS error). Third-party sites
+  quote ~30,000 transactions a month. Q3 stays open for the owner: a card on file with
+  usage inside the free allocation, or a different router.
 
 ### SPOT-32 · Route alternatives: dedupe and via-point fallback
 
