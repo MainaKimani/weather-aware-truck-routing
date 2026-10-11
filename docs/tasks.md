@@ -36,7 +36,7 @@ link to their sections instead of repeating them.
 | SPOT-12  | CI pipeline                                       | E1 Foundation        | DevOps · 2     | P0  | Done      |
 | SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
-| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | In review |
+| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done      |
 | SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | To do     |
@@ -415,7 +415,7 @@ rewriting migrations.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | In review | SPOT-10 |
+| Backend · 2 | P0 | Done | SPOT-10 |
 
 **Sub-tasks**
 - [x] `units.py`: km/h→mph, mm→in, cm→in, lb→kg, km→mi. Nothing else in the codebase
@@ -460,6 +460,7 @@ rewriting migrations.
     0.01 s and gives 1,126 points at 0.25°, over the ~700 cap, so SPOT-42 steps up to 0.5°
     (280 points).
 - Left: PR into `dev-backend`.
+- 2026-10-11: PR #1 merged into `dev-backend` with CI green, then into `main` (PR #2). Done.
 
 ### SPOT-21 · Checkpoint sampling and owned miles
 
