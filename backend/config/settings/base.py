@@ -1,22 +1,23 @@
-"""Django settings.
+"""Settings shared by every environment.
 
-All configuration comes from the environment (12-factor). Defaults here are
-for local development only; SPOT-13 splits this into base/local/prod and
-makes production refuse to start without its required settings.
+All configuration comes from the environment (12-factor). `local` and `prod`
+import this module and override only what differs; nothing here may assume
+which one is running.
 """
 
 from pathlib import Path
+from typing import Any
 
 import environ
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env()
-environ.Env.read_env(BASE_DIR / ".env")
 
-DEBUG = env.bool("DJANGO_DEBUG", default=False)
-SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="dev-only-insecure-key")
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+DEBUG = False
+SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="")
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -64,6 +65,32 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": env.db("DATABASE_URL", default="sqlite:///:memory:"),
 }
+
+REDIS_URL = env.str("REDIS_URL", default="")
+
+
+def cache_config(redis_url: str) -> dict[str, dict[str, Any]]:
+    """Redis when configured; otherwise a per-process cache for local dev and tests."""
+    if redis_url:
+        return {
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": redis_url,
+                "OPTIONS": {
+                    # A cache outage degrades to cache misses, not 500s (RFC §9).
+                    "IGNORE_EXCEPTIONS": True,
+                    "SOCKET_CONNECT_TIMEOUT": 2,
+                    "SOCKET_TIMEOUT": 2,
+                },
+            }
+        }
+    return {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+
+CACHES = cache_config(REDIS_URL)
+
+# Provider credentials. Open-Meteo needs no key.
+HERE_API_KEY = env.str("HERE_API_KEY", default="")
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

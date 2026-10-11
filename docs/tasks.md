@@ -26,7 +26,7 @@ link to their sections instead of repeating them.
 | SPOT-10 | Monorepo scaffold and local dev | E1 Foundation | DevOps · 2 | P0 | In review |
 | SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | Done |
 | SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | Done |
-| SPOT-13 | Settings and configuration | E1 Foundation | Backend · 1 | P0 | To do |
+| SPOT-13 | Settings and configuration | E1 Foundation | Backend · 1 | P0 | In review |
 | SPOT-14 | Postgres and custom user model | E1 Foundation | Backend · 1 | P0 | To do |
 | SPOT-20 | Units and geo utilities | E2 Domain | Backend · 2 | P0 | To do |
 | SPOT-21 | Checkpoint sampling and owned miles | E2 Domain | Backend · 2 | P0 | To do |
@@ -323,14 +323,14 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-10 |
+| Backend · 1 | P0 | In review | SPOT-10 |
 
 **Sub-tasks**
-- [ ] Split settings `base/local/prod`; all config from env (12-factor) with typed parsing
+- [x] Split settings `base/local/prod`; all config from env (12-factor) with typed parsing
   (`django-environ`).
-- [ ] Cache: `django-redis` when `REDIS_URL` is set, `LocMemCache` otherwise.
-- [ ] `RULES_VERSION` constant in `domain/` (used by responses and cache keys).
-- [ ] Fail at startup if a required prod setting is missing.
+- [x] Cache: `django-redis` when `REDIS_URL` is set, `LocMemCache` otherwise.
+- [x] `RULES_VERSION` constant in `domain/` (used by responses and cache keys).
+- [x] Fail at startup if a required prod setting is missing.
 
 **Acceptance criteria**
 - The app refuses to start in prod without `DJANGO_SECRET_KEY`, `HERE_API_KEY`, `DATABASE_URL`,
@@ -338,7 +338,21 @@ after every P0 in E9 is done.
 - Local dev runs with no `.env` beyond the example.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `config/settings/` split into `base` (everything shared, all from env),
+  `local` (reads `backend/.env` if present, dev defaults, `DEBUG` on) and `prod` (no `.env`,
+  `DEBUG` off). `manage.py` and pytest default to `local`; `wsgi`/`asgi` default to `prod`.
+  `prod` collects every missing required variable (blank counts as missing) and raises one
+  `ImproperlyConfigured` naming them all. It also requires `DJANGO_ALLOWED_HOSTS`, which the
+  acceptance criteria leave out but prod can't serve without. Cache: `django-redis` when `REDIS_URL` is set
+  (`IGNORE_EXCEPTIONS`, 2 s socket timeouts, so a Redis outage means cache misses rather than
+  500s), `LocMemCache` otherwise. `RULES_VERSION = "1.0.0"` lives in
+  `planner/domain/version.py`, with when-to-bump rules.
+- Verified: 13 tests pass. Prod starts with all six variables and fails naming each one when it's
+  missing. Local starts with an empty environment. A value in `.env` reaches `base`. Found and
+  fixed: importing `base` before reading `.env` would have ignored `.env` entirely, and
+  django-environ keeps inline `# comments` as part of the value, so `.env.example` keeps
+  comments on their own lines.
+- Left: HSTS, secure cookies and the proxy SSL header belong to SPOT-45. Done once CI is green.
 
 ### SPOT-14 · Postgres and custom user model
 
