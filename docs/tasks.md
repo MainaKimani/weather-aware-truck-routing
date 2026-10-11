@@ -34,9 +34,9 @@ link to their sections instead of repeating them.
 | SPOT-10  | Monorepo scaffold and local dev                   | E1 Foundation        | DevOps · 2     | P0  | In review |
 | SPOT-11  | Quality gates (lint, types, pre-commit)           | E1 Foundation        | DevOps · 1     | P0  | Done      |
 | SPOT-12  | CI pipeline                                       | E1 Foundation        | DevOps · 2     | P0  | Done      |
-| SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | In review |
-| SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | In review |
-| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done      |
+| SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
+| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | To do     |
@@ -341,7 +341,7 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | In review | SPOT-10 |
+| Backend · 1 | P0 | Done | SPOT-10 |
 
 **Sub-tasks**
 - [x] Split settings `base/local/prod`; all config from env (12-factor) with typed parsing
@@ -371,12 +371,13 @@ after every P0 in E9 is done.
   django-environ keeps inline `# comments` as part of the value, so `.env.example` keeps
   comments on their own lines.
 - Left: HSTS, secure cookies and the proxy SSL header belong to SPOT-45. Done once CI is green.
+- 2026-10-11: CI green on `dev-backend` (`25b710f`). Done.
 
 ### SPOT-14 · Postgres and custom user model
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | In review | SPOT-10, SPOT-13 |
+| Backend · 1 | P0 | Done | SPOT-10, SPOT-13 |
 
 Must be done **before the first `migrate`**: switching to a custom user model later means
 rewriting migrations.
@@ -404,6 +405,7 @@ rewriting migrations.
   `monkeypatch()` to be subscriptable at runtime. mypy turned out to apply the per-module
   `strict` override project-wide, so the config now says `strict = true` globally (see SPOT-11).
 - Left: Done once CI is green.
+- 2026-10-11: CI green on `dev-backend` (`25b710f`), Postgres service included. Done.
 
 ---
 
@@ -413,21 +415,51 @@ rewriting migrations.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-10 |
+| Backend · 2 | P0 | In review | SPOT-10 |
 
 **Sub-tasks**
-- [ ] `units.py`: km/h→mph, mm→in, cm→in, lb→kg, km→mi. Nothing else in the codebase
+- [x] `units.py`: km/h→mph, mm→in, cm→in, lb→kg, km→mi. Nothing else in the codebase
   converts units.
-- [ ] `geo.py`: haversine, cumulative polyline length, point at distance along a line,
+- [x] `geo.py`: haversine, cumulative polyline length, point at distance along a line,
   Douglas–Peucker simplify, local equirectangular buffer, point-in-polygon, lattice snapping.
-- [ ] Polyline encode/decode (precision 5) and HERE flexible polyline decode.
+- [x] Polyline encode/decode (precision 5) and HERE flexible polyline decode.
 
 **Acceptance criteria**
 - Conversions tested against known values; geo functions tested on known city pairs (within
   0.5% of reference distances).
 
 **Progress log**
-- _Not started._
+- 2026-10-11 (branch `feat/spot-20-units-geo`):
+  - `units.py` holds the six conversions with exact factors.
+  - `types.LatLon` is a NamedTuple.
+  - `geo.py` has `haversine_mi` (IUGG mean radius), `cumulative_mi`, `point_at_mi`,
+    `interpolate`, `distance_to_segment_mi`/`distance_to_line_mi`, an iterative Douglas-Peucker
+    `simplify`, `snap`, and `lattice_near`.
+  - `polyline.py` has a Google precision-5 `encode`/`decode` and `decode_flexible`.
+- Decisions:
+  - **Great-circle interpolation** in `point_at_mi`. Linear lat/lon was about 1% off on long
+    segments; a property test caught it.
+  - **The corridor buffer is distance-based, not a polygon.** `lattice_near` keeps lattice
+    points within the radius of any segment, testing only each segment's padded bounding box.
+    Building a buffer polygon and running point-in-polygon needs a polygon union, which we'd
+    have to write without GEOS. This gives the same result with less code, so there's no
+    point-in-polygon function.
+  - **HERE's decoding uses HERE's official `flexpolyline` package**, as RFC §5.1 says, rather
+    than a reimplementation. It's untyped, so it's wrapped in one typed function. Its header
+    errors surface as `RuntimeError`, which the wrapper turns into `ValueError`.
+  - Encoding rounds half up, like the reference algorithm (Python's `round` is half-to-even),
+    and rounds absolute coordinates before taking deltas, so error doesn't accumulate.
+- Verified: 66 domain tests, including hypothesis property tests (round trip, monotonic
+  cumulative, Douglas-Peucker tolerance bound, snap idempotent).
+  - Haversine is within 0.5% of WGS84 geodesic distances (geographiclib) for six city pairs,
+    including LA–NY and Seattle–Miami.
+  - `lattice_near` matches a brute-force scan exactly.
+  - Google's and HERE's published example vectors decode correctly.
+  - Domain coverage is 100%.
+  - Benchmark: three 20k-vertex coast-to-coast routes simplify in 0.76 s; the lattice takes
+    0.01 s and gives 1,126 points at 0.25°, over the ~700 cap, so SPOT-42 steps up to 0.5°
+    (280 points).
+- Left: PR into `dev-backend`.
 
 ### SPOT-21 · Checkpoint sampling and owned miles
 
