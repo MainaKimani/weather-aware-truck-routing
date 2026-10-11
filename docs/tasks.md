@@ -38,7 +38,7 @@ link to their sections instead of repeating them.
 | SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done      |
 | SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | To do     |
 | SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | To do     |
 | SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | To do     |
@@ -498,16 +498,16 @@ Spec: RFC §6.1, PRD §7.3, §7.5.
 
 ### SPOT-22 · ETA interpolation
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-20 |
 
 Spec: RFC §6.2.
 
 **Sub-tasks**
-- [ ] Drive time at distance `d` from per-span durations; fallback to whole-route interpolation.
-- [ ] Reverse lookup: distance at drive time `t` (needed for HOS stop locations).
-- [ ] Forecast-hour selection: `ceil_to_hour(eta)` (RFC §6.3).
+- [x] Drive time at distance `d` from per-span durations; fallback to whole-route interpolation.
+- [x] Reverse lookup: distance at drive time `t` (needed for HOS stop locations).
+- [x] Forecast-hour selection: `ceil_to_hour(eta)` (RFC §6.3).
 
 **Acceptance criteria**
 - ETAs are non-decreasing along a route (property test).
@@ -515,7 +515,21 @@ Spec: RFC §6.2.
 - An ETA exactly on the hour selects that hour; one second past selects the next.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/eta.py` and `types.Span`.
+  - `DriveProfile.build(spans, distance, duration)` gives cumulative miles against cumulative
+    seconds, scaled to the route's reported totals so the last ETA equals the reported
+    duration. Without spans it falls back to a single span with `estimated=True`.
+  - `drive_s_at(mile)` and `mile_at(seconds)` are piecewise-linear and clamped.
+  - `eta(departure, seconds)` returns UTC, and `ceil_to_hour(t)` picks the forecast hour.
+  - Naive datetimes are rejected.
+- Decision: where a span takes no time (or has no length), a lookup lands at its far end. It's
+  deterministic, and puts an HOS stop after a zero-time stretch rather than before it.
+- Verified (18 tests):
+  - Hypothesis: ETAs never decrease along random span lists, and forward then reverse returns
+    the original distance within 0.01 mi.
+  - An ETA exactly on the hour selects that hour; one second (or one microsecond) past selects
+    the next.
+  - Non-UTC and half-hour zones normalise to UTC hours.
 
 ### SPOT-23 · Risk classification and load rules
 
