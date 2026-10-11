@@ -48,7 +48,7 @@ link to their sections instead of repeating them.
 | SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | In review |
 | SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | To do     |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | To do     |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | To do     |
@@ -907,17 +907,17 @@ Spec: RFC §5.2, §6.3.
 
 ### SPOT-35 · Forecast cache
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-34, SPOT-13 |
 
 Spec: RFC §9, §18.2, §18.3, §18.4.
 
 **Sub-tasks**
-- [ ] Lattice snapping (0.1° checkpoints, 0.25° grid) and cache-first fetch of missing points.
-- [ ] Keys prefixed with `RULES_VERSION` and a payload schema version.
-- [ ] Single-flight: Redis `SET NX` lock per key, others wait up to 2 s for the value.
-- [ ] Stale-while-revalidate: keep entries 3 h past freshness; serve stale with a `stale` flag
+- [x] Lattice snapping (0.1° checkpoints, 0.25° grid) and cache-first fetch of missing points.
+- [x] Keys prefixed with `RULES_VERSION` and a payload schema version.
+- [x] Single-flight: Redis `SET NX` lock per key, others wait up to 2 s for the value.
+- [x] Stale-while-revalidate: keep entries 3 h past freshness; serve stale with a `stale` flag
   when the provider fails.
 
 **Acceptance criteria**
@@ -927,7 +927,34 @@ Spec: RFC §9, §18.2, §18.3, §18.4.
 - Bumping `RULES_VERSION` misses every old key.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `services/forecasts.py`. `ForecastStore(weather).get(points, step_deg)` returns a
+  `ForecastLookup` (series by snapped point, `for_point`, `stale`, `oldest_fetch`).
+  - **Snapping:** `CHECKPOINT_STEP_DEG` 0.1 and `GRID_STEP_DEG` 0.25.
+  - **Keys:** `v{RULES_VERSION}:fc{SCHEMA_VERSION}:{lat:.2f}:{lon:.2f}:{YYYYMMDDHH}`, with -0.0
+    normalised.
+  - **Window:** each entry runs from an hour ago to ten days ahead (241 h), so any departure up
+    to 7 days out plus a multi-day trip, and the heatmap's 0–48 h, share one entry.
+  - **Lifetime:** fresh until the next hour, then kept 3 h more as a fallback.
+  - **Single-flight:** a lock per key via `cache.add` (Redis `SET NX`), with waiters polling
+    for up to 2 s. If the holder never delivers, a waiter fetches itself, and locks are released
+    after a failure.
+  - **Stale:** if the provider fails, the newest entry from the last 3 h is used and the result
+    is flagged `stale`. With nothing to fall back on, it raises `WeatherUnavailable`.
+  - Gaps (`None` series) aren't cached.
+- Decision: if Redis is unreachable, django-redis with `IGNORE_EXCEPTIONS` returns `None` from
+  `add()`. That's treated as "no lock to wait for", so a Redis outage doesn't add 2 s to every
+  plan.
+- Verified (14 tests on the local-memory cache):
+  - A second identical request makes zero provider calls (counting fake), and 10 concurrent
+    requests for a cold key make one.
+  - Provider down with an entry two hours old gives `stale` and the same data; at 5 hours old,
+    or with nothing cached, it raises `WeatherUnavailable`.
+  - A new hour refetches, and bumping `RULES_VERSION` misses every old key.
+  - Locks are released after failure, a waiter falls back to fetching, gaps aren't cached, and
+    an unreachable cache doesn't wait.
+- Left: the plan-level criterion "plan succeeds with `stale: true`" gets its end-to-end check
+  in SPOT-40/41, which put `stale` in the response. Running against real Redis: SPOT-100
+  (Docker isn't available here).
 
 ### SPOT-36 · Provider resilience
 
