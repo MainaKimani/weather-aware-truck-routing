@@ -8,7 +8,11 @@ which one is running.
 from pathlib import Path
 from typing import Any
 
+import django_stubs_ext
 import environ
+
+# Lets Django's generic classes be subscripted at runtime (UserAdmin[User]).
+django_stubs_ext.monkeypatch()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -60,11 +64,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Postgres and the custom user model arrive together in SPOT-14. Until then
-# nothing is migrated, so no database is opened.
+# Postgres everywhere, including local dev and tests, so constraints and JSON
+# behave as in production (RFC §15). The default is the local socket.
 DATABASES = {
-    "default": env.db("DATABASE_URL", default="sqlite:///:memory:"),
+    "default": {
+        **env.db("DATABASE_URL", default="postgres:///spotter"),
+        # Persistent connections, checked before reuse (RFC §18).
+        "CONN_MAX_AGE": env.int("DB_CONN_MAX_AGE", default=60),
+        "CONN_HEALTH_CHECKS": True,
+    },
 }
+
+AUTH_USER_MODEL = "accounts.User"
 
 REDIS_URL = env.str("REDIS_URL", default="")
 

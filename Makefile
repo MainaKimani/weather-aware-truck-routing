@@ -1,6 +1,6 @@
 # Local development. `make dev` runs both apps natively; `make up` uses Docker.
 
-.PHONY: install hooks dev api web up down test lint fmt types
+.PHONY: install hooks migrate dev api web up down test lint fmt types
 
 install:
 	cd backend && uv sync
@@ -10,7 +10,10 @@ install:
 hooks:
 	uv run --project backend pre-commit install
 
-dev:
+migrate:
+	cd backend && uv run python manage.py migrate
+
+dev: migrate
 	@trap 'kill 0' INT TERM EXIT; \
 	$(MAKE) --no-print-directory api & \
 	$(MAKE) --no-print-directory web & \

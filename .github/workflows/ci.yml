@@ -15,6 +15,21 @@ concurrency:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: spotter
+          POSTGRES_PASSWORD: spotter
+          POSTGRES_DB: spotter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U spotter"
+          --health-interval 2s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://spotter:spotter@localhost:5432/spotter
     defaults:
       run:
         working-directory: backend
@@ -31,6 +46,8 @@ jobs:
           uv run ruff format --check .
       - name: mypy
         run: uv run mypy .
+      - name: Migrations up to date
+        run: uv run python manage.py makemigrations --check --dry-run
       - name: pytest
         run: uv run pytest --cov --cov-report=term
       - name: Domain coverage ≥ 95%

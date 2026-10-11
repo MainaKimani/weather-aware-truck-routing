@@ -27,7 +27,7 @@ link to their sections instead of repeating them.
 | SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | Done |
 | SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | Done |
 | SPOT-13 | Settings and configuration | E1 Foundation | Backend · 1 | P0 | In review |
-| SPOT-14 | Postgres and custom user model | E1 Foundation | Backend · 1 | P0 | To do |
+| SPOT-14 | Postgres and custom user model | E1 Foundation | Backend · 1 | P0 | In review |
 | SPOT-20 | Units and geo utilities | E2 Domain | Backend · 2 | P0 | To do |
 | SPOT-21 | Checkpoint sampling and owned miles | E2 Domain | Backend · 2 | P0 | To do |
 | SPOT-22 | ETA interpolation | E2 Domain | Backend · 2 | P0 | To do |
@@ -284,6 +284,9 @@ after every P0 in E9 is done.
   Conventional Commit and merge subjects. Strict mypy flags an unannotated function in `domain/`.
 - Left: moves to Done once SPOT-12 runs the same gates in CI.
 - 2026-10-11: CI ran the same gates green on GitHub (`88e5017`). Done.
+- 2026-10-11 (SPOT-14): mypy 2.4 applied the per-module `strict` override to the whole project,
+  so the code was already strict everywhere. The config now sets `strict = true` globally to
+  say so.
 
 ### SPOT-12 · CI pipeline
 
@@ -358,22 +361,34 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-10, SPOT-13 |
+| Backend · 1 | P0 | In review | SPOT-10, SPOT-13 |
 
 Must be done **before the first `migrate`**: switching to a custom user model later means
 rewriting migrations.
 
 **Sub-tasks**
-- [ ] Postgres 16 via `DATABASE_URL` (`dj-database-url`), `CONN_MAX_AGE` with health checks;
+- [x] Postgres 16 via `DATABASE_URL` (`dj-database-url`), `CONN_MAX_AGE` with health checks;
   Postgres in `docker-compose.yml` and in CI.
-- [ ] `accounts` app with `User(AbstractUser)`: no username, unique case-insensitive email
+- [x] `accounts` app with `User(AbstractUser)`: no username, unique case-insensitive email
   (RFC §3.1); `AUTH_USER_MODEL` set.
 
 **Acceptance criteria**
 - First migration creates `accounts.User`; tests run against Postgres in CI.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `accounts.User(AbstractUser)` with no username, email as `USERNAME_FIELD`, and
+  `EmailUserManager`, which trims and lower-cases emails. A `Lower("email")` unique constraint
+  is in the first migration. An email-based admin is registered. `DATABASES` comes from
+  `DATABASE_URL` (default `postgres:///spotter`, the local socket) with `CONN_MAX_AGE=60` and
+  `CONN_HEALTH_CHECKS`. CI's backend job runs a Postgres 16 service and checks
+  `makemigrations --check`. `make dev` now migrates first (`make migrate`).
+- Verified: 20 tests pass on local Postgres 16, including one that inserts `DRIVER@example.com`
+  with raw SQL next to `driver@example.com` and gets an `IntegrityError` from the database.
+  Admin login and healthz respond via runserver.
+- Along the way: Django's generic admin and form classes needed `django-stubs-ext`'s
+  `monkeypatch()` to be subscriptable at runtime. mypy turned out to apply the per-module
+  `strict` override project-wide, so the config now says `strict = true` globally (see SPOT-11).
+- Left: Done once CI is green.
 
 ---
 

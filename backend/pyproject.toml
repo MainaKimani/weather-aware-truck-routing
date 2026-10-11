@@ -7,6 +7,7 @@ dependencies = [
     "django>=5.2,<6",
     "django-environ>=0.14.0",
     "django-redis>=7.0.0",
+    "django-stubs-ext>=6.1.2",
     "djangorestframework>=3.18.3",
     "psycopg[binary]>=3.2",
 ]
@@ -40,21 +41,17 @@ extend-exclude = ["*/migrations/*"]
 select = ["E", "W", "F", "I", "B", "UP", "S", "DTZ", "SIM", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
-# assert is how pytest checks things.
-"tests/**" = ["S101"]
+# assert is how pytest checks things; fixed passwords in tests are fixtures,
+# not secrets.
+"tests/**" = ["S101", "S105", "S106"]
 
 [tool.mypy]
 python_version = "3.12"
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
-check_untyped_defs = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-exclude = ["/migrations/"]
-
-# The domain and provider layers are pure, typed Python: hold them to strict.
-[[tool.mypy.overrides]]
-module = ["planner.domain.*", "planner.providers.*"]
+# Strict everywhere. (A per-module strict override turned out to apply
+# project-wide anyway, so say so plainly.)
 strict = true
+exclude = ["/migrations/"]
 
 [[tool.mypy.overrides]]
 module = ["environ.*"]

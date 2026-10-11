@@ -768,6 +768,7 @@ dependencies = [
     { name = "django" },
     { name = "django-environ" },
     { name = "django-redis" },
+    { name = "django-stubs-ext" },
     { name = "djangorestframework" },
     { name = "psycopg", extra = ["binary"] },
 ]
@@ -789,6 +790,7 @@ requires-dist = [
     { name = "django", specifier = ">=5.2,<6" },
     { name = "django-environ", specifier = ">=0.14.0" },
     { name = "django-redis", specifier = ">=7.0.0" },
+    { name = "django-stubs-ext", specifier = ">=6.1.2" },
     { name = "djangorestframework", specifier = ">=3.18.3" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
 ]
