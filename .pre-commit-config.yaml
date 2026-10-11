@@ -1,6 +1,7 @@
 # Hooks run the project's own pinned tools (uv.lock, package-lock.json), so
 # local, CI and editor all use the same versions. Install with `make hooks`.
 default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
