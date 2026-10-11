@@ -1,11 +1,14 @@
 # Local development. `make dev` runs both apps natively; `make up` uses Docker.
-# Lint, format and type gates are filled in by SPOT-11.
 
-.PHONY: install dev api web up down test lint types
+.PHONY: install hooks dev api web up down test lint fmt types
 
 install:
 	cd backend && uv sync
 	cd frontend && npm ci
+	$(MAKE) --no-print-directory hooks
+
+hooks:
+	uv run --project backend pre-commit install
 
 dev:
 	@trap 'kill 0' INT TERM EXIT; \
@@ -30,8 +33,13 @@ test:
 	cd frontend && npm run build
 
 lint:
-	cd backend && uv run python manage.py check
-	cd frontend && npm run lint
+	cd backend && uv run ruff check . && uv run ruff format --check .
+	cd frontend && npm run lint && npm run format:check
+
+fmt:
+	cd backend && uv run ruff check --fix . && uv run ruff format .
+	cd frontend && npx eslint . --fix && npm run format
 
 types:
-	cd frontend && npx tsc -b
+	cd backend && uv run mypy .
+	cd frontend && npm run typecheck

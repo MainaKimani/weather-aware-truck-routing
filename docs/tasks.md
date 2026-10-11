@@ -24,7 +24,7 @@ link to their sections instead of repeating them.
 | SPOT-3 | Write UI prototype prompts (Lovable, AI Studio) | E0 Planning | Docs · 1 | P0 | Done |
 | SPOT-4 | Build UI prototype in AI Studio and review | E0 Planning | Frontend · 2 | P0 | To do |
 | SPOT-10 | Monorepo scaffold and local dev | E1 Foundation | DevOps · 2 | P0 | In review |
-| SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | To do |
+| SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | In review |
 | SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | To do |
 | SPOT-13 | Settings and configuration | E1 Foundation | Backend · 1 | P0 | To do |
 | SPOT-14 | Postgres and custom user model | E1 Foundation | Backend · 1 | P0 | To do |
@@ -246,25 +246,36 @@ after every P0 in E9 is done.
   this machine). Native `make dev` doesn't start Postgres or Redis. The DB stays unmigrated and
   defaults to in-memory SQLite until SPOT-14 adds the custom user model.
 - Left: choose a licence; run `make up` once on a machine with Docker.
+- 2026-10-11: `make fmt` added by SPOT-11.
 
 ### SPOT-11 · Quality gates (lint, types, pre-commit)
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 1 | P0 | To do | SPOT-10 |
+| DevOps · 1 | P0 | In review | SPOT-10 |
 
 **Sub-tasks**
-- [ ] ruff (lint + format) including `DTZ` (no naive datetimes), `B`, `UP`, `I`, `S` rules.
-- [ ] mypy: strict for `planner/domain` and `planner/providers`, normal elsewhere.
-- [ ] eslint + prettier + `tsc --noEmit`; `noUncheckedIndexedAccess` on.
-- [ ] pre-commit hooks for all of the above; commit-msg check for Conventional Commits.
+- [x] ruff (lint + format) including `DTZ` (no naive datetimes), `B`, `UP`, `I`, `S` rules.
+- [x] mypy: strict for `planner/domain` and `planner/providers`, normal elsewhere.
+- [x] eslint + prettier + `tsc --noEmit`; `noUncheckedIndexedAccess` on.
+- [x] pre-commit hooks for all of the above; commit-msg check for Conventional Commits.
 
 **Acceptance criteria**
 - A naive `datetime.now()` in backend code fails lint.
 - `make lint types` passes on the scaffold; pre-commit blocks a failing commit.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: Backend: ruff (E, W, F, I, B, UP, S, DTZ, SIM, RUF; line length 100) and mypy
+  with django-stubs/drf-stubs, `strict` for `planner.domain.*` and `planner.providers.*`.
+  Frontend: replaced the template's oxlint with eslint (typescript-eslint `strictTypeChecked`,
+  react-hooks, react-refresh) + prettier, as the tracker specified; `strict` and
+  `noUncheckedIndexedAccess` in both tsconfigs. `.pre-commit-config.yaml` runs the project's own
+  pinned tools (local hooks) plus the standard hygiene hooks; `scripts/check_commit_msg.py` is the
+  commit-msg check. Makefile gained `hooks` and `fmt`, and `lint`/`types` now cover both apps.
+- Verified: `make lint types` passes; a staged `datetime.now()` fails the ruff hook with DTZ005;
+  the commit-msg hook rejects `added some stuff` and a subject ending in a period, and accepts
+  Conventional Commit and merge subjects. Strict mypy flags an unannotated function in `domain/`.
+- Left: moves to Done once SPOT-12 runs the same gates in CI.
 
 ### SPOT-12 · CI pipeline
 

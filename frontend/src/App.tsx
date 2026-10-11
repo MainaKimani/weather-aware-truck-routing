@@ -10,12 +10,16 @@ export default function App() {
   useEffect(() => {
     const controller = new AbortController()
     fetch('/api/v1/healthz', { signal: controller.signal })
-      .then((res) => setStatus(res.ok ? 'ok' : 'down'))
+      .then((res) => {
+        setStatus(res.ok ? 'ok' : 'down')
+      })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
         setStatus('down')
       })
-    return () => controller.abort()
+    return () => {
+      controller.abort()
+    }
   }, [])
 
   return (
