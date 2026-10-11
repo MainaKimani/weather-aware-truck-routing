@@ -29,8 +29,8 @@ down:
 	docker compose down
 
 test:
-	cd backend && uv run pytest
-	cd frontend && npm run build
+	cd backend && uv run pytest --cov
+	cd frontend && npm test
 
 lint:
 	cd backend && uv run ruff check . && uv run ruff format --check .

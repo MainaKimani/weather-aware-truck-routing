@@ -17,6 +17,7 @@ dev = [
     "mypy>=2.4.0",
     "pre-commit>=4.6.2",
     "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
     "pytest-django>=4.14.0",
     "ruff>=0.17.0",
 ]
@@ -60,3 +61,12 @@ ignore_missing_imports = true
 
 [tool.django-stubs]
 django_settings_module = "config.settings"
+
+[tool.coverage.run]
+source = ["planner", "accounts", "config"]
+omit = ["*/migrations/*", "config/asgi.py", "config/wsgi.py"]
+branch = true
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true

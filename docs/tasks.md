@@ -25,7 +25,7 @@ link to their sections instead of repeating them.
 | SPOT-4 | Build UI prototype in AI Studio and review | E0 Planning | Frontend · 2 | P0 | To do |
 | SPOT-10 | Monorepo scaffold and local dev | E1 Foundation | DevOps · 2 | P0 | In review |
 | SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | In review |
-| SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | To do |
+| SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | In review |
 | SPOT-13 | Settings and configuration | E1 Foundation | Backend · 1 | P0 | To do |
 | SPOT-14 | Postgres and custom user model | E1 Foundation | Backend · 1 | P0 | To do |
 | SPOT-20 | Units and geo utilities | E2 Domain | Backend · 2 | P0 | To do |
@@ -221,7 +221,7 @@ after every P0 in E9 is done.
 | DevOps · 2 | P0 | In review | — |
 
 **Sub-tasks**
-- [ ] `git init`, `.gitignore`, `.editorconfig`, licence. _(licence pending owner's choice)_
+- [x] `git init`, `.gitignore`, `.editorconfig`, licence. _(licence pending owner's choice)_
 - [x] `backend/`: Django 5 project `config/` with app `planner/` laid out as RFC §4
   (`domain/`, `providers/`, `services/`, `api/`); dependencies managed with uv (`uv.lock`).
 - [x] `frontend/`: Vite + React + TypeScript (strict) + Tailwind; `package-lock.json`.
@@ -281,21 +281,33 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 2 | P0 | To do | SPOT-11 |
+| DevOps · 2 | P0 | In review | SPOT-11 |
 
 **Sub-tasks**
-- [ ] GitHub Actions: backend job (ruff, mypy, pytest with coverage), frontend job (eslint,
+- [x] GitHub Actions: backend job (ruff, mypy, pytest with coverage), frontend job (eslint,
   tsc, vitest, build).
-- [ ] Dependency audit job (`pip-audit`, `npm audit --audit-level=high`).
-- [ ] OpenAPI drift check (added in SPOT-44).
-- [ ] Cache dependencies; run on push and PR.
+- [x] Dependency audit job (`pip-audit`, `npm audit --audit-level=high`).
+- [ ] OpenAPI drift check (added in SPOT-44). _(waits for SPOT-44)_
+- [x] Cache dependencies; run on push and PR.
 
 **Acceptance criteria**
 - CI runs on every push and PR and fails on any gate.
 - Coverage for `planner/domain` reported and ≥ 95%.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `.github/workflows/ci.yml` with four jobs on push to `main` and on PRs:
+  `backend` (ruff, ruff format, mypy, pytest with coverage, then `planner/domain` ≥ 95%),
+  `frontend` (eslint, prettier, tsc, vitest, build), `audit` (`pip-audit --strict` on the
+  exported lockfile, `npm audit --audit-level=high`) and `commits` (runs
+  `scripts/check_commit_msg.py` on every commit in a PR). uv and npm caches are keyed on the
+  lockfiles; Node comes from `frontend/.nvmrc`. Added vitest + Testing Library with two App tests,
+  and pytest-cov. `make test` now runs pytest with coverage and vitest.
+- Coverage is configured with `source`, so domain modules no test imports still count against
+  the 95% gate; while `domain/` is empty, the gate passes.
+- Verified locally: every CI step passes and actionlint accepts the workflow. **Not verified:**
+  a run on GitHub (nothing pushed yet).
+- Left: first green run on GitHub, which also moves SPOT-10 (bar the licence and Docker check)
+  and SPOT-11 to Done; OpenAPI drift check in SPOT-44.
 
 ### SPOT-13 · Settings and configuration
 
