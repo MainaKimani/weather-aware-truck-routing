@@ -39,7 +39,7 @@ link to their sections instead of repeating them.
 | SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done      |
 | SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | To do     |
+| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | In review |
 | SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | To do     |
 | SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | To do     |
@@ -533,18 +533,18 @@ Spec: RFC §6.2.
 
 ### SPOT-23 · Risk classification and load rules
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-20 |
 
 Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
 
 **Sub-tasks**
-- [ ] `Level` enum, threshold tables, `band()` and `band_with_strict_top()`.
-- [ ] `apply_load_rules()` on gusts.
-- [ ] `classify()` returning `RiskResult` with every intermediate level, the driver and the
+- [x] `Level` enum, threshold tables, `band()` and `band_with_strict_top()`.
+- [x] `apply_load_rules()` on gusts.
+- [x] `classify()` returning `RiskResult` with every intermediate level, the driver and the
   load rule applied; missing forecast → `UNKNOWN`.
-- [ ] Table-driven tests written straight from the PRD table.
+- [x] Table-driven tests written straight from the PRD table.
 
 **Acceptance criteria**
 - Tests at and either side of **every** boundary: gust 24.99/25/34.99/35/44.99/45/54.99/55;
@@ -557,7 +557,23 @@ Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
 - Sustained wind never changes the result (test with sustained 80, gust 10 → Low).
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/risk.py` and `types.Forecast`.
+  - `Level` (IntEnum 0–4) and the band tables `WIND_MPH`, `RAIN_IN_HR`, `SNOW_IN_HR` with
+    strict No Travel tops.
+  - `LOAD_RULES` as data (`LoadRuleSpec`), applied by `apply_load_rules`.
+  - `classify(forecast, load_lb)` returns a `RiskResult` with base and adjusted wind, rain,
+    snow, the load rule, the overall level and the driver (tie order wind, rain, snow).
+  - `UNKNOWN` is `level=None`. Missing, NaN, infinite or negative provider values count as
+    missing.
+- Decision (written into PRD §7.4): partial data is Unknown unless a known value is already
+  No Travel. A gust of 60 mph with rain missing is No Travel, not Unknown, so a missing field
+  can't make an undrivable point look drivable. Known values are still returned for display.
+- Verified (62 tests, written from the PRD table):
+  - Every acceptance boundary: gust 24.99–55, rain 0.0999–1.0001, snow 0.499–3.0001.
+  - Load rules at 30,000/30,001 lb (gust 45 and 54.99) and 40,000/40,001 lb (gust 35 and
+    44.99). Gust 55 is No Travel at 1 lb, and the 40 mph / 35,000 lb gap case stays High.
+  - Tie-breaks, and sustained wind 80 with gust 10 rating Low.
+  - Hypothesis: the level is the worst component, and a heavier load is never safer.
 
 ### SPOT-24 · Hours of Service planner
 

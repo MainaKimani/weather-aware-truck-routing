@@ -1,6 +1,7 @@
 """Plain value types shared across the domain package."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import NamedTuple
 
 
@@ -17,3 +18,19 @@ class Span:
 
     length_mi: float
     duration_s: float
+
+
+@dataclass(frozen=True)
+class Forecast:
+    """One hour of weather at one point, in US units.
+
+    `None` means the provider had no usable value. Thresholds use gusts;
+    sustained wind is carried for display only (PRD §7.4).
+    """
+
+    valid_hour: datetime
+    gust_mph: float | None
+    rain_in_hr: float | None  # rain + showers over the hour
+    snow_in_hr: float | None  # snowfall depth over the hour
+    wind_mph: float | None = None
+    weather_code: int | None = None
