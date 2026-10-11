@@ -37,7 +37,7 @@ link to their sections instead of repeating them.
 | SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done      |
-| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | To do     |
 | SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | To do     |
@@ -464,16 +464,16 @@ rewriting migrations.
 
 ### SPOT-21 · Checkpoint sampling and owned miles
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-20 |
 
 Spec: RFC §6.1, PRD §7.3, §7.5.
 
 **Sub-tasks**
-- [ ] Place checkpoints at 0, N, 2N … and always at the destination.
-- [ ] Owned miles (half-gap to each neighbour), scaled to the provider's reported distance.
-- [ ] Property tests with Hypothesis on random polylines.
+- [x] Place checkpoints at 0, N, 2N … and always at the destination.
+- [x] Owned miles (half-gap to each neighbour), scaled to the provider's reported distance.
+- [x] Property tests with Hypothesis on random polylines.
 
 **Acceptance criteria**
 - Owned miles sum to the route distance (to 0.01 mi) for every generated polyline.
@@ -481,7 +481,20 @@ Spec: RFC §6.1, PRD §7.3, §7.5.
 - Intervals 10, 25 and 50 all work; anything else is rejected.
 
 **Progress log**
-- _Not started._
+- 2026-10-11 (branch `feat/spot-21-36-domain-providers`): `domain/sampling.py`.
+  - `RouteGeometry` holds the polyline, its cumulative distances and a scale to the provider's
+    reported distance; `position_at(mile)` maps a reported mile to a point.
+  - `checkpoint_miles` gives 0, N, 2N, … then the destination, rejecting intervals other than
+    10/25/50. `owned_miles` gives half the gap to each neighbour. `sample_checkpoints` puts
+    them together.
+- Decision: spacing is in **reported** miles, mapped onto the geometry by the scale, so
+  checkpoint labels read 0, 25, 50 and line up with the route summary. RFC §6.1 spaces on the
+  polyline and scales owned miles afterwards; the difference is only the scale factor, and
+  this keeps labels round.
+- Verified (24 tests): a Hypothesis property over random polylines, every interval and reported
+  distances ±10% off the geometry, with owned miles summing to the reported distance within
+  0.01 mi, all positive, and miles strictly increasing. A route shorter than N gives exactly
+  two checkpoints. An exact multiple (50 mi every 25) doesn't duplicate the destination.
 
 ### SPOT-22 · ETA interpolation
 
