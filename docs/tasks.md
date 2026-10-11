@@ -23,7 +23,7 @@ link to their sections instead of repeating them.
 | SPOT-2 | Write technical RFC | E0 Planning | Docs · 3 | P0 | Done |
 | SPOT-3 | Write UI prototype prompts (Lovable, AI Studio) | E0 Planning | Docs · 1 | P0 | Done |
 | SPOT-4 | Build UI prototype in AI Studio and review | E0 Planning | Frontend · 2 | P0 | To do |
-| SPOT-10 | Monorepo scaffold and local dev | E1 Foundation | DevOps · 2 | P0 | To do |
+| SPOT-10 | Monorepo scaffold and local dev | E1 Foundation | DevOps · 2 | P0 | In review |
 | SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | To do |
 | SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | To do |
 | SPOT-13 | Settings and configuration | E1 Foundation | Backend · 1 | P0 | To do |
@@ -218,16 +218,16 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 2 | P0 | To do | — |
+| DevOps · 2 | P0 | In review | — |
 
 **Sub-tasks**
-- [ ] `git init`, `.gitignore`, `.editorconfig`, licence.
-- [ ] `backend/`: Django 5 project `config/` with app `planner/` laid out as RFC §4
+- [ ] `git init`, `.gitignore`, `.editorconfig`, licence. _(licence pending owner's choice)_
+- [x] `backend/`: Django 5 project `config/` with app `planner/` laid out as RFC §4
   (`domain/`, `providers/`, `services/`, `api/`); dependencies managed with uv (`uv.lock`).
-- [ ] `frontend/`: Vite + React + TypeScript (strict) + Tailwind; `package-lock.json`.
-- [ ] `docker-compose.yml` with `api`, `postgres`, `redis`, `web`; `Makefile` with `dev`, `test`, `lint`,
-  `fmt`, `types`.
-- [ ] `.env.example` for both apps.
+- [x] `frontend/`: Vite + React + TypeScript (strict) + Tailwind; `package-lock.json`.
+- [x] `docker-compose.yml` with `api`, `postgres`, `redis`, `web`; `Makefile` with `dev`, `test`, `lint`,
+  `fmt`, `types`. _(`fmt` deferred to SPOT-11, which brings the formatters)_
+- [x] `.env.example` for both apps.
 
 **Acceptance criteria**
 - From a clean clone, `make dev` starts API, Postgres, Redis and web; the web page loads and calls a
@@ -235,7 +235,17 @@ after every P0 in E9 is done.
 - No secrets in the repo.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: Scaffolded `backend/` (Django 5.2, DRF, django-environ, psycopg; uv) with
+  `config/`, `planner/{domain,providers,services,api}` and an empty `accounts/` app; stub
+  `GET /api/v1/healthz` with a pytest. `frontend/` is Vite 8 + React 18 + TS (strict,
+  `noUncheckedIndexedAccess`) + Tailwind 4; the placeholder page calls `/api/v1/healthz` through
+  the Vite `/api` proxy (same-origin, RFC §3.2). Added root `Makefile`, `docker-compose.yml`,
+  `.editorconfig` and `.env.example` files.
+- Verified: `make dev` serves the web app on :5173 and `/api/v1/healthz` returns `{"status":"ok"}`
+  through the proxy; `make test` passes. **Not verified:** `make up` (Docker isn't installed on
+  this machine). Native `make dev` doesn't start Postgres or Redis. The DB stays unmigrated and
+  defaults to in-memory SQLite until SPOT-14 adds the custom user model.
+- Left: choose a licence; run `make up` once on a machine with Docker.
 
 ### SPOT-11 · Quality gates (lint, types, pre-commit)
 
