@@ -41,7 +41,7 @@ link to their sections instead of repeating them.
 | SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | In review |
 | SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | In review |
-| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | To do     |
+| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | In review |
 | SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | To do     |
 | SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | To do     |
@@ -621,14 +621,14 @@ Spec: PRD §7.3.1, RFC §6.2.1.
 
 ### SPOT-25 · Route metrics
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-21, SPOT-23 |
 
 Spec: PRD §7.5, RFC §6.5.
 
 **Sub-tasks**
-- [ ] Miles by level including `UNKNOWN`; distance-weighted average risk excluding Unknown;
+- [x] Miles by level including `UNKNOWN`; distance-weighted average risk excluding Unknown;
   worst level and its mile; drivable flag.
 
 **Acceptance criteria**
@@ -637,7 +637,17 @@ Spec: PRD §7.5, RFC §6.5.
 - One No Travel checkpoint makes `drivable = false`.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/metrics.py`. `route_metrics(checkpoints)` returns a `RouteMetrics`:
+  - `miles_by_level`, over all six buckets including `UNKNOWN`;
+  - the distance-weighted `avg_risk`, excluding Unknown and `None` when every checkpoint is
+    Unknown;
+  - `worst` and `worst_at_mile` (the first occurrence);
+  - `drivable` (no No Travel checkpoint), `distance_mi`, `unknown_miles` and `unknown_share`
+    (for SPOT-26's warning).
+- Verified (8 tests): a hand-worked 75 mi route; Unknown is counted but kept out of the
+  average; an all-Unknown route has no average and no Low miles; one No Travel checkpoint makes
+  the route not drivable. Hypothesis: miles by level sum to the route distance, the average
+  stays within 0–4, and drivable means no No Travel.
 
 ### SPOT-26 · Ranking and recommendation reason
 
