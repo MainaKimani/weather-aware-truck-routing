@@ -24,8 +24,8 @@ link to their sections instead of repeating them.
 | SPOT-3 | Write UI prototype prompts (Lovable, AI Studio) | E0 Planning | Docs · 1 | P0 | Done |
 | SPOT-4 | Build UI prototype in AI Studio and review | E0 Planning | Frontend · 2 | P0 | To do |
 | SPOT-10 | Monorepo scaffold and local dev | E1 Foundation | DevOps · 2 | P0 | In review |
-| SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | In review |
-| SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | In review |
+| SPOT-11 | Quality gates (lint, types, pre-commit) | E1 Foundation | DevOps · 1 | P0 | Done |
+| SPOT-12 | CI pipeline | E1 Foundation | DevOps · 2 | P0 | Done |
 | SPOT-13 | Settings and configuration | E1 Foundation | Backend · 1 | P0 | To do |
 | SPOT-14 | Postgres and custom user model | E1 Foundation | Backend · 1 | P0 | To do |
 | SPOT-20 | Units and geo utilities | E2 Domain | Backend · 2 | P0 | To do |
@@ -252,7 +252,7 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 1 | P0 | In review | SPOT-10 |
+| DevOps · 1 | P0 | Done | SPOT-10 |
 
 **Sub-tasks**
 - [x] ruff (lint + format) including `DTZ` (no naive datetimes), `B`, `UP`, `I`, `S` rules.
@@ -276,12 +276,13 @@ after every P0 in E9 is done.
   the commit-msg hook rejects `added some stuff` and a subject ending in a period, and accepts
   Conventional Commit and merge subjects. Strict mypy flags an unannotated function in `domain/`.
 - Left: moves to Done once SPOT-12 runs the same gates in CI.
+- 2026-10-11: CI ran the same gates green on GitHub (`88e5017`). Done.
 
 ### SPOT-12 · CI pipeline
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 2 | P0 | In review | SPOT-11 |
+| DevOps · 2 | P0 | Done | SPOT-11 |
 
 **Sub-tasks**
 - [x] GitHub Actions: backend job (ruff, mypy, pytest with coverage), frontend job (eslint,
@@ -308,6 +309,8 @@ after every P0 in E9 is done.
   a run on GitHub (nothing pushed yet).
 - Left: first green run on GitHub, which also moves SPOT-10 (bar the licence and Docker check)
   and SPOT-11 to Done; OpenAPI drift check in SPOT-44.
+- 2026-10-11: First run on GitHub passed for `88e5017`. Done; the drift check is tracked in
+  SPOT-44.
 
 ### SPOT-13 · Settings and configuration
 
