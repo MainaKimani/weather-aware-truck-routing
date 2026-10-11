@@ -1,0 +1,35 @@
+{
+  "_comment": "Synthetic: shaped to HERE Autosuggest v1 docs with show=tz. Replace with a recorded response once a key is available.",
+  "items": [
+    {
+      "title": "Dallas, TX, United States",
+      "id": "here:cm:namedplace:21002461",
+      "resultType": "locality",
+      "localityType": "city",
+      "address": {"label": "Dallas, TX, United States", "countryCode": "USA", "state": "Texas", "city": "Dallas"},
+      "position": {"lat": 32.77815, "lng": -96.7954},
+      "timeZone": {"name": "America/Chicago", "utcOffset": "-05:00"}
+    },
+    {
+      "title": "dallas",
+      "id": "here:chainQuery:dallas",
+      "resultType": "chainQuery",
+      "href": "https://autosuggest.search.hereapi.com/v1/discover?q=dallas"
+    },
+    {
+      "title": "Dallas Center, IA, United States",
+      "id": "here:cm:namedplace:21009385",
+      "resultType": "locality",
+      "address": {"label": "Dallas Center, IA, United States"},
+      "position": {"lat": 41.68443, "lng": -93.96133},
+      "timeZone": {"name": "America/Chicago", "utcOffset": "-05:00"}
+    },
+    {
+      "title": "Dalles, OR",
+      "id": "here:cm:namedplace:21004920",
+      "resultType": "locality",
+      "address": {"label": "The Dalles, OR, United States"},
+      "position": {"lat": 45.59456, "lng": -121.17868}
+    }
+  ]
+}

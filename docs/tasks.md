@@ -46,7 +46,7 @@ link to their sections instead of repeating them.
 | SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | To do     |
+| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | In review |
 | SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | To do     |
@@ -833,19 +833,32 @@ Spec: RFC §5.1.
 
 ### SPOT-33 · HERE autosuggest adapter
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 1 | P0 | To do | SPOT-30 |
 
 **Sub-tasks**
-- [ ] Autosuggest call biased to North America; return label, lat, lon, time zone.
-- [ ] Fixture tests.
+- [x] Autosuggest call biased to North America; return label, lat, lon, time zone.
+- [x] Fixture tests.
 
 **Acceptance criteria**
 - "dall" returns Dallas, TX first with coordinates and `America/Chicago`.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `providers/here_geocoder.py` holds `HereGeocoder.suggest(q, limit)`.
+  - It sends `at` (centre of the contiguous US) with `in=countryCode:USA,CAN,MEX`; HERE needs a
+    location focus alongside a country filter. It also sends `show=tz` and `lang=en-US`.
+  - Queries under 2 characters return `[]` without calling HERE.
+  - Results without a position (chain or category query suggestions) are skipped.
+  - Labels drop ", United States" ("Dallas, TX"), and `timeZone.name` gives the IANA zone.
+  - HTTP failures raise `GeocodingUnavailable`.
+- Checked in HERE's docs: `show=tz` works on every Geocoding & Search endpoint except
+  `/autocomplete`, so it works with Autosuggest.
+- Verified (12 tests, respx): "dall" gives Dallas, TX first with coordinates and
+  `America/Chicago`; request parameters; skipped query items; a missing time zone becomes
+  `None`; a short query makes no call; HTTP 401/429/503 and malformed bodies are handled.
+- **Not verified against the live API** (no key). The fixture is synthetic, shaped to HERE's
+  documented response.
 
 ### SPOT-34 · Open-Meteo forecast adapter
 
