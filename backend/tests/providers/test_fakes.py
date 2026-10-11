@@ -171,3 +171,21 @@ class TestRegistry:
             pytest.raises(ImproperlyConfigured),
         ):
             get_providers()
+
+
+class TestRealRegistry:
+    def test_real_mode_uses_here_and_open_meteo(self) -> None:
+        with override_settings(PROVIDERS="real", HERE_API_KEY="k"):
+            providers = get_providers()
+
+        assert not providers.demo
+        assert type(providers.routing).__name__ == "HereRouting"
+        assert type(providers.weather).__name__ == "OpenMeteoWeather"
+        assert type(providers.geocoder).__name__ == "HereGeocoder"
+
+    def test_real_mode_without_key(self) -> None:
+        with (
+            override_settings(PROVIDERS="real", HERE_API_KEY=""),
+            pytest.raises(ImproperlyConfigured, match="HERE_API_KEY"),
+        ):
+            get_providers()

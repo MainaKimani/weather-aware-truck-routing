@@ -47,7 +47,7 @@ link to their sections instead of repeating them.
 | SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | In review |
-| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | To do     |
+| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | In review |
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | To do     |
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | To do     |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | To do     |
@@ -862,23 +862,48 @@ Spec: RFC §5.1.
 
 ### SPOT-34 · Open-Meteo forecast adapter
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-30 |
 
 Spec: RFC §5.2, §6.3.
 
 **Sub-tasks**
-- [ ] Multi-location requests, ≤ 100 locations per batch, metric units, `unixtime`.
-- [ ] Parse to `Forecast` per hour: gust/sustained mph, rain = rain + showers in/hr, snow in/hr.
-- [ ] `null`/`NaN` → missing; out-of-range hours → missing.
+- [x] Multi-location requests, ≤ 100 locations per batch, metric units, `unixtime`.
+- [x] Parse to `Forecast` per hour: gust/sustained mph, rain = rain + showers in/hr, snow in/hr.
+- [x] `null`/`NaN` → missing; out-of-range hours → missing.
 
 **Acceptance criteria**
 - Units converted only via `units.py` (asserted by a test on a fixture with known values).
 - A fixture with a `null` gust gives `UNKNOWN` downstream, never Low.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `providers/open_meteo.py`.
+  - Requests: `OpenMeteoWeather.hourly(points, start, hours)` batches at most 100 locations
+    per request and runs batches in parallel (8 workers). Each request asks for wind, gusts,
+    rain, showers, snowfall and weather code in km/h, mm and cm, with unixtime, GMT and
+    `start_hour`/`end_hour`.
+  - Parsing: `parse_forecasts` accepts a list or a single object (one location comes back
+    without the list).
+    - It checks `hourly_units` before converting with `units.py`.
+    - Rain is rain + showers, and is missing if either is missing.
+    - Null, NaN and boolean values, and hours outside the response, become missing, so they
+      rate Unknown.
+  - The `real` providers branch in the registry is now wired: HERE routing, HERE geocoder and
+    Open-Meteo, needing `HERE_API_KEY`.
+- Checked against the live API (no key needed):
+  - Snowfall comes back in **cm** even with `precipitation_unit=mm`, so it's converted with
+    `cm_to_in`.
+  - Several locations return a JSON array; one location returns a plain object.
+  - Errors are HTTP 400 `{"error": true, "reason": …}`.
+- Verified (15 tests on a **recorded** 3-point fixture):
+  - Unit conversion against known values (80.4672 km/h → 50 mph, 12.7 mm → 0.5 in,
+    5.08 cm → 2 in), and a structural test that no conversion factor appears outside
+    `units.py`.
+  - A null gust rates Unknown, never Low; hours beyond the response are missing.
+  - Changed units fail loudly, and a wrong location count is an error.
+  - 250 points go out as batches of 100, 100 and 50, kept in order.
+  - Live run: 120 points × 49 h in 1.2 s, with every point-hour rated.
 
 ### SPOT-35 · Forecast cache
 

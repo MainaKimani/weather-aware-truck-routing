@@ -8,6 +8,9 @@ from django.core.exceptions import ImproperlyConfigured
 
 from planner.providers.base import Geocoder, RoutingProvider, WeatherProvider
 from planner.providers.fakes import FakeGeocoder, FakeRouting, FakeWeather, Scenario
+from planner.providers.here import HereRouting
+from planner.providers.here_geocoder import HereGeocoder
+from planner.providers.open_meteo import OpenMeteoWeather
 
 
 @dataclass(frozen=True)
@@ -28,5 +31,8 @@ def get_providers() -> Providers:
             FakeRouting(), FakeWeather(cast(Scenario, scenario)), FakeGeocoder(), demo=True
         )
     if mode == "real":
-        raise ImproperlyConfigured("Real providers are added in SPOT-31, SPOT-33 and SPOT-34.")
+        key = settings.HERE_API_KEY
+        if not key:
+            raise ImproperlyConfigured("PROVIDERS=real needs HERE_API_KEY")
+        return Providers(HereRouting(key), OpenMeteoWeather(), HereGeocoder(key), demo=False)
     raise ImproperlyConfigured(f"PROVIDERS must be fake or real, not {mode!r}")
