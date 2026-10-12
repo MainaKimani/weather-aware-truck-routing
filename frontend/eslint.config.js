@@ -1,4 +1,5 @@
 import js from '@eslint/js'
+import pluginQuery from '@tanstack/eslint-plugin-query'
 import prettier from 'eslint-config-prettier'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
@@ -7,13 +8,14 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig([
-  globalIgnores(['dist', 'src/api/schema.d.ts']),
+  globalIgnores(['dist', 'src/api/schema.ts']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,
       tseslint.configs.strictTypeChecked,
       reactHooks.configs.flat.recommended,
+      pluginQuery.configs['flat/recommended'],
       reactRefresh.configs.vite,
       prettier,
     ],

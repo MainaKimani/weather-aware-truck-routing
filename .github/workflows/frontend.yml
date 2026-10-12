@@ -22,6 +22,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: API types match backend/openapi.yaml
+        run: npm run gen:api:check
       - name: eslint
         run: npm run lint
       - name: prettier

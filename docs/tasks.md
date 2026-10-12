@@ -26,80 +26,112 @@ link to their sections instead of repeating them.
 
 ## Board
 
-| ID       | Task                                              | Epic                 | Effort         | Pri | Status    |
-| -------- | ------------------------------------------------- | -------------------- | -------------- | --- | --------- |
-| SPOT-1   | Assess brief, write PRD                           | E0 Planning          | Docs · 2       | P0  | Done      |
-| SPOT-2   | Write technical RFC                               | E0 Planning          | Docs · 3       | P0  | Done      |
-| SPOT-3   | Write UI prototype prompts (Lovable, AI Studio)   | E0 Planning          | Docs · 1       | P0  | Done      |
-| SPOT-4   | Build UI prototype in AI Studio and review        | E0 Planning          | Frontend · 2   | P0  | In review |
-| SPOT-10  | Monorepo scaffold and local dev                   | E1 Foundation        | DevOps · 2     | P0  | In review |
-| SPOT-11  | Quality gates (lint, types, pre-commit)           | E1 Foundation        | DevOps · 1     | P0  | Done      |
-| SPOT-12  | CI pipeline                                       | E1 Foundation        | DevOps · 2     | P0  | Done      |
-| SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done      |
-| SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
-| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done      |
-| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | Done      |
-| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | Done      |
-| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | Done      |
-| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | Done      |
-| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | Done      |
-| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | Done      |
-| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | Done      |
-| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | Blocked   |
-| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | Done      |
-| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | Done      |
-| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | Done      |
-| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done      |
-| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done      |
-| SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | In review |
-| SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | In review |
-| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress|
-| SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | In review |
-| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | In progress|
-| SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | In review |
-| SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | In review |
-| SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | To do     |
-| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | To do     |
-| SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | To do     |
-| SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | To do     |
-| SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | To do     |
-| SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | To do     |
-| SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | To do     |
-| SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | To do     |
-| SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | To do     |
-| SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | To do     |
-| SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | To do     |
-| SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | To do     |
-| SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | To do     |
-| SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | To do     |
-| SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | To do     |
-| SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | To do     |
-| SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | To do     |
-| SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | To do     |
-| SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | To do     |
-| SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | To do     |
-| SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do     |
-| SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do     |
-| SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do     |
-| SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | To do     |
-| SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | To do     |
-| SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | To do     |
-| SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | To do     |
-| SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | To do     |
-| SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | To do     |
-| SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | To do     |
-| SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | To do     |
-| SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | To do     |
-| SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | To do     |
-| SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do     |
-| SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do     |
-| SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do     |
-| SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | To do     |
-| SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | To do     |
-| SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do     |
-| SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do     |
+| ID       | Task                                              | Epic                 | Effort         | Pri | Status      |
+| -------- | ------------------------------------------------- | -------------------- | -------------- | --- | ----------- |
+| SPOT-1   | Assess brief, write PRD                           | E0 Planning          | Docs · 2       | P0  | Done        |
+| SPOT-2   | Write technical RFC                               | E0 Planning          | Docs · 3       | P0  | Done        |
+| SPOT-3   | Write UI prototype prompts (Lovable, AI Studio)   | E0 Planning          | Docs · 1       | P0  | Done        |
+| SPOT-4   | Build UI prototype in AI Studio and review        | E0 Planning          | Frontend · 2   | P0  | Done        |
+| SPOT-10  | Monorepo scaffold and local dev                   | E1 Foundation        | DevOps · 2     | P0  | Done        |
+| SPOT-11  | Quality gates (lint, types, pre-commit)           | E1 Foundation        | DevOps · 1     | P0  | Done        |
+| SPOT-12  | CI pipeline                                       | E1 Foundation        | DevOps · 2     | P0  | Done        |
+| SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done        |
+| SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done        |
+| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done        |
+| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | Done        |
+| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | Done        |
+| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | Done        |
+| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | Done        |
+| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | Done        |
+| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | Done        |
+| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | Done        |
+| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | Blocked     |
+| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | Done        |
+| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | Done        |
+| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | Done        |
+| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done        |
+| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
+| SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
+| SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
+| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress |
+| SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | Done        |
+| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | Done        |
+| SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | Done        |
+| SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | Done        |
+| SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | Done        |
+| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | In progress |
+| SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | Done        |
+| SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | Done        |
+| SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | Done        |
+| SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | Done        |
+| SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | Done        |
+| SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | To do       |
+| SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | To do       |
+| SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | To do       |
+| SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | To do       |
+| SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | To do       |
+| SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | To do       |
+| SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | To do       |
+| SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | To do       |
+| SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | To do       |
+| SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | To do       |
+| SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | To do       |
+| SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | To do       |
+| SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | To do       |
+| SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do       |
+| SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do       |
+| SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do       |
+| SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | To do       |
+| SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
+| SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | To do       |
+| SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
+| SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | To do       |
+| SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | To do       |
+| SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | To do       |
+| SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | To do       |
+| SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | To do       |
+| SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | To do       |
+| SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
+| SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
+| SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do       |
+| SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
+| SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | To do       |
+| SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
+| SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do       |
 
-**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 3 (6 points).
+**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 29 (60 points).
+
+## Open items
+
+Everything skipped, blocked or handed on, in one place. Each item is also in the progress log
+of the task it came from, and as a sub-task on the task that will pick it up. Remove an item
+here when that task closes it.
+
+**Blocked**
+- **SPOT-31 (and SPOT-33's live check): no HERE API key.** Both adapters pass against
+  synthetic fixtures shaped to HERE's documented responses; neither has made a real request.
+  Needs the PRD Q3 decision (HERE's Base Plan needs a card; free allowance unconfirmed), then
+  a key in `HERE_API_KEY` and one real Dallas → Denver request.
+
+**Waiting on the owner**
+- PRD Q3: paid routing tier (see Blocked).
+
+**Branch housekeeping**
+- `dev-frontend` is behind `main`; merge `main` into it before frontend work starts.
+
+**Carried over to a later task**
+
+| From | What's left | Picked up in |
+|---|---|---|
+| SPOT-41 | Plan response has no `trip_id`; plans aren't saved. Add it (and `Idempotency-Key`), then `make schema`. | SPOT-111 |
+| SPOT-42 | `GET /api/v1/trips/{id}/heatmap`: store the grid as `TripHeatmap`, same access as the trip, `heatmap` throttle scope. | SPOT-42, once trips exist (SPOT-111) |
+| SPOT-45 | Guest plan throttle counts by IP only; count by session `guest_id` too. | SPOT-112 |
+| SPOT-45 | Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite + host); point host checks at `/healthz` and `/readyz`. | SPOT-100 |
+| SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
+| SPOT-10 | Choose a licence. | SPOT-102 |
+| SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
+| SPOT-51 | Dependent heatmap query (starts after the plan resolves); the endpoint and its schema don't exist yet. | SPOT-51, once SPOT-42's endpoint lands |
+| SPOT-50 | Nothing calls `/api/v1/healthz` any more (hosts use `/healthz`); remove the route and its test. | Next backend change |
 
 ## Epics
 
@@ -201,7 +233,7 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | In review | SPOT-3 |
+| Frontend · 2 | P0 | Done | SPOT-3 |
 
 **Sub-tasks**
 - [x] Run `docs/ai-studio-prompt.md` in AI Studio (Build); fix weak areas with the prompts in
@@ -210,7 +242,7 @@ after every P0 in E9 is done.
   including guest vs signed-in header, login/sign-up, My trips and the trip page.
 - [x] Decide what to keep: layout, components, tokens. Record changes to the PRD/RFC if the
   design changes a requirement.
-- [ ] Download the AI Studio project (or push it to GitHub) for reference in SPOT-50.
+- [x] Download the AI Studio project (or push it to GitHub) for reference in SPOT-50.
 
 **Acceptance criteria**
 - An agreed visual design exists for every state in PRD §9.
@@ -225,6 +257,7 @@ after every P0 in E9 is done.
   The biggest is that the heatmap must be the RFC §8 corridor grid, not blurred blobs. No
   requirement changes, so the PRD is unchanged.
 - Left: owner to agree the review, and export the AI Studio project for reference in SPOT-50.
+- 2026-10-12: Done at the owner's call. The optional AI Studio export moves to SPOT-50.
 
 ---
 
@@ -234,7 +267,7 @@ after every P0 in E9 is done.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 2 | P0 | In review | — |
+| DevOps · 2 | P0 | Done | — |
 
 **Sub-tasks**
 - [x] `git init`, `.gitignore`, `.editorconfig`, licence. _(licence pending owner's choice)_
@@ -263,6 +296,7 @@ after every P0 in E9 is done.
   defaults to in-memory SQLite until SPOT-14 adds the custom user model.
 - Left: choose a licence; run `make up` once on a machine with Docker.
 - 2026-10-11: `make fmt` added by SPOT-11.
+- 2026-10-12: Done. The licence moves to SPOT-102 and the Docker `make up` check to SPOT-100.
 
 ### SPOT-11 · Quality gates (lint, types, pre-commit)
 
@@ -307,7 +341,7 @@ after every P0 in E9 is done.
 - [x] GitHub Actions: backend job (ruff, mypy, pytest with coverage), frontend job (eslint,
   tsc, vitest, build).
 - [x] Dependency audit job (`pip-audit`, `npm audit --audit-level=high`).
-- [ ] OpenAPI drift check (added in SPOT-44). _(waits for SPOT-44)_
+- [x] OpenAPI drift check (added in SPOT-44). _(a pytest that CI runs: `tests/api/test_openapi.py`)_
 - [x] Cache dependencies; run on push and PR.
 
 **Acceptance criteria**
@@ -1025,7 +1059,7 @@ Spec: RFC §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | In review | SPOT-21–26, SPOT-32, SPOT-35 |
+| Backend · 3 | P0 | Done | SPOT-21–26, SPOT-32, SPOT-35 |
 
 **Sub-tasks**
 - [x] `plan_trip(request)`: routes → checkpoints → ETAs (+ HOS) → forecasts (one batched call
@@ -1073,12 +1107,13 @@ Spec: RFC §18.3.
   - Missing forecasts are Unknown with a warning; ETAs read the hour being driven through;
     the strong scenario ranks Route B last as not drivable.
 - `tests/conftest.py` now clears the cache around every test (it was local to the cache tests).
+- 2026-10-12: Done; lands with the API PR into `dev-backend`.
 
 ### SPOT-41 · `POST /api/v1/plans` endpoint
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | In review | SPOT-40 |
+| Backend · 2 | P0 | Done | SPOT-40 |
 
 Spec: RFC §7.2, §11.
 
@@ -1129,6 +1164,7 @@ Spec: RFC §7.2, §11.
   - `no_route` → 422, `routing_unavailable` and `weather_unavailable` → 502.
   - The demo response's shape and geometry round trip.
   - The demo plan is 44 KB of JSON, 6.6 KB gzipped.
+- 2026-10-12: Done; lands with the API PR into `dev-backend`.
 
 ### SPOT-42 · Corridor grid and heatmap endpoint
 
@@ -1187,7 +1223,7 @@ Spec: RFC §7.3, §8.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | In review | SPOT-33 |
+| Backend · 1 | P0 | Done | SPOT-33 |
 
 **Sub-tasks**
 - [x] `GET /api/v1/geocode/suggest?q=`; min 2 characters; 24 h cache.
@@ -1209,17 +1245,18 @@ Spec: RFC §7.3, §8.
   "", "d", " d " and whitespace return `[]` with no provider call. "Den", "  den " and "DEN"
   make one provider call. No matches is `[]`. A failure is 502 and the next request retries.
   The cache TTL is 24 h, and keys are ASCII for any input.
+- 2026-10-12: Done; lands with the API PR into `dev-backend`.
 
 ### SPOT-44 · OpenAPI schema and TS type generation
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 1 | P0 | In progress | SPOT-41 |
+| Full stack · 1 | P0 | Done | SPOT-41 |
 
 **Sub-tasks**
 - [x] drf-spectacular schema at `/api/v1/schema`; committed `openapi.yaml`.
-- [ ] `openapi-typescript` generates `frontend/src/api/schema.d.ts`.
-- [ ] CI fails if the committed schema or generated types are out of date.
+- [x] `openapi-typescript` generates `frontend/src/api/schema.ts`.
+- [x] CI fails if the committed schema or generated types are out of date.
 
 **Acceptance criteria**
 - Renaming a response field without regenerating fails CI.
@@ -1249,12 +1286,30 @@ Spec: RFC §7.3, §8.
   `frontend/src/api/schema.d.ts` from `backend/openapi.yaml`, and fail CI when it's stale.
   Also add `backend/openapi.yaml` to the frontend's change filter in `ci.yml`, so a schema
   change runs the frontend job.
+- 2026-10-12: frontend half done, on `dev-frontend`.
+  - `npm run gen:api` runs `openapi-typescript` on `backend/openapi.yaml` and writes
+    `frontend/src/api/schema.ts`: path and component types, named root types (`Plan`, `Route`,
+    `Checkpoint`, …) and a values array for every enum (`riskLevelEnumValues`, …), so UI lists
+    such as the legend come from the contract.
+  - The generated file is excluded from eslint and prettier.
+  - **CI:** the frontend job runs `npm run gen:api:check`, which regenerates the file and fails
+    if it is untracked or differs from the committed one. `ci.yml` runs the frontend job when
+    `backend/openapi.yaml` changes, so a backend contract change can't skip the check.
+- Decisions:
+  - The output is `schema.ts`, not `schema.d.ts`: enum value arrays are runtime constants, and
+    a declaration file can't provide values at runtime.
+  - `openapi-typescript` 7.13 (latest) declares a TypeScript 5 peer. The project is on
+    TypeScript 6, so `package.json` has an `overrides` entry for that one package rather than
+    installing everything with `--legacy-peer-deps`. Its output type-checks under the project's
+    strict config.
+- Verified: the check fails when the file is untracked, and when the schema changes (a
+  renamed enum value) without regenerating; it passes once regenerated and committed.
 
 ### SPOT-45 · Security settings, throttling, health checks
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | In review | SPOT-41 |
+| Backend · 2 | P0 | Done | SPOT-41 |
 
 Spec: RFC §12, §18.3.
 
@@ -1310,12 +1365,13 @@ Spec: RFC §12, §18.3.
     HSTS and proxy header.
 - Left: point the host's health checks at `/healthz` and `/readyz` and set `NUM_PROXIES` for
   its proxy chain (SPOT-100/101).
+- 2026-10-12: Done; lands with the API PR into `dev-backend`.
 
 ### SPOT-46 · Structured logging and request ids
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | In review | SPOT-40 |
+| Backend · 1 | P0 | Done | SPOT-40 |
 
 **Sub-tasks**
 - [x] JSON logs; request id middleware; `X-Request-ID` response header.
@@ -1358,6 +1414,7 @@ Spec: RFC §12, §18.3.
     replaced. Ids are unique per request, and the context resets afterwards.
   - A failed provider call logs WARNING with status 503, 2 attempts and no query string.
   - JSON lines carry extras and tracebacks.
+- 2026-10-12: Done; lands with the API PR into `dev-backend`.
 
 ---
 
@@ -1367,30 +1424,72 @@ Spec: RFC §12, §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-4, SPOT-10 |
+| Frontend · 2 | P0 | Done | SPOT-4, SPOT-10 |
 
 **Sub-tasks**
-- [ ] Two-pane layout and header from the agreed design.
-- [ ] Tokens: risk palette, accent, spacing, type; light and dark themes.
-- [ ] `lib/risk.ts`: level → colour, label, score (single source for map and UI).
+- [x] Two-pane layout and header from the agreed design.
+- [x] Tokens: risk palette, accent, spacing, type; light and dark themes.
+- [x] `lib/risk.ts`: level → colour, label, score (single source for map and UI).
+- [x] Replace the placeholder page; drop its `/api/v1/healthz` call and that route, and the
+  task ids in its comments (carried over from the no-ids rule). _(frontend done; the backend
+  route goes in the next backend change, see Open items)_
+- [x] Export the AI Studio project for reference, if it helps (left over from SPOT-4).
+  _(not needed: design-review.md carried what the shell needed)_
 
 **Acceptance criteria**
 - Theme toggle switches every surface including map overlays.
 - Risk colours come only from `lib/risk.ts` (no hex codes elsewhere).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: app shell, tokens and themes.
+  - **Layout** (`features/shell`): header, a scrollable 400 px planner panel beside a
+    full-height map region, and the timeline bar, as the design review keeps them. Each has a
+    landmark with a name (banner, "Trip planner", main, "Forecast timeline"). On narrow
+    screens the map stacks above the panel.
+  - The placeholder page and its `/api/v1/healthz` call are gone; the panel shows the empty
+    state's explainer until the trip form lands.
+  - **Tokens** (`index.css`, Tailwind 4 `@theme`): semantic colours (`canvas`, `surface`,
+    `surface-raised`, `line`, `ink`, `muted`, `accent`, `focus`, `danger`) with light and dark
+    values, system font stacks, a mono stack, `.tabular` numbers, card radius, overlay shadow,
+    a visible focus ring, and reduced motion honoured.
+  - **Themes** (`lib/theme.ts`): a light/dark/system preference via `useSyncExternalStore`.
+    The OS setting is followed live until the user picks one, which is stored in
+    localStorage (and still applies if storage is blocked). An inline script in `index.html`
+    applies the theme before first paint, so there is no flash. `ThemeToggle` sits in the
+    header with an accessible name ("Switch to dark theme").
+  - **Risk** (`lib/risk.ts`): label, score (0–4, null for Unknown), fill and ink colour per
+    level, keyed by the generated `RiskLevelEnum`, so a new API level fails the type-check.
+    `riskStyle(null)` is Unknown, never Low. The colours reach CSS as `--risk-*` variables set
+    from this file at startup, so stylesheets and future map layers share one source.
+- Decisions:
+  - The palette is sequential, as RFC §10.6 asks: `#fed976`, `#fd8d3c`, `#e31a1c` and
+    `#800026` from ColorBrewer's colour-blind-safe YlOrRd, then near-black for No travel.
+    Unknown is a neutral grey outside the scale.
+  - No web font: system stacks avoid a font request and layout shift.
+  - The AI Studio export wasn't needed; the design review carried the layout.
+- Verified (16 tests):
+  - Every API level has a style, in order, with distinct colours; null and undefined are
+    Unknown; the CSS variables are applied.
+  - The theme follows the system, stores an explicit choice, forgets it on "system", ignores
+    system changes once chosen, and survives blocked storage.
+  - The shell has all four landmarks, icon controls have names, and the toggle switches
+    `<html data-theme>`, which every surface keys on.
+  - A palette guard fails if a risk colour, or any hex colour in a `.ts`/`.tsx` file, appears
+    outside `lib/risk.ts`; checked by planting one.
+  - Checked in Chrome: dark on first paint with a dark OS setting, light after toggling, no
+    console errors. Production build is 47.6 KB of JS gzipped.
+- Left: removing the backend's `/api/v1/healthz` route goes with the next backend change.
 
 ### SPOT-51 · API client, query layer and UI state
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-44 |
+| Frontend · 2 | P0 | In progress | SPOT-44 |
 
 **Sub-tasks**
-- [ ] Typed fetch client on generated types; error shape parsed into a typed error.
+- [x] Typed fetch client on generated types; error shape parsed into a typed error.
 - [ ] TanStack Query: plan mutation, dependent heatmap query (routing and session are SPOT-120).
-- [ ] UI store (selected route, hovered/selected checkpoint, layer toggles); slider hour in
+- [x] UI store (selected route, hovered/selected checkpoint, layer toggles); slider hour in
   its own context.
 
 **Acceptance criteria**
@@ -1398,7 +1497,68 @@ Spec: RFC §12, §18.3.
 - Changing the slider hour doesn't re-render the routes panel (checked with React Profiler).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: API client, query layer and UI stores; the heatmap query waits for its endpoint.
+  - **Client** (`api/client.ts`): `openapi-fetch` typed by the generated `paths`, with
+    same-origin credentials. A middleware sends `X-CSRFToken` from Django's `csrftoken` cookie
+    on unsafe methods. `fetch` is looked up per request, so wrappers (test servers,
+    monitoring) see every call.
+  - **Errors** (`api/errors.ts`): `unwrap()` turns every failure into one `ApiError` with
+    `code`, `message`, `status`, `fields` (dotted names), `requestId` (`X-Request-ID`),
+    `retryAfterS` and `transient`. A non-JSON proxy page is `server_error` with its status, a
+    rejected fetch is `network_error`, and an abort is rethrown untouched (checked by name, as
+    it can come from another realm's `DOMException`).
+  - **Queries** (`api/queryClient.ts`): retry once, and only transient failures (network,
+    502, 503), never 4xx, 422 or 429; no refetch on focus.
+  - **Plans** (`api/plans.ts`):
+    - `usePlanTrip().plan(request)` is a mutation with one `Idempotency-Key` per submission,
+      reused by its automatic retry.
+    - On success it writes the plan to `['plan', 'current']` (becomes `['trips', id]` once
+      plans are saved) and selects the recommended route.
+    - `usePlan(select)` reads the cache with `skipToken`, so each component subscribes only to
+      its slice; TanStack's structural sharing keeps unchanged slices referentially equal.
+  - **Places** (`api/places.ts`): `usePlaceSuggestions(q)` normalises like the backend, skips
+    queries under 2 characters, caches for 24 h, cancels superseded requests and keeps the last
+    results while loading. Debouncing is the form's job (SPOT-60).
+  - **UI state** (`state/ui.ts`, Zustand): selected/hovered route and checkpoint plus layer
+    toggles. Selecting a checkpoint selects its route; a new plan resets pointers and keeps
+    layer choices.
+  - **Timeline** (`state/timeline.ts`): a separate store for the hour (0–48, clamped,
+    whole) and play state. The map layer can subscribe outside React and only set a paint
+    property (RFC §10.4).
+  - Providers with a per-test query client. TanStack Query devtools are dev-only and lazy,
+    absent from the production build. `@tanstack/eslint-plugin-query` is enabled.
+  - To exercise all this before the trip form exists, the empty state has "Plan the demo
+    trip: Dallas → Denver", with the design's "Evaluating weather corridors…" pending label
+    and an error panel (message, request id, Try again). There is also a "Demo data" header
+    badge, a placeholder routes list (name, label, recommended, worst level, selection) and a
+    minimal hour slider. Route cards (SPOT-62) and the timeline (SPOT-81) replace the
+    placeholders.
+- Decisions:
+  - Zustand for UI state, with two stores rather than a context: selector subscriptions
+    isolate re-renders, and the map can subscribe without React. RFC §10.2 allows it.
+  - The plan is a mutation whose result goes into the query cache, rather than read from
+    mutation state, so readers subscribe by slice and the same hooks serve saved trips later.
+- Verified (45 tests, MSW at the network boundary, real fixture from the backend's demo plan
+  typed `satisfies Plan`):
+  - **Errors:** 400 with field messages and request id; 422/502 codes and transience; 429
+    `Retry-After`; non-JSON 502; network failure; abort.
+  - **CSRF** is sent on POST and not on GET.
+  - **Idempotency:** one key per submission, reused on a 502 retry, new for the next
+    submission. No retry on 400/422/429.
+  - **Cache:** the plan lands in the cache and the recommended route is selected.
+    Suggestions skip short queries, normalise, and hit the cache on repeat.
+  - **Stores:** the clamps and resets behave.
+  - **App flow:** routes, reason and badge; selection; an error with request id, then Try
+    again recovers.
+  - **Isolation** (React Profiler): seven hour changes commit the slider seven times and the
+    routes panel zero times. A planted hour subscription in the panel fails the test.
+    Selecting a route is one commit, and hovering a checkpoint is none.
+  - **In Chrome against the real backend** (fake providers, via the Vite proxy): Route A
+    recommended, "Fewest severe miles (0 vs 100)", demo badge, risk chips, no console errors.
+  - The production bundle is 62.8 KB of JS gzipped (TanStack Query is most of the increase).
+- Left: the dependent heatmap query, and its criterion "heatmap request starts only after the
+  plan resolves". The endpoint doesn't exist until trips do (SPOT-42), and it isn't in the
+  schema to type against.
 
 ---
 
@@ -1408,98 +1568,279 @@ Spec: RFC §12, §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P0 | To do | SPOT-51, SPOT-43 |
+| Frontend · 3 | P0 | Done | SPOT-51, SPOT-43 |
 
 Spec: PRD §7.1.
 
 **Sub-tasks**
-- [ ] Origin/destination comboboxes (250 ms debounce, keyboard navigation, swap button).
-- [ ] Departure picker in the origin's time zone; > 48 h note.
-- [ ] Load weight with thousands separators; interval segmented control.
-- [ ] zod schema mirroring server validation; server field errors shown inline.
+- [x] Origin/destination comboboxes (250 ms debounce, keyboard navigation, swap button).
+- [x] Departure picker in the origin's time zone; > 48 h note.
+- [x] Load weight with thousands separators; interval segmented control.
+- [x] zod schema mirroring server validation; server field errors shown inline.
 
 **Acceptance criteria**
 - Every server validation rule also fails client-side with the same message.
 - Form is fully usable by keyboard.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip form (`features/trip-form`).
+  - **Form state:** React Hook Form with a Zod schema. Validation runs on submit, then on
+    change.
+  - **Rules** (`rules.ts`) mirror the API serializers rule for rule and word for word:
+    required fields, pick a suggestion, places more than a mile apart, departure within 15 min
+    ago to 7 days ahead, and load a whole number from 1 to 80,000. Errors the server still
+    finds land on the same fields (`formFieldFor` maps `origin.lat` → origin and so on).
+    Anything unmapped shows as a form-level alert.
+  - **Origin and destination:** `PlaceCombobox`, an ARIA 1.2 combobox built on `downshift`:
+    arrows, Enter, Escape, active descendant. Input is debounced 250 ms into
+    `usePlaceSuggestions`. It shows "Searching…", "No matches" or "Place search is unavailable"
+    in the list. Typing after picking clears the coordinates, so the label and position always
+    agree. The origin shows its IANA zone, and a swap button exchanges the two.
+  - **Departure:** a `datetime-local` input on the origin's clock (the browser's until an
+    origin is picked), with the zone abbreviation (CDT). It defaults to the next whole hour,
+    and adds a lower-confidence note beyond 48 h.
+  - **Time zones:** `lib/time.ts` converts between that wall-clock time and UTC with Intl
+    only. In the spring gap it reads forward; in the autumn overlap it takes the first
+    occurrence.
+  - **Load and interval:** load accepts separators and reformats to `42,000` on blur, with
+    the 30,000/40,000 lb hint from the design. The interval is a segmented radio group.
+  - **Submit** shows "Evaluating weather corridors…" while pending. On success the form
+    collapses to a one-line summary ("Dallas, TX → Denver, CO · Mon 06:00 CDT · 42,000 lb ·
+    every 25 mi") with Edit trip.
+  - "Use the demo trip" fills Dallas → Denver, 42,000 lb, next hour; it replaces the
+    temporary demo button.
+- Decisions:
+  - Places are stored as `{text, place}`, so the form can tell "nothing typed" (the API's
+    "This field is required.") from "typed but not picked" ("Choose a place from the
+    suggestions.", client-only because the API never sees text without coordinates).
+  - No date library: Intl covers zone conversion, and 18 tests pin it down.
+- Found in Chrome and fixed: typed text now reaches the form in the input's own `onChange`.
+  Through downshift's `onInputValueChange`, which runs after render, React reset the
+  controlled input between keystrokes, so fast typing dropped characters ("dal" became "l").
+  A regression test fires key events faster than effects can run.
+- Verified (39 new tests, 91 total):
+  - Every rule fails with the API's message (11 cases). Valid edges pass (1, 80,000,
+    `42 000`, 15 min ago).
+  - The departure is read on the origin's clock (Denver 06:00 → 12:00Z, Dallas → 11:00Z).
+  - Zone conversion: six zones including half-hour Kolkata, both DST transitions, and every
+    hour of 2026 round-tripping in five zones including Lord Howe's 30-minute DST.
+  - The form, through user events and MSW: a keyboard-only plan sends exactly the expected
+    body; empty submit shows three "This field is required." messages and sends nothing.
+    Typed-not-picked, typing after picking, no matches, search down, swap, the 48 h note,
+    server field errors placed inline, collapse and Edit, and a non-field error with retry
+    are all covered.
 
 ### SPOT-61 · Hours of Service fields
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P1 | To do | SPOT-60 |
+| Frontend · 2 | P1 | Done | SPOT-60 |
 
 Spec: PRD §7.3.1.
 
 **Sub-tasks**
-- [ ] Toggle (off by default) revealing cycle select and four ELD-style clocks (`hh:mm`).
-- [ ] Cross-field validation (Drive ≤ Shift, Drive ≤ Cycle); cycle max follows the cycle type.
-- [ ] "How is this calculated?" popover listing rules and simplifications.
+- [x] Toggle (off by default) revealing cycle select and four ELD-style clocks (`hh:mm`).
+- [x] Cross-field validation (Drive ≤ Shift, Drive ≤ Cycle); cycle max follows the cycle type.
+- [x] "How is this calculated?" popover listing rules and simplifications.
 
 **Acceptance criteria**
 - With the toggle off, no HOS fields are sent (`{"enabled": false}`).
 - Switching to 60 h / 7 days clamps a 70 h cycle value with a visible message.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: Hours of Service fields (`features/trip-form/HosFields.tsx`, `hos.ts`).
+  - **Toggle:** a `role="switch"` toggle, off by default. With it off the clocks are hidden and
+    the request carries only `hos: {enabled: false}`.
+  - **Fields:** a cycle select (70 h / 8 days, 60 h / 7 days) and the four ELD clocks as
+    `hh:mm` (drive, shift, until break, cycle), each with its maximum ("of 11:00"). Defaults
+    are a rested driver.
+  - **Rules** mirror the API's HOS serializer and its messages: each clock ≤ its limit, the
+    cycle limit following the cycle, drive ≤ min(shift, cycle), and required when on. A
+    malformed clock gets "Enter hours and minutes, like 10:30." (client-only, since the API
+    takes decimal hours).
+  - **Request:** clocks are sent as decimal-hour strings with two decimals ("10.33"), the
+    API's `DecimalField` format, so no float rounding on the wire.
+  - **Cycle switch:** switching to 60 h / 7 days caps a cycle value over 60:00 and says so
+    in a status message ("Cycle time capped at 60:00, …"). A value that fits is left alone.
+  - **"How is this calculated?"** is a disclosure listing the rules and the four
+    simplifications from the PRD.
+  - Server errors on `hos.*` land on their clock. The collapsed summary says "HOS on".
+- Decision: `hh:mm` becomes hours with two decimals, so a clock can be up to 18 s off (10:20 →
+  10.33 h → 10 h 19 m 48 s). That's within any ELD reading's precision, and the API takes only
+  two decimals.
+- Verified (31 new tests, 122 total):
+  - Clock parsing and formatting (valid and invalid forms), and the hour conversion.
+  - Every HOS rule with the API's message (9 cases); nothing is checked with HOS off.
+  - The request block and the error routing.
+  - Through the form: off sends `{enabled: false}` with the clocks hidden; on sends all four
+    in hours. Drive over shift blocks submit and marks the drive clock invalid. The 60 h
+    switch caps 70:00 with a visible status but leaves 52:30. A server `hos.until_break_h`
+    error lands on its clock, and the explainer opens.
 
 ### SPOT-62 · Route cards and recommendation
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P0 | To do | SPOT-51 |
+| Frontend · 3 | P0 | Done | SPOT-51 |
 
 **Sub-tasks**
-- [ ] Ranked cards: badge and reason, distance, drive time, arrival with zone, average risk,
+- [x] Ranked cards: badge and reason, distance, drive time, arrival with zone, average risk,
   worst level pill, stacked miles-by-level bar with tooltips.
-- [ ] Not drivable tag; no-safe-route alert; warnings banner; stale forecast banner.
-- [ ] HOS summary and expandable stop list when HOS is on.
-- [ ] Card ↔ map selection and hover sync.
+- [x] Not drivable tag; no-safe-route alert; warnings banner; stale forecast banner.
+- [x] HOS summary and expandable stop list when HOS is on.
+- [x] Card ↔ map selection and hover sync.
 
 **Acceptance criteria**
 - Every number on a card matches the API response (component tests on the demo fixture).
 - Selecting a card selects the route on the map and vice versa.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: route cards (`features/routes-panel`), replacing the placeholder list.
+  - **Cards** are in rank order. Each shows "Route A · via Amarillo", the Recommended or Not
+    drivable badges, and the reason on the recommended card. Its stats are distance, drive
+    time, arrival in the destination's zone ("Mon 23:53 MDT"), average risk "x / 4.0" ("No
+    data" when all Unknown), and the worst level as a coloured pill with its mile.
+  - **Risk strip** (design review fix 2): each checkpoint's owned miles, in order along the
+    route, in its level's colour, with a hover title per stretch. A text line and the
+    accessible name give the miles by level ("655 mi Low · 75 mi Moderate · …").
+  - **HOS on:** "Trip 22 h 14 min (incl. 1 break, 1 rest)" opens to the stops with kind,
+    length in its natural unit ("Rest 10 h", "Break 30 min", design review fix 6), mile, start
+    time on the origin's clock and the rule that caused it. The panel says "ETAs include Hours
+    of Service stops."
+  - **Plan notices:**
+    - "No safe route right now" (an alert) when nothing is recommended.
+    - A stale-forecast status with the forecast's age.
+    - Warnings, naming their route.
+  - **Sync:** cards read and write selection and hover through the UI store (click, hover,
+    keyboard focus), so the map will need no extra wiring. Each card is memoised and subscribes
+    only to its own selected and hovered state.
+  - `lib/format.ts` is the single place for miles, durations, stop lengths, clock times with
+    zone, average risk, forecast age and weather values. A missing value reads "No data",
+    never blank or zero.
+- Decisions:
+  - The design's "stacked miles-by-level bar" became a positional strip with the totals as
+    text: it shows where the risk is as well as how much, and the design review asked for
+    per-span colour.
+  - Arrival is on the destination's clock and HOS stops on the origin's, each with its zone
+    abbreviation, so mixed zones are never ambiguous.
+- Verified (23 new tests, 145 total), using two real backend fixtures: the demo plan, and a
+  strong storm with HOS on (Route B not drivable, a break and a rest per route).
+  - **Numbers:** every distance, drive time, arrival, average risk and worst level on every
+    card equals the fixture's value through the formatters. "742 mi", "11 h 44 min" and
+    "0.00 / 4.0" are also checked literally.
+  - **Ordering:** cards follow rank, with one Recommended badge.
+  - **Strip:** one segment per checkpoint, widths summing to 100%, and an accessible
+    summary.
+  - **States:** Not drivable only on Route B; HOS summary and stops with "Rest 10 h" and
+    never "600 min"; the no-safe-route alert; stale age and route-named warnings.
+  - **Sync:** card click → store, store → card (as the map will), hover set and cleared.
+  - Formatters: 13 cases.
+- Left: the map side of "selecting a card selects the route on the map and vice versa" is
+  SPOT-71's, which now has a sub-task to use the same store.
 
 ### SPOT-63 · Checkpoint table
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-62 |
+| Frontend · 2 | P0 | Done | SPOT-62 |
 
 **Sub-tasks**
-- [ ] Table for the selected route: mile, ETA, gust, rain, snow, level.
-- [ ] Row click flies the map to the checkpoint and opens its popup.
+- [x] Table for the selected route: mile, ETA, gust, rain, snow, level.
+- [x] Row click flies the map to the checkpoint and opens its popup.
 
 **Acceptance criteria**
 - Long routes (200+ rows) scroll smoothly (virtualised if needed).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: checkpoint table (`features/checkpoints/CheckpointTable.tsx`), below the cards.
+  - **Content:** the selected route's checkpoints with mile, ETA on the origin's clock
+    ("Mon 07:04 CDT"), wind as sustained / gust in mph (sustained for information, design
+    review fix 10), rain and snow per hour, and the level chip with the condition that set
+    it ("Severe gusts"). A "· load" mark explains a level raised by the load rule.
+  - **Missing data:** a missing forecast reads "No data" in every column and Unknown in grey,
+    never Low or blank.
+  - **Selection:** a row click, or Enter/Space on a focused row, sets `selectedCheckpoint` in
+    the UI store (and `aria-selected`). Hover sets `hoveredCheckpoint`. The map will follow
+    both.
+  - **Virtualisation:** `@tanstack/react-virtual` with fixed 36 px rows in a 360 px viewport.
+    Spacer rows above and below the rendered window keep it a native `<table>`, and
+    `aria-rowcount` / `aria-rowindex` tell assistive technology where each row sits.
+- Decisions:
+  - It's always virtualised rather than above a threshold: one code path, and at 10 mi
+    spacing a cross-country route has 300+ rows.
+  - It sits below the cards, not inside the selected card, so the cards stay comparable at a
+    glance.
+- Found in Chrome and fixed: at the panel's 400 px the table needed sideways scrolling. The
+  zone moved into the ETA heading (a row shows its own zone only where it differs, such as
+  across a DST change), and the deciding condition sits under the level chip. Both tested.
+- Verified (7 tests, 152 total):
+  - Nothing renders until a route is selected. Row cells equal the fixture's values
+    (mile, ETA, sustained / gust, rain, snow, level and driver), and the table follows the
+    selection.
+  - A null forecast gives "No data" ×3 and Unknown. The load-rule mark shows.
+  - Click and Enter select, moving `aria-selected`.
+  - A 300-checkpoint route renders fewer than 40 rows with `aria-rowcount` 301. After
+    scrolling to row 200, row 200 is rendered and row 1 isn't.
+  - jsdom does no layout, so `test/layout.ts` gives scroll containers their inline height in
+    these tests. Real scrolling is checked in Chrome with the batch.
+- Left: flying the map to the selected checkpoint is SPOT-72's, which now has a sub-task to
+  follow the same store.
 
 ### SPOT-64 · Empty, loading, partial and error states
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-62 |
+| Frontend · 2 | P0 | Done | SPOT-62 |
 
 Spec: PRD §9, RFC §11.
 
 **Sub-tasks**
-- [ ] Empty state with explainer; skeletons for routes; heatmap fade-in.
-- [ ] Partial results (< 3 routes, Unknown checkpoints), not drivable, no safe route.
-- [ ] Error state per error code with retry; 429 message.
+- [x] Empty state with explainer; skeletons for routes; heatmap fade-in. _(fade-in moved to
+  SPOT-80, with the layer it fades)_
+- [x] Partial results (< 3 routes, Unknown checkpoints), not drivable, no safe route.
+- [x] Error state per error code with retry; 429 message.
 
 **Acceptance criteria**
 - Each state reachable through the fake providers and covered by a component test.
 - No state shows missing data as Low or as blank.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: planner states (`features/plan/ResultsArea.tsx`).
+  - **Results area:** below the form, driven by `useLatestPlanAttempt()` (TanStack's
+    `useMutationState` on the plan mutation key), so it reflects any plan request without
+    being wired to the form.
+  - **Empty:** the explainer, until the first request.
+  - **Loading:** three skeleton cards with an `aria-busy` region and one status line
+    ("Evaluating weather along each route…"). The form's button reads "Evaluating weather
+    corridors…" and is disabled for any pending request, including a retry.
+  - **Errors** (`failureCopy.ts`, `PlanFailure.tsx`): a title and guidance per code, naming
+    the service (HERE for routing, Open-Meteo for weather, never "NOAA", design review fix
+    5), plus Try again. The request id is offered only when the server sent one. A rate limit
+    holds the retry for `Retry-After` seconds with a countdown. Field errors stay on the form.
+  - **Failure after an earlier plan:** the earlier plan stays visible, dimmed and labelled
+    "Showing your previous plan, not the trip that just failed." (design review fix 5).
+  - **Partial, not drivable, no safe route:** covered by the route cards' notices and the
+    Unknown handling in cards and table. The routes list now has an accessible name ("Ranked
+    routes"), separating it from the warnings list.
+- Decisions:
+  - "Each state reachable through the fake providers": not drivable comes from the strong
+    storm fixture. Fewer than three routes, all-Unknown data and no safe route can't be
+    produced by the fakes, so those tests adjust the real demo response.
+  - Heatmap fade-in waits for the heatmap layer (SPOT-80), which has no data source until the
+    heatmap endpoint exists.
+- Verified (16 tests through the whole app with MSW, 168 total):
+  - Empty, then loading (skeleton, disabled button) and results. Four error codes each show
+    their title, request id and an enabled retry; routing names HERE and weather names
+    Open-Meteo. A network failure, the 429 countdown (disabled then enabled), and a field
+    error staying on the form are covered.
+  - A failure after a plan keeps it dimmed and labelled. Two-route partial results show the
+    warning. All-Unknown shows "No data" and Unknown with no Low anywhere. Not drivable and
+    no safe route are covered, and no request id is mentioned without one.
+  - **In Chrome** against the backend's fake providers: a keyboard-picked Dallas → Denver
+    with HOS on gave three cards with HOS summaries and the Severe stretches on B and C.
+    Route B's table scrolled to the storm ("Severe · gusts · load" at 41 mph). Stopping the
+    backend gave the failure card above the dimmed previous plan.
+- Left: heatmap fade-in, now a SPOT-80 sub-task.
 
 ---
 
@@ -1532,6 +1873,9 @@ Spec: PRD §9, RFC §11.
 - [ ] Unselected routes grey; selected route split into segments coloured by checkpoint risk,
   with casing.
 - [ ] Selection and hover via filters/paint expressions, not new data.
+- [ ] Read and write selection and hover through `state/ui.ts` (`selectedRouteId`,
+  `hoveredRouteId`), the same store the route cards use, so card ↔ map sync needs no other
+  wiring (carried over from SPOT-62).
 
 **Acceptance criteria**
 - Changing selection doesn't call `setData` (asserted in a test with a mocked map).
@@ -1549,6 +1893,9 @@ Spec: PRD §9, RFC §11.
 - [ ] Single `circle` layer, colour by level, zoom-scaled radius; hover via `feature-state`.
 - [ ] Tooltip (level, ETA) and popup (mile, ETA, gust, sustained "for info", rain, snow,
   level, driver, load rule sentence).
+- [ ] Follow `selectedCheckpoint` / `hoveredCheckpoint` in `state/ui.ts`: fly to and open the
+  popup for the selected checkpoint, highlight the hovered one. The checkpoint table already
+  sets them (carried over from SPOT-63).
 
 **Acceptance criteria**
 - 600+ checkpoints pan and zoom at 60 fps.
@@ -1605,6 +1952,7 @@ Spec: RFC §10.4.
 - [ ] Build GeoJSON with flat `h0`…`h48` properties once per heatmap response.
 - [ ] `heatmap` layer under routes: weight from `h<hour>`, zoom-scaled radius, risk colour ramp.
 - [ ] Visual check at zooms 4–10; switch to the fill-grid fallback if the blur misleads.
+- [ ] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
 
 **Acceptance criteria**
 - Heatmap colours agree with checkpoint colours at the same place and hour (visual check on
@@ -1736,6 +2084,11 @@ Spec: PRD §8.
   managed Postgres and Redis; health checks on `/healthz` and `/readyz`.
 - [ ] Migrations as a release step; daily scheduled job for `purge_trips`; run `seed_demo`.
 - [ ] Always-on instance for the review window; secrets set in the host.
+- [ ] Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite plus the host's proxy) so
+  throttles key on the client IP (carried over from SPOT-45).
+- [ ] Run the forecast cache and `/readyz` against real Redis (carried over from SPOT-35;
+  only tested on local memory, no Docker here).
+- [ ] Run `make up` once with Docker to confirm the compose stack (left over from SPOT-10).
 
 **Acceptance criteria**
 - Hosted API answers the first request after 1 h idle in under 3 s.
@@ -1770,6 +2123,7 @@ Spec: PRD §8.
 **Sub-tasks**
 - [ ] What it does, hosted link, screenshots/GIF, quick start (`make dev`), tests, architecture
   diagram, key decisions with links to PRD/RFC, known limitations, demo account credentials.
+- [ ] Choose and add a licence (left over from SPOT-10).
 
 **Acceptance criteria**
 - A new developer runs the app locally from the README in under 10 minutes.
@@ -1835,6 +2189,8 @@ core features, per PRD §5.
   (`snapshot_version = 1`), and back.
 - [ ] Save trip and routes in one `transaction.atomic()`.
 - [ ] `Idempotency-Key` handling: same key returns the existing trip.
+- [ ] Add `trip_id` to the plan response (carried over from SPOT-41) and regenerate
+  `openapi.yaml`.
 
 **Acceptance criteria**
 - Save then load gives a response identical to the original plan response (round-trip test on
@@ -1857,6 +2213,8 @@ core features, per PRD §5.
 - [ ] Create `guest_id` in the session on a guest's first plan.
 - [ ] `planner/access.py`: `Owner`, `current_owner(request)`, `get_visible_trip()`,
   `get_owned_trip()`; 404 for anything not visible.
+- [ ] Count the guest plan throttle by session `guest_id` as well as IP (carried over from
+  SPOT-45, which counts by IP only).
 
 **Acceptance criteria**
 - Access-matrix tests (owner / other user / guest / other guest / anonymous × private /

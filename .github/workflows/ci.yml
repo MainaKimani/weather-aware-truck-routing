@@ -73,7 +73,8 @@ jobs:
             shared='^(\.github/|Makefile$|docker-compose\.yml$|\.pre-commit-config\.yaml$|scripts/)'
             backend=false; frontend=false
             grep -Eq "^backend/|$shared" <<< "$files" && backend=true
-            grep -Eq "^frontend/|$shared" <<< "$files" && frontend=true
+            # The frontend's API types are generated from the backend's schema.
+            grep -Eq "^frontend/|^backend/openapi\.yaml$|$shared" <<< "$files" && frontend=true
           fi
           echo "backend=$backend" >> "$GITHUB_OUTPUT"
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"

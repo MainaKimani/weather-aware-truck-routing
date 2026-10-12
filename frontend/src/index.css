@@ -1,1 +1,93 @@
 @import 'tailwindcss';
+
+/*
+ * Design tokens. Components use the semantic names (bg-surface, text-muted,
+ * border-line, bg-accent …), never raw colours, so both themes come from
+ * the two blocks below. Risk colours are set at startup from src/lib/risk.ts,
+ * the only place they are defined.
+ */
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+
+  --color-risk-low: var(--risk-low);
+  --color-risk-moderate: var(--risk-moderate);
+  --color-risk-high: var(--risk-high);
+  --color-risk-severe: var(--risk-severe);
+  --color-risk-no-travel: var(--risk-no-travel);
+  --color-risk-unknown: var(--risk-unknown);
+
+  --radius-card: 0.625rem;
+  --shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.18);
+}
+
+:root {
+  --canvas: #eef1f4;
+  --surface: #ffffff;
+  --surface-raised: #f7f8fa;
+  --line: #d9dee5;
+  --ink: #111827;
+  --muted: #5b6472;
+  --accent: #1d4ed8;
+  --accent-ink: #ffffff;
+  --focus: #2563eb;
+  --danger: #b91c1c;
+}
+
+[data-theme='dark'] {
+  --canvas: #0b0f14;
+  --surface: #121821;
+  --surface-raised: #19212c;
+  --line: #2a3441;
+  --ink: #e6eaf0;
+  --muted: #98a2b3;
+  --accent: #60a5fa;
+  --accent-ink: #0b0f14;
+  --focus: #93c5fd;
+  --danger: #f87171;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
+
+  /* Numbers line up in tables and cards. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
