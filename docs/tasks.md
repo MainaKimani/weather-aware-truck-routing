@@ -86,7 +86,7 @@ link to their sections instead of repeating them.
 | SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | Done        |
-| SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | To do       |
+| SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | To do       |
 | SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | To do       |
 | SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | To do       |
@@ -2844,10 +2844,10 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P1 | To do | SPOT-114 |
+| Backend · 1 | P1 | Done | SPOT-114 |
 
 **Sub-tasks**
-- [ ] `user_logged_in` handler: transfer trips for the session's `guest_id`, then drop it.
+- [x] `user_logged_in` handler: transfer trips for the session's `guest_id`, then drop it.
 
 **Acceptance criteria**
 - Guest plans 3 trips, signs up: all 3 are in the account and no guest trips remain.
@@ -2855,7 +2855,29 @@ core features, per PRD §5.
 - Logging out and planning again creates a new guest whose trips the account can't see.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: guest trips claimed on sign-in (`access.claim_guest_trips`, `planner/signals.py`).
+  - A `user_logged_in` handler, connected in `PlannerConfig.ready`, runs on every login,
+    sign-up included (allauth logs the new user in). In one transaction it moves the
+    session's guest trips to the user and clears their guest id, then drops `guest_id` from
+    the session. Django keeps session data when `login()` rotates the key, so it is there.
+  - Logout (allauth) flushes the session, so the next plan starts a new guest.
+- Decisions:
+  - The rule lives in the access layer with the rest of trip ownership; the signal module
+    only connects it.
+  - Logging back in on the same device claims that device's newer guest trips too: the
+    handler can't tell a second person from the same one, and the trips were made in this
+    browser.
+  - How many trips moved isn't returned by the API: the client knows its guest's
+    `recent_trip_count` from `/me` before signing in, which is what the "N trips were added"
+    message needs (SPOT-123).
+- Verified (6 tests, 678 total):
+  - A guest plans 3 trips and signs up: all 3 are the user's and no guest trips of theirs
+    remain; another guest's trip is untouched; `/me` counts 3.
+  - Logging in to an existing account with 1 trip after planning 2 as a guest: 3 trips.
+  - After logout, a new plan belongs to a new guest the account can't see; logging back in
+    claims it.
+  - Another account's trips are never claimed; no guest id, or a garbled one, claims
+    nothing and leaves the session clean.
 
 ### SPOT-116 · Trip actions API
 

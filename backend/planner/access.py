@@ -10,7 +10,9 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Final, Literal, overload
 
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.http import Http404, HttpRequest
 from rest_framework.request import Request
@@ -74,6 +76,26 @@ def current_owner(request: HttpRequest | Request, *, create: bool = False) -> Ow
     guest_id = uuid.uuid4()
     request.session[GUEST_KEY] = str(guest_id)
     return Owner(guest_id=guest_id)
+
+
+def claim_guest_trips(request: HttpRequest, user: AbstractBaseUser) -> int:
+    """Move the session's guest trips into `user`'s account and forget the guest.
+
+    Runs on every sign-in, sign-up included (RFC §3.2). Django's `login()`
+    keeps the session's data when it rotates the key, so the guest id is
+    still there. Returns how many trips moved.
+    """
+    stored = request.session.pop(GUEST_KEY, None)
+    if not stored:
+        return 0
+    try:
+        guest_id = uuid.UUID(str(stored))
+    except ValueError:
+        return 0
+    with transaction.atomic():
+        return Trip.objects.filter(guest_id=guest_id, user__isnull=True).update(
+            user=user, guest_id=None
+        )
 
 
 def owned_trips(owner: Owner | None) -> QuerySet[Trip]:
