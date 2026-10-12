@@ -130,7 +130,6 @@ here when that task closes it.
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
 | SPOT-51 | Dependent heatmap query (starts after the plan resolves). The endpoint and its schema now exist. | SPOT-80, with the layer that draws it |
-| SPOT-50 | Nothing calls `/api/v1/healthz` any more (hosts use `/healthz`); remove the route and its test. | Next backend change |
 
 ## Epics
 
@@ -1503,6 +1502,8 @@ Spec: RFC §12, §18.3.
   - Checked in Chrome: dark on first paint with a dark OS setting, light after toggling, no
     console errors. Production build is 47.6 KB of JS gzipped.
 - Left: removing the backend's `/api/v1/healthz` route goes with the next backend change.
+- 2026-10-12: the backend's `/api/v1/healthz` route is removed, with the trips work. Hosts
+  check `/healthz` and `/readyz`, and a test now confirms the old path is a 404.
 
 ### SPOT-51 · API client, query layer and UI state
 
