@@ -7,6 +7,7 @@ import { z } from 'zod'
 import type { Place, PlanRequest } from '../../api/schema'
 import { haversineMi } from '../../lib/geo'
 import { browserZone, zonedToUtc } from '../../lib/time'
+import { hosErrors, hosFieldFor, restedHos, toHosRequest, type HosValues } from './hos'
 import {
   DEPARTURE_GRACE_MS,
   DEPARTURE_MAX_AHEAD_MS,
@@ -32,6 +33,7 @@ export interface TripFormValues {
   /** As typed, thousands separators allowed. */
   loadLb: string
   intervalMi: Interval
+  hos: HosValues
 }
 
 export function emptyValues(departureLocal: string): TripFormValues {
@@ -41,6 +43,7 @@ export function emptyValues(departureLocal: string): TripFormValues {
     departureLocal,
     loadLb: '',
     intervalMi: 25,
+    hos: restedHos(),
   }
 }
 
@@ -75,6 +78,14 @@ export function tripFormSchema(now: () => Date = () => new Date()) {
           error: (issue) => MESSAGES.choice(issue.input),
         },
       ),
+      hos: z.object({
+        enabled: z.boolean(),
+        cycle: z.enum(['70h_8d', '60h_7d']),
+        driveLeft: z.string(),
+        windowLeft: z.string(),
+        untilBreak: z.string(),
+        cycleLeft: z.string(),
+      }),
     })
     .superRefine((v, ctx) => {
       const issue = (path: string, message: string) => {
@@ -111,6 +122,10 @@ export function tripFormSchema(now: () => Date = () => new Date()) {
         else if (load < 1) issue('loadLb', MESSAGES.min(1))
         else if (load > MAX_LOAD_LB) issue('loadLb', MESSAGES.max(MAX_LOAD_LB))
       }
+
+      for (const [field, message] of Object.entries(hosErrors(v.hos))) {
+        issue(`hos.${field}`, message)
+      }
     })
 }
 
@@ -126,11 +141,14 @@ export function toPlanRequest(v: TripFormValues): PlanRequest {
     departure: zonedToUtc(v.departureLocal, departureZone(v.origin)).toISOString(),
     load_lb: load,
     interval_mi: v.intervalMi,
+    hos: toHosRequest(v.hos),
   }
 }
 
+export type FormField = keyof Omit<TripFormValues, 'hos'> | `hos.${keyof HosValues}`
+
 /** Where an API field error belongs on the form ("origin.lat" → "origin"). */
-export function formFieldFor(apiField: string): keyof TripFormValues | null {
+export function formFieldFor(apiField: string): FormField | null {
   const top = apiField.split('.')[0]
   switch (top) {
     case 'origin':
@@ -142,6 +160,10 @@ export function formFieldFor(apiField: string): keyof TripFormValues | null {
       return 'loadLb'
     case 'interval_mi':
       return 'intervalMi'
+    case 'hos': {
+      const field = hosFieldFor(apiField)
+      return field ? `hos.${field}` : null
+    }
     default:
       return null
   }

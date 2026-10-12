@@ -66,6 +66,7 @@ describe('TripForm', () => {
       departure: '2026-10-12T11:00:00.000Z', // 06:00 in Dallas (CDT)
       load_lb: 42_000,
       interval_mi: 50,
+      hos: { enabled: false },
     })
   })
 

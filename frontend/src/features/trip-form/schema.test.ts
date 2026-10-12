@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { DEMO_DESTINATION, DEMO_ORIGIN } from '../plan/demoTrip'
+import { restedHos } from './hos'
 import { MESSAGES } from './rules'
 import { formFieldFor, toPlanRequest, tripFormSchema, type TripFormValues } from './schema'
 
@@ -13,6 +14,7 @@ const valid: TripFormValues = {
   departureLocal: '2026-10-12T06:00',
   loadLb: '42,000',
   intervalMi: 25,
+  hos: restedHos(),
 }
 
 function errors(values: Partial<TripFormValues>): Record<string, string[]> {
@@ -71,6 +73,7 @@ describe('trip form rules (mirroring the API)', () => {
       departure: '2026-10-12T11:00:00.000Z',
       load_lb: 42_000,
       interval_mi: 25,
+      hos: { enabled: false },
     })
   })
 

@@ -13,6 +13,7 @@ import { DEMO_DESTINATION, DEMO_LOAD_LB, DEMO_ORIGIN } from '../plan/demoTrip'
 import { PlanError } from '../plan/PlanError'
 import { nextWholeHourInput, zoneAbbreviation, zonedToUtc } from '../../lib/time'
 import { Chip, FieldError, inputClass } from './fields'
+import { HosFields } from './HosFields'
 import { PlaceCombobox } from './PlaceCombobox'
 import { LOW_CONFIDENCE_AHEAD_MS } from './rules'
 import {
@@ -192,6 +193,8 @@ export function TripForm({ now = () => new Date() }: TripFormProps) {
         )}
       />
 
+      <HosFields control={control} setValue={setValue} />
+
       {error && error.code !== 'invalid_input' && (
         <PlanError error={error} onRetry={() => void submit()} />
       )}
@@ -330,7 +333,7 @@ function TripSummary({ values, onEdit }: { values: TripFormValues; onEdit: () =>
         </p>
         <p className="tabular mt-0.5 text-muted">
           {departure} {zoneAbbreviation(when, zone)} · {values.loadLb} lb · every{' '}
-          {values.intervalMi} mi
+          {values.intervalMi} mi{values.hos.enabled && ' · HOS on'}
         </p>
       </div>
       <button

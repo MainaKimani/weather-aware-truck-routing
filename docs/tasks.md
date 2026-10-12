@@ -61,7 +61,7 @@ link to their sections instead of repeating them.
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | Done        |
 | SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | In progress |
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | Done        |
-| SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | To do       |
+| SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | Done        |
 | SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | To do       |
 | SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | To do       |
 | SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | To do       |
@@ -1634,21 +1634,48 @@ Spec: PRD §7.1.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P1 | To do | SPOT-60 |
+| Frontend · 2 | P1 | Done | SPOT-60 |
 
 Spec: PRD §7.3.1.
 
 **Sub-tasks**
-- [ ] Toggle (off by default) revealing cycle select and four ELD-style clocks (`hh:mm`).
-- [ ] Cross-field validation (Drive ≤ Shift, Drive ≤ Cycle); cycle max follows the cycle type.
-- [ ] "How is this calculated?" popover listing rules and simplifications.
+- [x] Toggle (off by default) revealing cycle select and four ELD-style clocks (`hh:mm`).
+- [x] Cross-field validation (Drive ≤ Shift, Drive ≤ Cycle); cycle max follows the cycle type.
+- [x] "How is this calculated?" popover listing rules and simplifications.
 
 **Acceptance criteria**
 - With the toggle off, no HOS fields are sent (`{"enabled": false}`).
 - Switching to 60 h / 7 days clamps a 70 h cycle value with a visible message.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: Hours of Service fields (`features/trip-form/HosFields.tsx`, `hos.ts`).
+  - **Toggle:** a `role="switch"` toggle, off by default. With it off the clocks are hidden and
+    the request carries only `hos: {enabled: false}`.
+  - **Fields:** a cycle select (70 h / 8 days, 60 h / 7 days) and the four ELD clocks as
+    `hh:mm` (drive, shift, until break, cycle), each with its maximum ("of 11:00"). Defaults
+    are a rested driver.
+  - **Rules** mirror the API's HOS serializer and its messages: each clock ≤ its limit, the
+    cycle limit following the cycle, drive ≤ min(shift, cycle), and required when on. A
+    malformed clock gets "Enter hours and minutes, like 10:30." (client-only, since the API
+    takes decimal hours).
+  - **Request:** clocks are sent as decimal-hour strings with two decimals ("10.33"), the
+    API's `DecimalField` format, so no float rounding on the wire.
+  - **Cycle switch:** switching to 60 h / 7 days caps a cycle value over 60:00 and says so
+    in a status message ("Cycle time capped at 60:00, …"). A value that fits is left alone.
+  - **"How is this calculated?"** is a disclosure listing the rules and the four
+    simplifications from the PRD.
+  - Server errors on `hos.*` land on their clock. The collapsed summary says "HOS on".
+- Decision: `hh:mm` becomes hours with two decimals, so a clock can be up to 18 s off (10:20 →
+  10.33 h → 10 h 19 m 48 s). That's within any ELD reading's precision, and the API takes only
+  two decimals.
+- Verified (31 new tests, 122 total):
+  - Clock parsing and formatting (valid and invalid forms), and the hour conversion.
+  - Every HOS rule with the API's message (9 cases); nothing is checked with HOS off.
+  - The request block and the error routing.
+  - Through the form: off sends `{enabled: false}` with the clocks hidden; on sends all four
+    in hours. Drive over shift blocks submit and marks the drive clock invalid. The 60 h
+    switch caps 70:00 with a visible status but leaves 52:30. A server `hos.until_break_h`
+    error lands on its clock, and the explainer opens.
 
 ### SPOT-62 · Route cards and recommendation
 
