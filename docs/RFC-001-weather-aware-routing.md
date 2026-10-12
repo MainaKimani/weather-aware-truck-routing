@@ -881,8 +881,13 @@ Rule: **never show a missing value as safe.**
 
 - HERE key only in backend env vars; Open-Meteo needs no key.
 - DRF throttling: `plans` 10/min per guest session and IP, 30/min per signed-in user;
-  `geocode` 60/min; login attempts limited by allauth.
-- Sessions: httpOnly, Secure, `SameSite=Lax` cookies; CSRF enforced on unsafe methods;
+  `geocode` 60/min; `heatmap` 20/min; login attempts limited by allauth. Until guest sessions
+  exist, guests are counted by IP. The client IP comes from `X-Forwarded-For` only
+  as far as `NUM_PROXIES` trusted proxies allow (default 0), so a client can't choose its own
+  throttle key.
+- Sessions: httpOnly, Secure, `SameSite=Lax` cookies; CSRF enforced on unsafe methods. The
+  CSRF cookie is Secure and Lax but not httpOnly, because the client reads it into
+  `X-CSRFToken` (§7.5);
   `CSRF_TRUSTED_ORIGINS` set to the site origin. Same-origin deployment through the frontend's
   `/api` proxy, so no CORS (§3.2).
 - Passwords hashed with Argon2; Django password validators on; account deletion requires the
@@ -891,6 +896,11 @@ Rule: **never show a missing value as safe.**
   Tests cover every combination of caller (owner, other user, guest, other guest, anonymous)
   and trip state (private, shared).
 - `DEBUG=False`, strict `ALLOWED_HOSTS`, HTTPS only, standard Django security middleware.
+  Production redirects HTTP to HTTPS (except `/healthz` and `/readyz`, which the host calls
+  internally), trusts `X-Forwarded-Proto` from the host's proxy, and sends HSTS for a year
+  without `includeSubDomains` or preload, since the app runs on a domain we don't own
+  outright. `manage.py check --deploy` passes, with the two warnings about those flags
+  silenced on purpose.
 - Input sizes bounded by validation (no free-form geometry accepted from clients).
 
 ## 13. Testing

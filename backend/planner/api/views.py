@@ -1,8 +1,8 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from planner.api.serializers import (
@@ -12,6 +12,7 @@ from planner.api.serializers import (
     PlanSerializer,
     SuggestQuerySerializer,
 )
+from planner.api.throttles import PlanGuestThrottle, PlanUserThrottle
 from planner.providers.registry import get_providers
 from planner.services.geocoding import suggest
 from planner.services.plan import plan_trip
@@ -21,18 +22,11 @@ def _error(description: str) -> OpenApiResponse:
     return OpenApiResponse(ErrorSerializer, description=description)
 
 
-@extend_schema(exclude=True)
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def healthz(request: Request) -> Response:
-    """Liveness: the process is up."""
-    return Response({"status": "ok"})
-
-
 class PlanView(APIView):
     """Plan a trip: three routes rated for weather risk, and a recommendation."""
 
     permission_classes = (AllowAny,)
+    throttle_classes = (PlanGuestThrottle, PlanUserThrottle)
 
     @extend_schema(
         operation_id="create_plan",
@@ -56,6 +50,8 @@ class GeocodeSuggestView(APIView):
     """Places matching a partial query, for the origin and destination fields."""
 
     permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "geocode"
 
     @extend_schema(
         operation_id="suggest_places",

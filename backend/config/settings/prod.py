@@ -1,7 +1,9 @@
 """Production. Refuses to start unless every required setting is present.
 
-Transport and cookie hardening (HSTS, secure cookies, proxy SSL header) is
-not configured yet.
+HTTPS only: the host terminates TLS and forwards X-Forwarded-Proto, plain
+HTTP is redirected (except the health checks, which the host calls inside
+its network), cookies are Secure, and HSTS tells browsers to stay on HTTPS.
+`manage.py check --deploy` passes with these settings (tested).
 """
 
 from django.core.exceptions import ImproperlyConfigured
@@ -24,3 +26,18 @@ if _missing:
 
 DEBUG = False
 PROVIDERS = env.str("PROVIDERS", default="real")
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = True
+SECURE_REDIRECT_EXEMPT = [r"^healthz$", r"^readyz$"]
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31_536_000)  # a year
+
+# HSTS for subdomains and the preload list are for a domain we own outright.
+# The app is served from a host's shared domain (or a subdomain of someone's),
+# where those would be presumptuous, so the two deploy-check warnings that
+# ask for them are silenced deliberately.
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]

@@ -78,6 +78,18 @@ DATABASES = {
 
 AUTH_USER_MODEL = "accounts.User"
 
+# Cookies (RFC §3.2, §12). The browser sees one origin (the frontend proxies
+# /api), so Lax is enough and no CORS is configured. The CSRF cookie is
+# readable by JavaScript on purpose: the client copies it into X-CSRFToken,
+# and Django's docs note an httpOnly CSRF cookie adds no protection.
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = "Lax"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+
 REDIS_URL = env.str("REDIS_URL", default="")
 
 
@@ -139,6 +151,17 @@ REST_FRAMEWORK = {
     ],
     "EXCEPTION_HANDLER": "planner.api.errors.exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # RFC §12. Counters live in the default cache.
+    "DEFAULT_THROTTLE_RATES": {
+        "plans_guest": "10/min",
+        "plans_user": "30/min",
+        "geocode": "60/min",
+        "heatmap": "20/min",
+    },
+    # How many proxies sit in front of Django and append to X-Forwarded-For.
+    # 0 trusts only REMOTE_ADDR, so a client can't pick its own throttle key;
+    # production sets it to match the host's proxy chain.
+    "NUM_PROXIES": env.int("NUM_PROXIES", default=0),
 }
 
 # The OpenAPI schema is generated from the serializers and committed as

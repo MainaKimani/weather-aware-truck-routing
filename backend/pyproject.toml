@@ -59,7 +59,7 @@ strict = true
 exclude = ["/migrations/"]
 
 [[tool.mypy.overrides]]
-module = ["environ.*", "flexpolyline.*"]
+module = ["environ.*", "flexpolyline.*", "django_redis.*"]
 ignore_missing_imports = true
 
 [tool.django-stubs]

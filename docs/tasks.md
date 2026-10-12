@@ -56,7 +56,7 @@ link to their sections instead of repeating them.
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress|
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | In review |
 | SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | In progress|
-| SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | To do     |
+| SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | In review |
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | To do     |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | To do     |
 | SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | To do     |
@@ -1254,15 +1254,15 @@ Spec: RFC §7.3, §8.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-41 |
+| Backend · 2 | P0 | In review | SPOT-41 |
 
 Spec: RFC §12, §18.3.
 
 **Sub-tasks**
-- [ ] DRF throttles: plans 10/min per guest, 30/min per user; heatmap 20/min; geocode 60/min.
-- [ ] Secure, httpOnly, `SameSite=Lax` session and CSRF cookies; `CSRF_TRUSTED_ORIGINS`;
+- [x] DRF throttles: plans 10/min per guest, 30/min per user; heatmap 20/min; geocode 60/min.
+- [x] Secure, httpOnly, `SameSite=Lax` session and CSRF cookies; `CSRF_TRUSTED_ORIGINS`;
   `ALLOWED_HOSTS`, HTTPS redirect, HSTS, security middleware. No CORS (one origin).
-- [ ] `/healthz` and `/readyz` (Redis ping, settings check).
+- [x] `/healthz` and `/readyz` (Redis ping, settings check).
 
 **Acceptance criteria**
 - 11th plan request in a minute gets 429 `rate_limited`.
@@ -1270,7 +1270,46 @@ Spec: RFC §12, §18.3.
 - `manage.py check --deploy` passes with prod settings.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: throttling, cookie and HTTPS settings, and health endpoints.
+  - **Throttles** (`planner/api/throttles.py`, rates in settings): plans 10/min for guests
+    (`PlanGuestThrottle`) and 30/min per account (`PlanUserThrottle`), and geocode 60/min
+    (`ScopedRateThrottle`). The `heatmap` rate (20/min) is defined for SPOT-42's endpoint.
+    Counters live in the default cache. A 429 uses the error shape with `rate_limited` and
+    `Retry-After`.
+  - **Client IP:** `NUM_PROXIES` (env, default 0) says how many proxies' `X-Forwarded-For`
+    entries to trust. DRF's default trusts the whole header, which would let a client pick its
+    own throttle key.
+  - **Cookies (all environments):** the session cookie is httpOnly and `SameSite=Lax`. The
+    CSRF cookie is Lax but readable by JavaScript, since the client copies it into
+    `X-CSRFToken` (RFC §7.5), and Django's docs say an httpOnly CSRF cookie adds nothing.
+    `nosniff`, `Referrer-Policy: same-origin` and `X-Frame-Options: DENY` are set. No CORS:
+    one origin.
+  - **Production:** trusts `X-Forwarded-Proto`, redirects HTTP to HTTPS (except
+    `/healthz` and `/readyz`), uses Secure session and CSRF cookies, and sends HSTS for a
+    year (`SECURE_HSTS_SECONDS`).
+  - **Health:** `config/health.py`. `/healthz` checks nothing beyond the process.
+    `/readyz` pings Redis (with `IGNORE_EXCEPTIONS`, `cache.get` would hide an outage), runs
+    `SELECT 1`, and checks that the provider settings build. It returns 200, or 503 naming the
+    failed check without details (those go to the log). `/api/v1/healthz` stays for the
+    frontend placeholder.
+- Decisions (RFC §12 updated):
+  - **HSTS** leaves out `includeSubDomains` and preload: the app runs on a host's domain, not
+    one we own. Deploy-check warnings W005 and W021 are silenced for that reason.
+  - **Guests** are counted by IP until guest sessions exist (SPOT-112).
+  - The task's "httpOnly CSRF cookie" conflicts with the RFC's CSRF flow; the RFC wins.
+- Verified (25 tests):
+  - The 11th guest plan in a minute gets 429 `rate_limited` with `Retry-After`. Guests are
+    counted per IP, and a changing `X-Forwarded-For` doesn't reset the count.
+  - A signed-in user gets 30, then 429. The 61st suggestion gets 429. Plan and geocode limits
+    are separate.
+  - `/readyz` is 503 with `cache: fail` when Redis is unreachable (port 1), 503 when the
+    database check fails or `PROVIDERS=real` has no key, and leaks no setting names. Both
+    health endpoints are GET only and skip the HTTPS redirect.
+  - `manage.py check --deploy --fail-level WARNING` passes with prod settings and a proper
+    key ("no issues (2 silenced)"). A subprocess confirms prod's redirect, Secure cookies,
+    HSTS and proxy header.
+- Left: point the host's health checks at `/healthz` and `/readyz` and set `NUM_PROXIES` for
+  its proxy chain (SPOT-100/101).
 
 ### SPOT-46 · Structured logging and request ids
 
