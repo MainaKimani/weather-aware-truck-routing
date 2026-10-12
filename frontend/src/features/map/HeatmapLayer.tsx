@@ -6,6 +6,12 @@
  * property from outside React, at most once a frame: nothing re-renders and
  * nothing is re-uploaded. The layer fades in when the heatmap arrives, which
  * is after the routes are drawn.
+ *
+ * It colours by the overall rating or by one condition (the legend's
+ * choice). The first time a condition is chosen, the heatmap with every
+ * condition's levels is fetched and its data replaces the plain one, once;
+ * until it arrives the rating stays on show. After that, switching is a
+ * paint change like the slider's.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Layer, Source, useMap } from 'react-map-gl/maplibre'
@@ -15,7 +21,7 @@ import { usePlan } from '../../api/plans'
 import type { Plan } from '../../api/schema'
 import { prefersReducedMotion } from '../../lib/motion'
 import { useTimelineStore } from '../../state/timeline'
-import { useUiStore } from '../../state/ui'
+import { useUiStore, type HeatmapMetric } from '../../state/ui'
 import { buildHeatmapGeometry, meanLatitude } from './heatmapGeometry'
 import {
   HEATMAP_OPACITY,
@@ -34,11 +40,17 @@ const selectTripId = (plan: Plan) => plan.trip_id
 
 export function HeatmapLayer() {
   const tripId = usePlan(selectTripId)
-  const { data: heatmap } = useHeatmap(tripId)
+  const metric = useUiStore((s) => s.heatmapMetric)
+  const plain = useHeatmap(tripId)
+  // Requested once a condition is chosen; read from the cache after that.
+  const full = useHeatmap(tripId, { metrics: true, enabled: metric !== 'risk' })
+  const heatmap = full.data ?? plain.data
   const geometry = useMemo(() => (heatmap ? buildHeatmapGeometry(heatmap) : null), [heatmap])
+  const shownMetric: HeatmapMetric = heatmap?.metrics ? metric : 'risk'
   const on = useUiStore((s) => s.layers.heatmap)
-  const shown = useShownAfterFirstFrame(geometry)
-  useHourOnMap(geometry !== null)
+  // Fades in once per trip, not again when the conditions' data replaces the plain data.
+  const shown = useShownAfterFirstFrame(geometry ? (tripId ?? null) : null)
+  useHourOnMap(geometry !== null, shownMetric)
   if (!heatmap || !geometry) return null
 
   return (
@@ -50,7 +62,7 @@ export function HeatmapLayer() {
         layout={{ visibility: visibility(on) }}
         paint={{
           // The hour as of this render; the slider then updates it directly (useHourOnMap).
-          'heatmap-weight': heatmapWeight(useTimelineStore.getState().hour),
+          'heatmap-weight': heatmapWeight(useTimelineStore.getState().hour, shownMetric),
           'heatmap-radius': heatmapRadius(heatmap.cell_deg),
           'heatmap-intensity': heatmapIntensity(meanLatitude(heatmap)),
           'heatmap-color': heatmapColor,
@@ -84,7 +96,7 @@ function useShownAfterFirstFrame(value: unknown): boolean {
 }
 
 /** Keeps the layer's weight on the slider's hour, once a frame at most, without rendering. */
-function useHourOnMap(active: boolean) {
+function useHourOnMap(active: boolean, metric: HeatmapMetric) {
   const { current: map } = useMap()
 
   useEffect(() => {
@@ -97,7 +109,8 @@ function useHourOnMap(active: boolean) {
         if (map.getLayer(LAYER.heatmap)) {
           const { hour } = useTimelineStore.getState()
           // MapRef leaves out setters, as React owns the props; this one is ours on purpose.
-          map.getMap().setPaintProperty(LAYER.heatmap, 'heatmap-weight', heatmapWeight(hour))
+          const weight = heatmapWeight(hour, metric)
+          map.getMap().setPaintProperty(LAYER.heatmap, 'heatmap-weight', weight)
         }
       })
     })
@@ -105,5 +118,5 @@ function useHourOnMap(active: boolean) {
       unsubscribe()
       if (frame !== null) cancelAnimationFrame(frame)
     }
-  }, [map, active])
+  }, [map, active, metric])
 }

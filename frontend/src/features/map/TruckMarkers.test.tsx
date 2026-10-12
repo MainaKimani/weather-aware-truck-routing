@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 
+import { heatmapKeys } from '../../api/heatmap'
 import type { Route } from '../../api/schema'
 import { useTimelineStore } from '../../state/timeline'
 import { useUiStore } from '../../state/ui'
@@ -30,9 +31,7 @@ async function renderAtHour(hour: number, heatmapStart = new Date(DEPARTURE).toI
   const view = renderMap(demoPlan)
   // Until the heatmap arrives, hour 0 is the hour after the plan was made.
   await waitFor(() => {
-    expect(view.client.getQueryState(['trips', demoPlan.trip_id, 'heatmap'])?.status).toBe(
-      'success',
-    )
+    expect(view.client.getQueryState(heatmapKeys.trip(demoPlan.trip_id))?.status).toBe('success')
   })
   return view
 }

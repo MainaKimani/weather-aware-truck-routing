@@ -4,12 +4,14 @@ import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useTimelineStore } from '../../state/timeline'
+import { useUiStore, type HeatmapMetric } from '../../state/ui'
 import { fake, layer, source } from '../../test/fakeMap'
-import { demoHeatmap } from '../../test/fixtures/demoHeatmap'
+import { demoHeatmap, demoHeatmapWithMetrics } from '../../test/fixtures/demoHeatmap'
 import { demoPlan } from '../../test/fixtures/demoPlan'
 import { setReducedMotion } from '../../test/matchMedia'
 import { renderMap, showPlan } from '../../test/renderMap'
 import { HEATMAP, apiError, server } from '../../test/server'
+import { buildHeatmapGeometry } from './heatmapGeometry'
 import { HEATMAP_OPACITY, LAYER, SOURCE, heatmapWeight } from './layers'
 
 // Animation frames wait in a queue until a test runs them, so a test can see
@@ -179,5 +181,120 @@ describe('heatmap layer', () => {
     })
     expect(fake.sources.has(SOURCE.heatmap)).toBe(false)
     expect(fake.sources.has(SOURCE.routes)).toBe(true)
+  })
+})
+
+describe('heatmap metric', () => {
+  /** Records each heatmap request: whether it asked for the conditions. */
+  function recordIncludes(respond?: (metrics: boolean) => Promise<Response> | Response) {
+    const includes: boolean[] = []
+    server.use(
+      http.get(HEATMAP, ({ request }) => {
+        const metrics = new URL(request.url).searchParams.get('include') === 'metrics'
+        includes.push(metrics)
+        if (respond) return respond(metrics)
+        return HttpResponse.json(metrics ? demoHeatmapWithMetrics : demoHeatmap)
+      }),
+    )
+    return includes
+  }
+
+  const choose = (metric: HeatmapMetric) => {
+    act(() => {
+      useUiStore.getState().showHeatmapMetric(metric)
+    })
+  }
+
+  it('fetches the conditions once, when one is first chosen, then switches by paint alone', async () => {
+    const includes = recordIncludes()
+    renderMap(demoPlan)
+    await heatmapArrives()
+    nextFrame()
+    expect(includes).toEqual([false])
+
+    choose('wind')
+    await waitFor(() => {
+      expect(layer(LAYER.heatmap).paint).toMatchObject({
+        'heatmap-weight': heatmapWeight(0, 'wind'),
+      })
+    })
+    expect(includes).toEqual([false, true])
+    expect(source(SOURCE.heatmap).setData).toHaveBeenCalledTimes(1)
+    const sent = source(SOURCE.heatmap).setData.mock.calls[0]?.[0]
+    expect(sent).toEqual(buildHeatmapGeometry(demoHeatmapWithMetrics))
+
+    for (const metric of ['rain', 'snow', 'risk', 'wind'] as const) {
+      choose(metric)
+      expect(layer(LAYER.heatmap).paint).toMatchObject({
+        'heatmap-weight': heatmapWeight(0, metric),
+      })
+    }
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    expect(includes).toEqual([false, true])
+    expect(source(SOURCE.heatmap).setData).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the overall rating on show while the conditions load', async () => {
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    recordIncludes(async (metrics) => {
+      if (metrics) await held
+      return HttpResponse.json(metrics ? demoHeatmapWithMetrics : demoHeatmap)
+    })
+    renderMap(demoPlan)
+    await heatmapArrives()
+    nextFrame()
+
+    choose('rain')
+    expect(layer(LAYER.heatmap).paint).toMatchObject({ 'heatmap-weight': heatmapWeight(0) })
+
+    release()
+    await waitFor(() => {
+      expect(layer(LAYER.heatmap).paint).toMatchObject({
+        'heatmap-weight': heatmapWeight(0, 'rain'),
+      })
+    })
+    // The trip's heatmap faded in once; the conditions arriving don't fade it again.
+    expect(layer(LAYER.heatmap).paint).toMatchObject({ 'heatmap-opacity': HEATMAP_OPACITY })
+  })
+
+  it("follows the slider in the chosen condition's levels", async () => {
+    renderMap(demoPlan)
+    await heatmapArrives()
+    nextFrame()
+    choose('wind')
+    await waitFor(() => {
+      expect(source(SOURCE.heatmap).setData).toHaveBeenCalledTimes(1)
+    })
+
+    act(() => {
+      useTimelineStore.getState().setHour(9)
+    })
+    nextFrame()
+
+    expect(fake.map.setPaintProperty).toHaveBeenLastCalledWith(
+      LAYER.heatmap,
+      'heatmap-weight',
+      heatmapWeight(9, 'wind'),
+    )
+  })
+
+  it('stays on the overall rating when the trip has no conditions kept', async () => {
+    recordIncludes((metrics) =>
+      HttpResponse.json(metrics ? { ...demoHeatmap, metrics: null } : demoHeatmap),
+    )
+    renderMap(demoPlan)
+    await heatmapArrives()
+
+    choose('snow')
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+
+    expect(layer(LAYER.heatmap).paint).toMatchObject({ 'heatmap-weight': heatmapWeight(0) })
   })
 })

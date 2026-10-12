@@ -6,7 +6,7 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 
-import { demoHeatmap } from './fixtures/demoHeatmap'
+import { demoHeatmap, demoHeatmapWithMetrics } from './fixtures/demoHeatmap'
 import { demoPlan } from './fixtures/demoPlan'
 
 export const PLANS = '*/api/v1/plans'
@@ -17,7 +17,13 @@ export const handlers = [
   http.post(PLANS, () =>
     HttpResponse.json(demoPlan, { headers: { 'X-Request-ID': 'req-plan-0001' } }),
   ),
-  http.get(HEATMAP, () => HttpResponse.json(demoHeatmap)),
+  http.get(HEATMAP, ({ request }) =>
+    HttpResponse.json(
+      new URL(request.url).searchParams.get('include') === 'metrics'
+        ? demoHeatmapWithMetrics
+        : demoHeatmap,
+    ),
+  ),
   http.get(SUGGEST, ({ request }) => {
     const q = new URL(request.url).searchParams.get('q') ?? ''
     const places = [

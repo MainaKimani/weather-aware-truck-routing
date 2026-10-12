@@ -6,6 +6,8 @@
 import type { ExpressionSpecification } from 'maplibre-gl'
 
 import { RISK } from '../../lib/risk'
+import type { HeatmapMetric } from '../../state/ui'
+import { heatmapProperty } from './heatmapGeometry'
 
 export const SOURCE = {
   heatmap: 'heatmap',
@@ -100,9 +102,12 @@ export function readRouteInk(root: HTMLElement = document.documentElement): Rout
 // level, and shows pale yellow as on the checkpoints); Unknown weighs
 // nothing, so missing data is left uncoloured rather than shown as Low.
 
-/** Density of each level: Low 0.2 … No travel 1.0; Unknown 0. */
-export function heatmapWeight(hour: number): ExpressionSpecification {
-  return ['/', ['+', ['coalesce', ['get', `h${String(hour)}`], -1], 1], 5]
+/** Density of each level of `metric` at `hour`: Low 0.2 … No travel 1.0; Unknown 0. */
+export function heatmapWeight(
+  hour: number,
+  metric: HeatmapMetric = 'risk',
+): ExpressionSpecification {
+  return ['/', ['+', ['coalesce', ['get', heatmapProperty(metric, hour)], -1], 1], 5]
 }
 
 /** Density back to the level's colour, in steps, so each band is one legend colour. */

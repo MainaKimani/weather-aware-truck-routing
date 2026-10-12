@@ -73,7 +73,7 @@ link to their sections instead of repeating them.
 | SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | Done        |
 | SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | Done        |
 | SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | Done        |
-| SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | To do       |
+| SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | Done        |
 | SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | To do       |
 | SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | To do       |
 | SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | To do       |
@@ -2287,17 +2287,61 @@ Spec: RFC §10.4.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 2 | P1 | To do | SPOT-81 |
+| Full stack · 2 | P1 | Done | SPOT-81 |
 
 **Sub-tasks**
-- [ ] Backend: `?include=metrics` returns gust, rain and snow grids.
-- [ ] Frontend: switch between composite risk, gust, rain, snow with matching legends.
+- [x] Backend: `?include=metrics` returns gust, rain and snow grids. _(as levels; see Decisions)_
+- [x] Frontend: switch between composite risk, gust, rain, snow with matching legends.
 
 **Acceptance criteria**
 - Switching metric doesn't refetch once metrics are loaded.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: backend half (`services/corridor.py`, `HeatmapSerializer`, `TripHeatmapView`,
+  migration `0002_heatmap_metrics`).
+  - The grid keeps each condition's level per point and hour from the same `classify` call
+    as the overall rating: wind (gusts after the load rules), rain, snow.
+  - `GET …/heatmap?include=metrics` adds `metrics: {wind, rain, snow}`, indexed like `risk`.
+    Without it the response is unchanged. Any other `include` is a 400 naming the field.
+  - Metrics are computed and kept with the grid on the first request, asked for or not, so a
+    later `?include=metrics` reads the same kept copy. A heatmap kept before this change has
+    `metrics: null`.
+  - For the demo trip: 3.2 KB gzipped without metrics, 5.7 KB with.
+- 2026-10-12: frontend half (`HeatmapLayer`, `Legend`, `api/heatmap.ts`).
+  - The legend's "Heatmap shows" choice: Risk (default), Wind, Rain, Snow, with a line saying
+    what each one shows. It is off while the heatmap is hidden, and the choice survives a new
+    plan.
+  - Choosing a condition the first time fetches `?include=metrics` once (its own cache key),
+    and the data with every condition's levels (`w`, `r`, `s` properties beside `h`) replaces
+    the plain data once. Until it arrives the overall rating stays on show; the trip doesn't
+    fade in again.
+  - After that, switching is only a weight expression on another property, like the slider.
+    The slider follows the chosen condition.
+- Decisions (RFC §7.3 updated):
+  - **Levels, not raw values.** The RFC sketched raw gust, rain and snow grids, but colouring
+    those would mean the thresholds in the browser too, which RFC §19 rules out (one set of
+    rules, on the server). The levels are the ones a checkpoint shows for each condition, so
+    every view keeps the one colour scale and legend and agrees with the checkpoint table.
+  - **Wind is after the load rules**, as on the checkpoints: what the gusts mean for this
+    truck.
+  - The legend names the levels, not each condition's thresholds: those live in the backend's
+    rules and the PRD table, and copying them into the UI would let them drift.
+- Verified:
+  - **Backend** (7 new tests, 633 total): the grid's wind, rain and snow levels equal
+    `classify`'s for every point-hour sampled. Metrics only when asked for, and the rest of
+    the response is unchanged. Asked first or second, both come from one kept copy with no
+    recompute. Null for a heatmap kept without them. An unknown `include` is a 400. Under
+    20 KB gzipped. The backend half stands alone on the trips branch: ruff, mypy, the
+    migration check and all 633 tests pass there.
+  - **Frontend** (10 new tests, 300 total): properties per condition; the weight reads the
+    chosen condition; one request for conditions and one `setData`, then rain, snow, risk and
+    wind switch by paint with no further request; the rating stays on show while the
+    conditions load, with no second fade; the slider follows the condition; with conditions
+    unavailable the rating stays. Legend: four choices starting on Risk, the note per choice,
+    off while the heatmap is hidden.
+  - **In Chrome** (real backend, demo trip at +5 h): choosing Wind made one request
+    (`?include=metrics`), and Rain, Snow, Risk and Wind after it made none. Wind shows only
+    the storm cores (Severe near Wichita, High near Lubbock) over a Low corridor.
 
 ---
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Heatmap } from '../../api/schema'
 import { demoHeatmap } from '../../test/fixtures/demoHeatmap'
-import { buildHeatmapGeometry, meanLatitude } from './heatmapGeometry'
+import { buildHeatmapGeometry, heatmapProperty, meanLatitude } from './heatmapGeometry'
 
 const tiny = {
   start_hour: '2026-10-12T15:00:00Z',
@@ -46,6 +46,43 @@ describe('heatmap geometry', () => {
     expect(Object.keys(features[0]?.properties ?? {})).toEqual(
       Array.from({ length: 49 }, (_, h) => `h${String(h)}`),
     )
+  })
+
+  it("adds each condition's levels under its own letter when the response has them", () => {
+    const { features } = buildHeatmapGeometry({
+      ...tiny,
+      metrics: {
+        wind: [
+          [0, 1, 2],
+          [null, 0, 0],
+        ],
+        rain: [
+          [0, 2, 4],
+          [1, null, 3],
+        ],
+        snow: [
+          [0, 0, 0],
+          [0, 0, 1],
+        ],
+      },
+    })
+
+    expect(features[1]?.properties).toEqual({
+      h0: 1,
+      h2: 3,
+      w1: 0,
+      w2: 0,
+      r0: 1,
+      r2: 3,
+      s0: 0,
+      s1: 0,
+      s2: 1,
+    })
+  })
+
+  it('names the property for a condition and hour', () => {
+    const metrics = ['risk', 'wind', 'rain', 'snow'] as const
+    expect(metrics.map((m) => heatmapProperty(m, 7))).toEqual(['h7', 'w7', 'r7', 's7'])
   })
 
   it('finds the mean latitude', () => {

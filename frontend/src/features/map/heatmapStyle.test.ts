@@ -56,6 +56,15 @@ describe('heatmap weight', () => {
     expect(weightOf(undefined)).toBe(0)
   })
 
+  it("reads the chosen condition's level", () => {
+    const cell = { h3: 0, w3: 4, r3: 1, s3: 2 }
+    const weight = (metric: 'risk' | 'wind' | 'rain' | 'snow') =>
+      evaluate('heatmap-weight', heatmapWeight(3, metric), { zoom: 6 }, cell)
+    expect([weight('risk'), weight('wind'), weight('rain'), weight('snow')]).toEqual([
+      0.2, 1, 0.4, 0.6,
+    ])
+  })
+
   it('reads the hour it is built for', () => {
     expect(evaluate('heatmap-weight', heatmapWeight(48), { zoom: 6 }, { h47: 4, h48: 0 })).toBe(0.2)
   })
