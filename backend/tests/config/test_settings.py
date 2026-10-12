@@ -67,3 +67,49 @@ def test_local_runs_with_no_environment() -> None:
 
     assert result.returncode == 0, result.stderr
     assert result.stdout.split() == ["True", "django.core.cache.backends.locmem.LocMemCache"]
+
+
+def test_prod_passes_the_deploy_check() -> None:
+    env = {
+        "PATH": os.environ["PATH"],
+        "DJANGO_SETTINGS_MODULE": "config.settings.prod",
+        **PROD_ENV,
+        # check --deploy rejects short or low-variety keys, as it should.
+        "DJANGO_SECRET_KEY": "k3Y-" + "".join(chr(97 + i % 26) + str(i) for i in range(30)),
+    }
+    result = subprocess.run(
+        [sys.executable, "manage.py", "check", "--deploy", "--fail-level", "WARNING"],
+        cwd=BACKEND_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "no issues (2 silenced)" in result.stdout
+
+
+PRINT_SECURITY = (
+    "import django; django.setup(); from django.conf import settings as s; "
+    "print(s.SECURE_SSL_REDIRECT, s.SESSION_COOKIE_SECURE, s.CSRF_COOKIE_SECURE, "
+    "s.SESSION_COOKIE_HTTPONLY, s.CSRF_COOKIE_HTTPONLY, s.SESSION_COOKIE_SAMESITE, "
+    "s.SECURE_HSTS_SECONDS > 0, s.SECURE_PROXY_SSL_HEADER[0])"
+)
+
+
+def test_prod_is_https_only_with_secure_cookies() -> None:
+    env = {"PATH": os.environ["PATH"], "DJANGO_SETTINGS_MODULE": "config.settings.prod", **PROD_ENV}
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", PRINT_SECURITY],
+        cwd=BACKEND_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.split() == [
+        "True", "True", "True", "True", "False", "Lax", "True", "HTTP_X_FORWARDED_PROTO",
+    ]  # fmt: skip

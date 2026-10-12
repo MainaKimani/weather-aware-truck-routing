@@ -1,6 +1,6 @@
 import threading
 import time
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -49,13 +49,6 @@ class CountingWeather:
         if self.down:
             raise WeatherUnavailable("Open-Meteo: HTTP 503")
         return self.inner.hourly(points, start, hours)
-
-
-@pytest.fixture(autouse=True)
-def clear_cache() -> Iterator[None]:
-    cache.clear()
-    yield
-    cache.clear()
 
 
 def store(weather: CountingWeather, clock: Clock | None = None) -> ForecastStore:

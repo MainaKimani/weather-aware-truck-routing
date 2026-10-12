@@ -1,6 +1,6 @@
 # Local development. `make dev` runs both apps natively; `make up` uses Docker.
 
-.PHONY: install hooks migrate dev api web up down test lint fmt types
+.PHONY: install hooks migrate dev api web up down test lint fmt types schema
 
 install:
 	cd backend && uv sync
@@ -46,3 +46,7 @@ fmt:
 types:
 	cd backend && uv run mypy .
 	cd frontend && npm run typecheck
+
+# Regenerate the OpenAPI contract after changing a serializer (CI checks it).
+schema:
+	cd backend && uv run python manage.py spectacular --file openapi.yaml --validate --fail-on-warn
