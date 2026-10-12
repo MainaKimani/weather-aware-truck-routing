@@ -204,3 +204,28 @@ export function useDeleteTrip() {
     },
   })
 }
+
+/** Plan a trip again with current weather; one Idempotency-Key per request. */
+export function replanTrip(tripId: string): Promise<Trip> {
+  return unwrap(
+    api.POST('/api/v1/trips/{trip_id}/replan', {
+      params: { path: { trip_id: tripId } },
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    }),
+  )
+}
+
+/**
+ * Re-plan: the new trip is cached as it comes back, so its page opens at
+ * once, and it goes to the top of the recent trips like any new plan.
+ */
+export function useReplanTrip() {
+  const queryClient = useQueryClient()
+  return useMutation<Trip, ApiError, string>({
+    mutationFn: replanTrip,
+    onSuccess: (trip) => {
+      queryClient.setQueryData(tripKeys.detail(trip.trip_id), trip)
+      addPlannedTrip(queryClient, trip)
+    },
+  })
+}

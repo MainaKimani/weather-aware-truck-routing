@@ -35,9 +35,16 @@ interface TripFormProps {
   inputs?: Plan['inputs']
   /** Called with each new plan, once it is saved. */
   onPlanned?: (plan: Plan) => void
+  /** Someone else's shared trip: its summary only, with no way to edit it. */
+  readOnly?: boolean
 }
 
-export function TripForm({ now = () => new Date(), inputs, onPlanned }: TripFormProps) {
+export function TripForm({
+  now = () => new Date(),
+  inputs,
+  onPlanned,
+  readOnly = false,
+}: TripFormProps) {
   const schema = useMemo(() => tripFormSchema(now), [now])
   const { control, handleSubmit, setError, setValue, reset, getValues, formState } =
     useForm<TripFormValues>({
@@ -87,16 +94,20 @@ export function TripForm({ now = () => new Date(), inputs, onPlanned }: TripForm
     return (
       <TripSummary
         values={getValues()}
-        onEdit={() => {
-          // Editing an older trip starts from the next hour, as re-planning does:
-          // its departure has passed and couldn't be planned again.
-          const values = getValues()
-          const zone = departureZone(values.origin)
-          if (zonedToUtc(values.departureLocal, zone).getTime() < now().getTime()) {
-            setValue('departureLocal', nextWholeHourInput(now(), zone))
-          }
-          setCollapsed(false)
-        }}
+        onEdit={
+          readOnly
+            ? undefined
+            : () => {
+                // Editing an older trip starts from the next hour, as re-planning does:
+                // its departure has passed and couldn't be planned again.
+                const values = getValues()
+                const zone = departureZone(values.origin)
+                if (zonedToUtc(values.departureLocal, zone).getTime() < now().getTime()) {
+                  setValue('departureLocal', nextWholeHourInput(now(), zone))
+                }
+                setCollapsed(false)
+              }
+        }
       />
     )
   }
@@ -326,7 +337,7 @@ function parseDeparture(local: string, zone: string): Date | null {
   }
 }
 
-function TripSummary({ values, onEdit }: { values: TripFormValues; onEdit: () => void }) {
+function TripSummary({ values, onEdit }: { values: TripFormValues; onEdit?: () => void }) {
   const zone = departureZone(values.origin)
   const when = zonedToUtc(values.departureLocal, zone)
   const departure = new Intl.DateTimeFormat('en-US', {
@@ -347,13 +358,15 @@ function TripSummary({ values, onEdit }: { values: TripFormValues; onEdit: () =>
           {values.intervalMi} mi{values.hos.enabled && ' · HOS on'}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="shrink-0 rounded-md border border-line px-2.5 py-1 text-sm font-medium hover:bg-surface"
-      >
-        Edit trip
-      </button>
+      {onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="shrink-0 rounded-md border border-line px-2.5 py-1 text-sm font-medium hover:bg-surface"
+        >
+          Edit trip
+        </button>
+      )}
     </div>
   )
 }

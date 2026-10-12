@@ -96,7 +96,7 @@ link to their sections instead of repeating them.
 | SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | Done        |
 | SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | Done        |
-| SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
+| SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do       |
 
 **Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 29 (60 points).
@@ -139,8 +139,6 @@ here when that task closes it.
 | SPOT-118 | Schedule `manage.py purge_trips` daily on the host. | SPOT-100 |
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
-| SPOT-90 | Second smoke flow: plan as a guest, sign up, see the trip in My trips, share it, open the link in a fresh context. Needs accounts and trip pages. | SPOT-125 |
-| SPOT-91 | Keyboard walkthrough and axe checks for PRD stories 8–11 (recent trips, sign-up, My trips, sharing). Those screens don't exist yet. | SPOT-125 |
 
 ## Epics
 
@@ -3260,20 +3258,20 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P1 | To do | SPOT-121, SPOT-116 |
+| Frontend · 2 | P1 | Done | SPOT-121, SPOT-116 |
 
 Replaces the earlier "shareable URL" task: a real trip link is better than encoding inputs,
 because it shows the result the user actually saw.
 
 **Sub-tasks**
-- [ ] On the trip page: Re-plan with current weather, Save (with name), Share (switch + copy
+- [x] On the trip page: Re-plan with current weather, Save (with name), Share (switch + copy
   link), Delete.
-- [ ] Guests clicking Save get a "Create an account to save trips" dialog.
-- [ ] Shared trip opened by someone else: read-only, only "Re-plan" available.
-- [ ] Add the second Playwright flow to `frontend/e2e/`: plan as a guest, sign up, see the
+- [x] Guests clicking Save get a "Create an account to save trips" dialog.
+- [x] Shared trip opened by someone else: read-only, only "Re-plan" available.
+- [x] Add the second Playwright flow to `frontend/e2e/`: plan as a guest, sign up, see the
   trip in My trips, share it, open the link in a fresh browser context (carried over from
   SPOT-90, which runs the first flow in CI).
-- [ ] Extend `frontend/e2e/keyboard.spec.ts` and `a11y.spec.ts` to PRD stories 8–11: recent
+- [x] Extend `frontend/e2e/keyboard.spec.ts` and `a11y.spec.ts` to PRD stories 8–11: recent
   trips, sign-up, My trips, saving, sharing, by keyboard and with no serious or critical axe
   violations in either theme (carried over from SPOT-91, which covers stories 1–7).
 
@@ -3281,7 +3279,47 @@ because it shows the result the user actually saw.
 - Each action updates the page and lists without a reload; share-off revokes the copied link.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip actions (`features/trip/TripActions.tsx`, `features/shell/Modal.tsx`,
+  `api/trips.ts` `useReplanTrip`).
+  - **Re-plan with current weather**, for anyone who can see the trip: `POST …/replan` with
+    a fresh `Idempotency-Key`. The new trip is cached from the response, so its page opens
+    with no second request, and it goes to the top of recent trips.
+  - **Owner:**
+    - Save asks for a name (prefilled with the name or route; Escape cancels), then saves
+      both at once; Saved (★) unsaves.
+    - Share is a switch (`role=switch`), with Copy link while it's on and a toast saying
+      what the switch does to the link.
+    - Delete asks first, then goes to My trips (a user) or the planner (a guest).
+  - **A guest's Save** opens "Create an account to save trips" (a dialog: Not now, Log in,
+    Sign up), and the links come back to this trip. Nothing is saved.
+  - **Someone else's shared trip:** only Re-plan, a "Shared with you, read-only" note, and
+    the form's summary with no Edit.
+  - The modal logic (focus in and back, Tab kept inside, Escape) is now `Modal`, shared by
+    the delete confirmation and the sign-up dialog.
+  - `/me` stays fresh until something invalidates it (sign-in, sign-out, a plan), rather
+    than being fetched again by each component that mounts. The smoke test caught a
+    refetch while scrubbing.
+- **End-to-end** (`e2e/accounts.spec.ts`; `keyboard.spec.ts` and `a11y.spec.ts` extended),
+  carried over from SPOT-90 and SPOT-91:
+  - Second smoke flow: plan as a guest; sign up and see "1 trip … was added"; find it in My
+    trips; share it from its page; a fresh browser context opens the link, read-only;
+    sharing off, and the same link is "Trip not found" for them.
+  - Keyboard only, stories 8–11:
+    - back to a recent trip from the header;
+    - sign up keeping the trip;
+    - My trips, save under a name, re-plan;
+    - share, copy the link, and unshare.
+  - axe, both themes: recent trips; sign-up-to-save dialog; a login error; sign-up; the
+    save form; a saved, shared trip; My trips; the delete dialog; a shared trip seen
+    read-only. No serious or critical violations.
+  - The end-to-end sign-up found that Django refused it from the dev proxy's origin (fixed
+    in SPOT-114's settings). Specs that fake a plan now serve its trip page too.
+- Verified (9 new unit tests, 367 total; 19 end-to-end tests pass with 2 workers):
+  - Save under a name (focus in the field, toast, ★, the banner's name); unsave; a guest's
+    dialog (focus on Not now, back on Save, nothing saved); share on and off (`aria-checked`,
+    clipboard, toast); delete to My trips or the planner.
+  - Read-only for a non-owner; re-plan with a key, the new trip on screen without
+    fetching it again; a failed re-plan says so.
 
 ### SPOT-126 · Account page
 

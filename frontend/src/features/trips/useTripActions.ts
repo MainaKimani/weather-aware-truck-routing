@@ -30,6 +30,19 @@ export function useTripActions(tripId: string) {
     rename: (name: string, onDone?: () => void) => {
       update.mutate({ tripId, changes: { name } }, { onSuccess: onDone, onError: failed })
     },
+    /** Save under a name, in one request. */
+    saveAs: (name: string, onDone?: () => void) => {
+      update.mutate(
+        { tripId, changes: { name, saved: true } },
+        {
+          onSuccess: () => {
+            showToast('Trip saved. It stays until you delete it.')
+            onDone?.()
+          },
+          onError: failed,
+        },
+      )
+    },
     setSaved: (saved: boolean) => {
       update.mutate({ tripId, changes: { saved } }, { onError: failed })
     },

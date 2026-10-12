@@ -6,7 +6,7 @@
 import { expect, test } from '@playwright/test'
 
 import { strongHosPlan } from '../src/test/fixtures/strongHosPlan'
-import { expectAccessible, planDemoTrip, respondToPlanWith } from './support'
+import { expectAccessible, planDemoTrip, respondToPlanWith, signUp, uniqueEmail } from './support'
 
 for (const theme of ['light', 'dark'] as const) {
   test.describe(`${theme} theme`, () => {
@@ -80,6 +80,63 @@ for (const theme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'Plan trip' }).click()
       await expect(page.getByText('Not drivable')).toBeVisible()
       await expectAccessible(page, 'not drivable')
+    })
+
+    test('a guest: recent trips open, and asked to sign up to save', async ({ page }) => {
+      await page.goto('/')
+      await planDemoTrip(page)
+      await page.getByRole('button', { name: /^Recent trips/ }).click()
+      await expect(
+        page.getByRole('region', { name: 'Recent trips' }).getByRole('link').first(),
+      ).toBeVisible()
+      await expectAccessible(page, 'recent trips')
+
+      await page.keyboard.press('Escape')
+      await page.getByRole('button', { name: '☆ Save' }).click()
+      await expect(
+        page.getByRole('dialog', { name: 'Create an account to save trips' }),
+      ).toBeVisible()
+      await expectAccessible(page, 'sign up to save')
+    })
+
+    test('log in with a wrong password, and sign up', async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('Email').fill(uniqueEmail())
+      await page.getByLabel('Password').fill('not-the-password-1')
+      await page.getByRole('button', { name: 'Log in' }).click()
+      await expect(page.getByRole('alert').first()).toBeVisible()
+      await expectAccessible(page, 'login error')
+
+      await page.goto('/signup')
+      await expectAccessible(page, 'sign up')
+    })
+
+    test('a user: My trips, deleting, saving and sharing', async ({ page, browser }) => {
+      await signUp(page)
+      await page.goto('/')
+      await planDemoTrip(page)
+      const tripUrl = page.url()
+      await page.getByRole('button', { name: '☆ Save' }).click()
+      await expect(page.getByRole('form', { name: 'Save trip' })).toBeVisible()
+      await expectAccessible(page, 'save form')
+      await page.getByRole('button', { name: 'Save trip' }).click()
+      await page.getByRole('switch', { name: 'Share' }).click()
+      await expect(page.getByRole('button', { name: 'Copy link' })).toBeVisible()
+      await expectAccessible(page, 'saved and shared trip')
+
+      await page.getByRole('link', { name: 'My trips' }).click()
+      await expect(page.getByRole('list', { name: 'Trips' }).getByRole('listitem')).toHaveCount(1)
+      await expectAccessible(page, 'my trips')
+      await page.getByRole('button', { name: /^Delete:/ }).click()
+      await expect(page.getByRole('alertdialog')).toBeVisible()
+      await expectAccessible(page, 'delete dialog')
+
+      const stranger = await browser.newContext({ colorScheme: theme })
+      const theirs = await stranger.newPage()
+      await theirs.goto(tripUrl)
+      await expect(theirs.getByText(/Shared with you, read-only/)).toBeVisible()
+      await expectAccessible(theirs, 'shared trip, read-only')
+      await stranger.close()
     })
 
     test('a failed plan', async ({ page }) => {

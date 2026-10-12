@@ -19,17 +19,23 @@ export function fetchMe(signal?: AbortSignal): Promise<Me> {
   return unwrap(api.GET('/api/v1/me', { signal }))
 }
 
+/**
+ * Fresh until something changes it: signing in or out and planning invalidate
+ * it, so it isn't fetched again each time another component asks.
+ */
+const meQuery = {
+  queryKey: meKeys.all,
+  queryFn: ({ signal }: { signal: AbortSignal }) => fetchMe(signal),
+  staleTime: Infinity,
+}
+
 export function useMe() {
-  return useQuery({ queryKey: meKeys.all, queryFn: ({ signal }) => fetchMe(signal) })
+  return useQuery(meQuery)
 }
 
 const selectUser = (me: Me) => me.user
 
 /** The signed-in user, null for a guest or visitor, undefined until known. */
 export function useCurrentUser() {
-  return useQuery({
-    queryKey: meKeys.all,
-    queryFn: ({ signal }) => fetchMe(signal),
-    select: selectUser,
-  }).data
+  return useQuery({ ...meQuery, select: selectUser }).data
 }

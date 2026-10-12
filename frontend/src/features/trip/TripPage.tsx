@@ -20,6 +20,7 @@ import { RouteSkeletons } from '../plan/RouteSkeletons'
 import { useOpenTrip } from '../planner/useOpenTrip'
 import { NotFound } from '../shell/NotFound'
 import { TripForm } from '../trip-form/TripForm'
+import { TripActions } from './TripActions'
 
 export function TripPage() {
   const { tripId = '' } = useParams()
@@ -58,7 +59,13 @@ export function TripPage() {
   return (
     <div className="space-y-5 p-5">
       {trip.data && <PlannedBanner trip={trip.data} />}
-      <TripForm key={tripId} inputs={inputs} onPlanned={openTrip} />
+      {trip.data && <TripActions trip={trip.data} />}
+      <TripForm
+        key={tripId}
+        inputs={inputs}
+        onPlanned={openTrip}
+        readOnly={trip.data ? !trip.data.is_owner : false}
+      />
       <ResultsArea onPlanned={openTrip} />
     </div>
   )
