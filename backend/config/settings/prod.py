@@ -1,7 +1,7 @@
 """Production. Refuses to start unless every required setting is present.
 
 Transport and cookie hardening (HSTS, secure cookies, proxy SSL header) is
-added in SPOT-45.
+not configured yet.
 """
 
 from django.core.exceptions import ImproperlyConfigured

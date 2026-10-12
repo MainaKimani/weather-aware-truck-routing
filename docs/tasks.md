@@ -12,7 +12,8 @@ link to their sections instead of repeating them.
 - **Priority:** P0 must ship, P1 should ship, P2 stretch (matches PRD §5).
 - **Updating:** when a task changes, update its row in the board **and** add a dated line to its
   progress log saying what was done, what's left and any decision made. Tick sub-tasks as they
-  finish. Branches and commits carry the task id, e.g. `feat(risk): apply load rules [SPOT-23]`.
+  finish. Branch names may carry the task id; commit messages and code comments don't. They
+  say what changed and why in plain words, e.g. `feat(risk): raise wind risk for heavy loads`.
 - **Done means** every acceptance criterion is met, tests pass in CI, and the progress log says so.
 - **Branches:** backend work goes on `dev-backend`, frontend work on `dev-frontend`. Feature
   branches merge into a dev branch, and `main` accepts PRs only from `dev-backend` or

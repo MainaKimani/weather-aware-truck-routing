@@ -7,5 +7,5 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def healthz(request: Request) -> Response:
-    """Liveness: the process is up. Readiness checks come in SPOT-45."""
+    """Liveness: the process is up."""
     return Response({"status": "ok"})
