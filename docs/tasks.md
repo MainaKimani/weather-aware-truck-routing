@@ -75,7 +75,7 @@ link to their sections instead of repeating them.
 | SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | Done        |
 | SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | Done        |
 | SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | Done        |
-| SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | To do       |
+| SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | Done        |
 | SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | To do       |
 | SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | To do       |
 | SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do       |
@@ -132,6 +132,7 @@ here when that task closes it.
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
 | SPOT-90 | Second smoke flow: plan as a guest, sign up, see the trip in My trips, share it, open the link in a fresh context. Needs accounts and trip pages. | SPOT-125 |
+| SPOT-91 | Keyboard walkthrough and axe checks for PRD stories 8–11 (recent trips, sign-up, My trips, sharing). Those screens don't exist yet. | SPOT-125 |
 
 ## Epics
 
@@ -2396,16 +2397,44 @@ Spec: RFC §10.4.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-64, SPOT-81 |
+| Frontend · 2 | P0 | Done | SPOT-64, SPOT-81 |
 
 **Sub-tasks**
-- [ ] axe check on every state; keyboard-only walkthrough; contrast in both themes.
+- [x] axe check on every state; keyboard-only walkthrough; contrast in both themes.
 
 **Acceptance criteria**
 - No serious or critical axe violations; every task in the PRD stories can be done by keyboard.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: axe and keyboard specs (`frontend/e2e/a11y.spec.ts`, `keyboard.spec.ts`,
+  `support.ts`), run with the smoke test in CI.
+  - **axe** (`@axe-core/playwright` 4.13.0, WCAG 2.2 A/AA and best practices, failing on
+    serious or critical) on every state in both themes: empty form, validation errors,
+    loading, results, checkpoint popup, a condition on the heatmap, heatmap hidden, HOS fields,
+    HOS stop popup, a not-drivable route and a failed plan (12 tests). Contrast is axe's
+    `color-contrast` rule in each theme.
+  - **Keyboard only** (Tab to reach, then Enter, Space, the arrows, Home and End; nothing
+    clicks): stories 1–7. Fill the form with autosuggest; read the pick and its reason; open
+    a checkpoint; choose Route B and open a checkpoint whose level the load raised; scrub,
+    play and pause; switch the heatmap to Wind and hide checkpoints. Then see a route marked
+    Not drivable, and turn HOS on and open a stop (3 tests).
+  - **Fixed:**
+    - The legend's radios and switches were 13 px targets 4 px apart (axe `target-size`,
+      serious, WCAG 2.2); rows are now at least 24 px.
+    - The page lost its only `h1` once a plan was shown; the app name in the header is now
+      the `h1` on every screen, and the empty state's title an `h2`.
+  - `tsconfig.e2e.json` (bundler resolution, as Playwright loads them) type-checks the specs,
+    which share the app's recorded plans.
+- Decisions:
+  - Checked in a real browser rather than jsdom: axe's contrast and target-size checks need
+    layout and computed colours.
+  - The not-drivable and failed-plan states use recorded responses through `page.route`; the
+    rest run against the fake-provider backend.
+- Verified: 16 end-to-end tests pass locally in 1.3 min with 3 workers. Removing the 24 px
+  rows again makes the heatmap-condition test fail with `target-size` on the three switches.
+  300 unit tests still pass.
+- Left: stories 8–11 (recent trips, sign-up, My trips, sharing) wait for those screens; moved
+  to SPOT-125 with the second smoke flow.
 
 ### SPOT-92 · Performance check against budgets
 
@@ -2903,6 +2932,9 @@ because it shows the result the user actually saw.
 - [ ] Add the second Playwright flow to `frontend/e2e/`: plan as a guest, sign up, see the
   trip in My trips, share it, open the link in a fresh browser context (carried over from
   SPOT-90, which runs the first flow in CI).
+- [ ] Extend `frontend/e2e/keyboard.spec.ts` and `a11y.spec.ts` to PRD stories 8–11: recent
+  trips, sign-up, My trips, saving, sharing, by keyboard and with no serious or critical axe
+  violations in either theme (carried over from SPOT-91, which covers stories 1–7).
 
 **Acceptance criteria**
 - Each action updates the page and lists without a reload; share-off revokes the copied link.

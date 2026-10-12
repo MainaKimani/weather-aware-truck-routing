@@ -39,9 +39,9 @@ function Panel() {
     <div className="space-y-5 p-5">
       {!planned && attempt.status === 'idle' && (
         <section aria-labelledby="empty-title">
-          <h1 id="empty-title" className="text-lg font-semibold">
+          <h2 id="empty-title" className="text-lg font-semibold">
             Plan a weather-aware trip
-          </h1>
+          </h2>
           <p className="mt-2 text-sm text-muted">
             Enter an origin, destination, departure and load. You'll get up to three routes, each
             rated for wind, rain and snow at the time the truck reaches every checkpoint, with a

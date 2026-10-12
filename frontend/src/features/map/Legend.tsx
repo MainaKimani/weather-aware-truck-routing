@@ -85,7 +85,7 @@ function LayerSwitch({ layer, label }: { layer: Layer; label: string }) {
   const on = useUiStore((s) => s.layers[layer])
   const toggleLayer = useUiStore((s) => s.toggleLayer)
   return (
-    <label className="flex cursor-pointer items-center gap-2">
+    <label className="flex min-h-6 cursor-pointer items-center gap-2">
       <input
         type="checkbox"
         checked={on}
@@ -125,9 +125,10 @@ function MetricChoice() {
       className="space-y-1 border-t border-line pt-2 disabled:opacity-60"
     >
       <legend className="font-semibold">Heatmap shows</legend>
+      {/* Rows of at least 24 px, here and on the switches: big enough targets (WCAG 2.5.8). */}
       <div className="grid grid-cols-2 gap-x-2 gap-y-1">
         {METRICS.map((m) => (
-          <label key={m.metric} className="flex cursor-pointer items-center gap-1.5">
+          <label key={m.metric} className="flex min-h-6 cursor-pointer items-center gap-1.5">
             <input
               type="radio"
               name={name}
