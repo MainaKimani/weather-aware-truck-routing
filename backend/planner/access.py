@@ -76,6 +76,13 @@ def current_owner(request: HttpRequest | Request, *, create: bool = False) -> Ow
     return Owner(guest_id=guest_id)
 
 
+def owned_trips(owner: Owner | None) -> QuerySet[Trip]:
+    """The caller's own trips; none for an anonymous visitor."""
+    if owner is None:
+        return Trip.objects.none()
+    return Trip.objects.filter(owner.trips())
+
+
 def visible_trips(owner: Owner | None) -> QuerySet[Trip]:
     """Trips the caller may read: their own, and any shared one."""
     shared = Q(shared=True)
@@ -91,7 +98,7 @@ def get_owned_trip(trip_id: uuid.UUID | str, owner: Owner | None) -> Trip:
     """The trip only if the caller owns it, shared or not; for changes. Http404 otherwise."""
     if owner is None:
         raise Http404
-    return _get(Trip.objects.filter(owner.trips()), trip_id)
+    return _get(owned_trips(owner), trip_id)
 
 
 def _get(trips: QuerySet[Trip], trip_id: uuid.UUID | str) -> Trip:

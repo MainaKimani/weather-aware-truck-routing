@@ -120,6 +120,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: routing_unavailable or weather_unavailable
+  /api/v1/trips:
+    get:
+      operationId: list_trips
+      description: |-
+        The caller's trips, newest first.
+
+        Signed-in users page through all of theirs with the cursor in `next`.
+        A guest gets their latest 20 and no further pages. A visitor who hasn't
+        planned yet gets an empty list.
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+        description: From a previous page's `next`.
+      - in: query
+        name: q
+        schema:
+          type: string
+          default: ''
+          maxLength: 100
+        description: Matches the name, origin or destination.
+      - in: query
+        name: saved
+        schema:
+          type: boolean
+          nullable: true
+        description: Only saved trips, or only not.
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripPage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: invalid_input
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+  /api/v1/trips/{trip_id}:
+    get:
+      operationId: get_trip
+      description: 'A saved trip: the plan as it was made, for its owner or, if shared,
+        anyone.'
+      parameters:
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours and not shared'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
   /api/v1/trips/{trip_id}/heatmap:
     get:
       operationId: trip_heatmap
@@ -865,6 +954,185 @@ components:
       - avg_risk_tolerance
       - hos_enabled
       - wind_basis
+    Trip:
+      type: object
+      description: 'A saved trip: its plan response, what the owner has set, and who
+        is asking.'
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        rules_version:
+          type: string
+        stale:
+          type: boolean
+        forecast_as_of:
+          type: string
+          format: date-time
+          nullable: true
+        demo:
+          type: boolean
+        inputs:
+          $ref: '#/components/schemas/Inputs'
+        settings:
+          $ref: '#/components/schemas/Settings'
+        recommended_route_id:
+          type: string
+          nullable: true
+        reason_code:
+          $ref: '#/components/schemas/ReasonCodeEnum'
+        recommendation_reason:
+          type: string
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Warning'
+        routes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Route'
+        corridor:
+          $ref: '#/components/schemas/Corridor'
+        trip_id:
+          type: string
+          format: uuid
+          description: The saved trip; its heatmap is under /trips/{id}.
+        name:
+          type: string
+        saved:
+          type: boolean
+        shared:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        is_owner:
+          type: boolean
+          description: Whether the caller may change the trip.
+        replanned_from:
+          type: string
+          format: uuid
+          nullable: true
+          description: The trip this one re-planned, if any.
+      required:
+      - corridor
+      - created_at
+      - demo
+      - forecast_as_of
+      - generated_at
+      - inputs
+      - is_owner
+      - name
+      - reason_code
+      - recommendation_reason
+      - recommended_route_id
+      - replanned_from
+      - routes
+      - rules_version
+      - saved
+      - settings
+      - shared
+      - stale
+      - trip_id
+      - warnings
+    TripPage:
+      type: object
+      description: A page of trips, newest first. Follow `next` for the one after;
+        guests get one page.
+      properties:
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TripSummary'
+      required:
+      - next
+      - previous
+      - results
+    TripRouteSummary:
+      type: object
+      description: The recommended route, as a trip list shows it.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        label:
+          type: string
+          nullable: true
+        worst:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/RiskLevelEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        drivable:
+          type: boolean
+      required:
+      - drivable
+      - id
+      - label
+      - name
+      - worst
+    TripSummary:
+      type: object
+      description: 'One trip in a list: enough to recognise it, without its routes''
+        detail.'
+      properties:
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        name:
+          type: string
+          description: Set by the owner; empty until then.
+        saved:
+          type: boolean
+        shared:
+          type: boolean
+        origin:
+          type: string
+        destination:
+          type: string
+        departure:
+          type: string
+          format: date-time
+        load_lb:
+          type: integer
+        interval_mi:
+          type: integer
+        demo:
+          type: boolean
+        stale:
+          type: boolean
+        recommended:
+          allOf:
+          - $ref: '#/components/schemas/TripRouteSummary'
+          nullable: true
+          readOnly: true
+          description: Null when no route is drivable, so none is recommended.
+      required:
+      - created_at
+      - demo
+      - departure
+      - destination
+      - id
+      - interval_mi
+      - load_lb
+      - name
+      - origin
+      - recommended
+      - saved
+      - shared
+      - stale
     Warning:
       type: object
       properties:

@@ -421,6 +421,83 @@ class PlanSerializer(PlanSnapshotSerializer):
     trip_id = serializers.UUIDField(help_text="The saved trip; its heatmap is under /trips/{id}.")
 
 
+# --- Trips -------------------------------------------------------------------
+
+
+class TripRouteSummarySerializer(serializers.Serializer[Any]):
+    """The recommended route, as a trip list shows it."""
+
+    id = serializers.CharField(source="key")
+    name = serializers.CharField()
+    label = serializers.CharField(allow_null=True)  # type: ignore[assignment]  # Field.label
+    # Stored by name, so a plain choice; the same RiskLevelEnum in the schema.
+    worst = serializers.ChoiceField(
+        source="worst_level", choices=[level.name for level in Level], allow_null=True
+    )
+    drivable = serializers.BooleanField()
+
+
+class TripSummarySerializer(serializers.Serializer[Any]):
+    """One trip in a list: enough to recognise it, without its routes' detail."""
+
+    id = serializers.UUIDField()
+    created_at = UtcDateTimeField()
+    name = serializers.CharField(help_text="Set by the owner; empty until then.")
+    saved = serializers.BooleanField()
+    shared = serializers.BooleanField()
+    origin = serializers.CharField(source="origin_label")
+    destination = serializers.CharField(source="destination_label")
+    departure = UtcDateTimeField()
+    load_lb = serializers.IntegerField()
+    interval_mi = serializers.IntegerField()
+    demo = serializers.BooleanField()
+    stale = serializers.BooleanField()
+    recommended = serializers.SerializerMethodField(
+        help_text="Null when no route is drivable, so none is recommended."
+    )
+
+    @extend_schema_field(TripRouteSummarySerializer(allow_null=True))
+    def get_recommended(self, trip: Any) -> dict[str, Any] | None:
+        routes = getattr(trip, "recommended_routes", [])
+        return TripRouteSummarySerializer(routes[0]).data if routes else None
+
+
+class TripPageSerializer(serializers.Serializer[Any]):
+    """A page of trips, newest first. Follow `next` for the one after; guests get one page."""
+
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = TripSummarySerializer(many=True)
+
+
+class TripListQuerySerializer(serializers.Serializer[dict[str, Any]]):
+    saved = serializers.BooleanField(
+        required=False, allow_null=True, default=None, help_text="Only saved trips, or only not."
+    )
+    q = serializers.CharField(
+        required=False,
+        default="",
+        allow_blank=True,
+        max_length=100,
+        trim_whitespace=True,
+        help_text="Matches the name, origin or destination.",
+    )
+    cursor = serializers.CharField(required=False, help_text="From a previous page's `next`.")
+
+
+class TripSerializer(PlanSerializer):
+    """A saved trip: its plan response, what the owner has set, and who is asking."""
+
+    name = serializers.CharField()
+    saved = serializers.BooleanField()
+    shared = serializers.BooleanField()
+    created_at = UtcDateTimeField()
+    is_owner = serializers.BooleanField(help_text="Whether the caller may change the trip.")
+    replanned_from = serializers.UUIDField(
+        allow_null=True, help_text="The trip this one re-planned, if any."
+    )
+
+
 # --- Heatmap -----------------------------------------------------------------
 
 

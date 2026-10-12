@@ -18,6 +18,7 @@ from decimal import Decimal
 from typing import Any, Final
 
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch, Q, QuerySet
 from django.utils.dateparse import parse_datetime
 
 from planner.access import Owner
@@ -175,6 +176,62 @@ def _route_snapshot(route: TripRoute) -> Snapshot:
             "drivable": route.drivable,
         },
         "checkpoints": route.checkpoints,
+    }
+
+
+# --- Reading trips back ---------------------------------------------------------
+
+# What a trip list shows of each trip; the heavy JSON stays in the database.
+SUMMARY_FIELDS: Final = (
+    "id",
+    "created_at",
+    "name",
+    "saved",
+    "shared",
+    "user_id",
+    "guest_id",
+    "origin_label",
+    "destination_label",
+    "departure",
+    "load_lb",
+    "interval_mi",
+    "demo",
+    "stale",
+    "replanned_from_id",
+)
+RECOMMENDED_FIELDS: Final = ("trip_id", "key", "name", "label", "worst_level", "drivable")
+
+
+def summaries(trips: QuerySet[Trip], *, saved: bool | None = None, q: str = "") -> QuerySet[Trip]:
+    """Trips for a list, newest first, each with its recommended route.
+
+    Two queries for any page: the trips' summary columns, then their
+    recommended routes without geometry, checkpoints or stops (RFC §3.1).
+    """
+    if saved is not None:
+        trips = trips.filter(saved=saved)
+    if q:
+        trips = trips.filter(
+            Q(name__icontains=q) | Q(origin_label__icontains=q) | Q(destination_label__icontains=q)
+        )
+    recommended = TripRoute.objects.filter(recommended=True).only(*RECOMMENDED_FIELDS)
+    return (
+        trips.only(*SUMMARY_FIELDS)
+        .prefetch_related(Prefetch("routes", queryset=recommended, to_attr="recommended_routes"))
+        .order_by("-created_at", "-id")
+    )
+
+
+def load_trip(trip: Trip, owner: Owner | None) -> Snapshot:
+    """The trip's plan response, with what the owner has set and who is asking."""
+    return {
+        **load_snapshot(trip),
+        "name": trip.name,
+        "saved": trip.saved,
+        "shared": trip.shared,
+        "created_at": _wire(trip.created_at),
+        "is_owner": owner is not None and owner.owns(trip),
+        "replanned_from": None if trip.replanned_from_id is None else str(trip.replanned_from_id),
     }
 
 

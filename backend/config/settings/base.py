@@ -164,6 +164,8 @@ REST_FRAMEWORK = {
         "plans_user": "30/min",
         "geocode": "60/min",
         "heatmap": "20/min",
+        # Reading trips: lists and pages, which the UI refetches as trips change.
+        "trips": "120/min",
     },
     # How many proxies sit in front of Django and append to X-Forwarded-For.
     # 0 trusts only REMOTE_ADDR, so a client can't pick its own throttle key;

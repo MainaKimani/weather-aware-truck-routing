@@ -9,8 +9,9 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from planner.access import Owner, current_owner, get_visible_trip
+from planner.access import Owner, current_owner, get_visible_trip, owned_trips
 from planner.api.errors import IdempotencyConflict
+from planner.api.pagination import TripCursorPagination
 from planner.api.serializers import (
     ErrorSerializer,
     HeatmapQuerySerializer,
@@ -20,6 +21,10 @@ from planner.api.serializers import (
     PlanSerializer,
     PlanSnapshotSerializer,
     SuggestQuerySerializer,
+    TripListQuerySerializer,
+    TripPageSerializer,
+    TripSerializer,
+    TripSummarySerializer,
 )
 from planner.api.throttles import PlanGuestSessionThrottle, PlanGuestThrottle, PlanUserThrottle
 from planner.models import Trip
@@ -28,9 +33,11 @@ from planner.repositories import (
     Snapshot,
     load_heatmap,
     load_snapshot,
+    load_trip,
     route_lines,
     save_heatmap,
     save_trip,
+    summaries,
     trip_for_key,
 )
 from planner.services.corridor import corridor_grid
@@ -115,6 +122,67 @@ def _replay(trip: Trip, owner: Owner | None) -> Snapshot:
     if owner is None or not owner.owns(trip):
         raise IdempotencyConflict
     return load_snapshot(trip)
+
+
+# How many trips a guest's list shows: their recent ones on this device (PRD §7.9).
+GUEST_LIST_LIMIT = 20
+
+
+class TripListView(APIView):
+    """The caller's trips, newest first.
+
+    Signed-in users page through all of theirs with the cursor in `next`.
+    A guest gets their latest 20 and no further pages. A visitor who hasn't
+    planned yet gets an empty list.
+    """
+
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "trips"
+
+    @extend_schema(
+        operation_id="list_trips",
+        parameters=[TripListQuerySerializer],
+        responses={
+            200: TripPageSerializer,
+            400: _error("invalid_input"),
+            429: _error("rate_limited"),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        query = TripListQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        owner = current_owner(request)
+        trips = summaries(
+            owned_trips(owner), saved=query.validated_data["saved"], q=query.validated_data["q"]
+        )
+        if owner is None or owner.is_guest:
+            page = TripSummarySerializer(trips[:GUEST_LIST_LIMIT], many=True).data
+            return Response({"next": None, "previous": None, "results": page})
+        paginator = TripCursorPagination()
+        results = paginator.paginate_queryset(trips, request, view=self) or []
+        return paginator.get_paginated_response(TripSummarySerializer(results, many=True).data)
+
+
+class TripDetailView(APIView):
+    """A saved trip: the plan as it was made, for its owner or, if shared, anyone."""
+
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "trips"
+
+    @extend_schema(
+        operation_id="get_trip",
+        parameters=[OpenApiParameter("trip_id", uuid.UUID, OpenApiParameter.PATH)],
+        responses={
+            200: TripSerializer,
+            404: _error("not_found: no such trip, or not yours and not shared"),
+            429: _error("rate_limited"),
+        },
+    )
+    def get(self, request: Request, trip_id: str) -> Response:
+        owner = current_owner(request)
+        return Response(load_trip(get_visible_trip(trip_id, owner), owner))
 
 
 class TripHeatmapView(APIView):

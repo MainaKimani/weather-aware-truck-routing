@@ -84,7 +84,7 @@ link to their sections instead of repeating them.
 | SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
 | SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | Done        |
-| SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
+| SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | To do       |
 | SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | To do       |
 | SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | To do       |
@@ -2740,19 +2740,49 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-111, SPOT-112 |
+| Backend · 2 | P0 | Done | SPOT-111, SPOT-112 |
 
 **Sub-tasks**
-- [ ] `GET /api/v1/trips` (summaries, cursor pagination, `saved` and `q` filters; guests capped
+- [x] `GET /api/v1/trips` (summaries, cursor pagination, `saved` and `q` filters; guests capped
   at 20).
-- [ ] `GET /api/v1/trips/{id}` (full snapshot + meta, `is_owner`).
+- [x] `GET /api/v1/trips/{id}` (full snapshot + meta, `is_owner`).
 
 **Acceptance criteria**
 - Listing 20 trips runs in 2 queries (`django_assert_num_queries`).
 - A guest can open their own trip; another guest gets 404; anyone can open a shared trip.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip read endpoints (`TripListView`, `TripDetailView`, `repositories.summaries`,
+  `access.owned_trips`).
+  - `GET /api/v1/trips`: the caller's own trips, newest first, through `owned_trips` in the
+    access layer. Each summary has the name, saved and shared flags, the places, departure,
+    load, interval, demo and stale flags, and the recommended route (id, name, label, worst
+    level, drivable), or null when nothing is drivable. Filters: `saved=true|false`, and `q`
+    against the name, origin or destination, case-insensitive.
+  - **Pages:** users page with a cursor (`next`), 20 at a time, ordered by creation time then
+    id. Guests get their latest 20 and `next: null`. A visitor who hasn't planned gets an
+    empty list.
+  - `GET /api/v1/trips/{id}`: the saved plan response plus `name`, `saved`, `shared`,
+    `created_at`, `is_owner` and `replanned_from`, through `get_visible_trip` (the owner, or
+    anyone if shared; otherwise a JSON 404, malformed ids included).
+  - Both have a `trips` throttle scope, 120 a minute (RFC §12 updated). The schema, the
+    frontend's types and the OpenAPI path test are updated.
+- Decisions:
+  - A cursor rather than page numbers: new trips arrive at the top, and a cursor neither
+    repeats nor skips one when they do. It needs no count query either.
+  - Only the recommended route is fetched for a list, and only its summary columns: what the
+    list shows, and none of the geometry, checkpoint or stop JSON.
+- Verified (16 tests, 660 total):
+  - Only the caller's trips, newest first; others' shared trips are not in their list.
+  - The summary's exact shape; null recommendation when nothing is drivable.
+  - `saved` and `q` filters; a bad `saved` or a 101-character `q` is a 400.
+  - **Paging:** 45 trips come back as 20, 20 and 5 with each exactly once, even with a new
+    trip added after the first page. A guest with 23 trips gets 20 and no `next`.
+  - **20 trips with 3 routes each in 2 queries** (`django_assert_num_queries`), and no
+    `checkpoints`, `geometry` or `hos_stops` column in the SQL.
+  - Detail: the plan made through the API reads back identical, with the meta; another
+    guest gets 404; a shared trip opens for anyone with `is_owner: false`; unknown and
+    malformed ids are JSON 404s; `replanned_from` names the earlier trip.
 
 ### SPOT-114 · Accounts (sign up, log in, log out, session)
 
