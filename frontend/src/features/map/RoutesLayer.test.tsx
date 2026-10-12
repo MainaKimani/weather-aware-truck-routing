@@ -131,7 +131,7 @@ describe('pointing at routes on the map', () => {
     expect(useUiStore.getState().hoveredRouteId).toBeNull()
   })
 
-  it('leaves the selection alone when the click misses every route', () => {
+  it('leaves the route selected when the click misses every route', () => {
     renderMap(demoPlan)
 
     act(() => {

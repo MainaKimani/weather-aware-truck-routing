@@ -20,6 +20,8 @@ import type { Plan } from '../../api/schema'
 import { useTheme } from '../../lib/theme'
 import { BASEMAP, INITIAL_VIEW } from './basemap'
 import { Camera } from './Camera'
+import { CheckpointPopups } from './CheckpointPopups'
+import { CheckpointsLayer } from './CheckpointsLayer'
 import { INTERACTIVE_LAYERS } from './layers'
 import { PlaceMarkers } from './PlaceMarkers'
 import { RoutesLayer } from './RoutesLayer'
@@ -63,7 +65,9 @@ export default function MapView() {
         <NavigationControl position="top-right" showCompass={false} />
         <Camera />
         <RoutesLayer theme={theme} />
+        <CheckpointsLayer theme={theme} />
         <PlaceMarkers />
+        <CheckpointPopups />
       </Map>
       {!planned && (
         <p className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-surface/90 px-3 py-1 text-xs text-muted shadow-overlay">

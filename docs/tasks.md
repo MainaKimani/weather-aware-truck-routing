@@ -67,7 +67,7 @@ link to their sections instead of repeating them.
 | SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | Done        |
 | SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | Done        |
 | SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | Done        |
-| SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | To do       |
+| SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | Done        |
 | SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | To do       |
 | SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | To do       |
 | SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | To do       |
@@ -1952,15 +1952,15 @@ Spec: PRD §9, RFC §11.
 
 ### SPOT-72 · Checkpoints layer, tooltip and popup
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 3 | P0 | To do | SPOT-70 |
 
 **Sub-tasks**
-- [ ] Single `circle` layer, colour by level, zoom-scaled radius; hover via `feature-state`.
-- [ ] Tooltip (level, ETA) and popup (mile, ETA, gust, sustained "for info", rain, snow,
+- [x] Single `circle` layer, colour by level, zoom-scaled radius; hover via `feature-state`.
+- [x] Tooltip (level, ETA) and popup (mile, ETA, gust, sustained "for info", rain, snow,
   level, driver, load rule sentence).
-- [ ] Follow `selectedCheckpoint` / `hoveredCheckpoint` in `state/ui.ts`: fly to and open the
+- [x] Follow `selectedCheckpoint` / `hoveredCheckpoint` in `state/ui.ts`: fly to and open the
   popup for the selected checkpoint, highlight the hovered one. The checkpoint table already
   sets them (carried over from SPOT-63).
 
@@ -1970,7 +1970,49 @@ Spec: PRD §9, RFC §11.
   42,000 lb load (> 40,000 lb rule)".
 
 **Progress log**
-- _Not started._
+- 2026-10-12: checkpoints layer, tooltip and popup (`features/map/CheckpointsLayer.tsx`,
+  `CheckpointPopups.tsx`).
+  - **Layer:** one `checkpoints` source holding every route's checkpoints, built once per plan
+    with numeric feature ids. One `circle` layer filtered to the selected route, coloured by
+    level from `lib/risk.ts`, with radius scaled by zoom (3 → 8 px) and an outline from the
+    casing token.
+  - **Highlight:** `hoveredCheckpoint` and `selectedCheckpoint` from `state/ui.ts` become
+    `feature-state` (`hover`, `selected`), drawn larger with a heavier outline. They are
+    re-applied when a new basemap (theme change) re-adds the source.
+  - **Tooltip:** the hovered checkpoint's level chip and ETA ("Mon 11:48 CDT"), from the map
+    or from a table row.
+  - **Popup:** the selected checkpoint's mile and route, ETA, gust, sustained "(for info)",
+    rain, snow, and level with its driver. A load-rule checkpoint adds the sentence from
+    `lib/loadRule.ts`, e.g. "Raised High → Severe: gust 37 mph with a 42,000 lb load
+    (> 40,000 lb rule)". Closing it, or clicking empty map, clears the checkpoint and keeps
+    the route. Popups use the app's surface tokens in both themes.
+  - **Follows the table:** choosing a row opens its popup. If the checkpoint is off screen
+    the map eases to it (a jump under reduced motion); otherwise the camera stays put.
+  - **Pointer:** a checkpoint wins over the route beneath it. The hover changes only when the
+    pointer moves to a different checkpoint, so moving within one doesn't re-run the
+    highlight.
+- Verified (18 new tests, 215 total):
+  - Checkpoint ids are unique, and positions, route, index and level are kept (null as
+    Unknown).
+  - Route switching is a filter change with no `setData`.
+  - Hover and selection feature-state is set and cleared, and re-applied only on the source's
+    metadata event.
+  - Tooltip text; popup fields and the load-rule sentence from the real fixture; one popup
+    when a checkpoint is both hovered and selected; close button; easing only when off
+    screen.
+  - Map hover and click precedence; a steady hover; a click on empty map.
+  - **In Chrome:** choosing Route B's mile-325 row opened its popup on the map. Mile 350 read
+    "Raised High → Severe: gust 37 mph with a 42,000 lb load (> 40,000 lb rule)". Hovering
+    another row showed its tooltip. In the dark theme, MapLibre's stylesheet (loaded later
+    with the map) had overridden the popup colours, leaving light text on white. The
+    overrides are now scoped under `.maplibregl-map`, and popups use the dark surface.
+  - **Performance (acceptance):** a Los Angeles → New York plan every 10 mi gives 773
+    checkpoints. With the route filter lifted in the console so all 773 rendered, 120
+    pan/zoom steps took a median of 0.8 ms per synchronous redraw (p95 2.8 ms, max 8.7 ms),
+    against 16.7 ms for 60 fps. Chrome was throttling the occluded test window to one
+    frame a second, so this is MapLibre's render time per frame, not a frame-rate trace.
+    SPOT-92's pan/zoom trace measures the frame rate in a visible window, with 773
+    checkpoints among its cases.
 
 ### SPOT-73 · HOS stops layer
 
@@ -2127,7 +2169,9 @@ Spec: PRD §8.
 
 **Sub-tasks**
 - [ ] Measure cold and warm plan latency on the hosted app (1,500 mi trip, 10 mi interval).
-- [ ] Chrome trace for pan/zoom and slider scrubbing; bundle size report.
+- [ ] Chrome trace for pan/zoom and slider scrubbing; bundle size report. Include pan/zoom
+  with all 773 checkpoints of a Los Angeles → New York plan every 10 mi showing (SPOT-72
+  measured render time only, in a throttled window).
 - [ ] Record numbers here; fix anything over budget.
 
 **Acceptance criteria**

@@ -10,6 +10,7 @@ import { RISK } from '../../lib/risk'
 export const SOURCE = {
   routes: 'routes',
   segments: 'route-segments',
+  checkpoints: 'checkpoints',
 } as const
 
 export const LAYER = {
@@ -18,10 +19,11 @@ export const LAYER = {
   routeSegments: 'route-segments',
   /** Wide and invisible, so a 4 px line is easy to point at. */
   routeHit: 'route-hit',
+  checkpoints: 'checkpoints',
 } as const
 
 /** Layers whose features the pointer can hover and click. */
-export const INTERACTIVE_LAYERS: string[] = [LAYER.routeHit]
+export const INTERACTIVE_LAYERS: string[] = [LAYER.checkpoints, LAYER.routeHit]
 
 /** A colour per risk level, read from a feature's `level` property. */
 export const riskColor: ExpressionSpecification = [
@@ -44,6 +46,28 @@ export const riskColor: ExpressionSpecification = [
 export function routeIs(routeId: string): ExpressionSpecification {
   return ['==', ['get', 'route'], routeId]
 }
+
+/** A hovered or selected checkpoint is drawn larger, with a heavier outline. */
+const emphasised: ExpressionSpecification = [
+  'any',
+  ['boolean', ['feature-state', 'hover'], false],
+  ['boolean', ['feature-state', 'selected'], false],
+]
+
+/** Checkpoint radius by zoom: small dots across a state, clear circles along a road. */
+export const checkpointRadius: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  4,
+  ['case', emphasised, 6, 3],
+  8,
+  ['case', emphasised, 9, 5],
+  12,
+  ['case', emphasised, 12, 8],
+]
+
+export const checkpointStroke: ExpressionSpecification = ['case', emphasised, 2.5, 1]
 
 export interface RouteInk {
   other: string

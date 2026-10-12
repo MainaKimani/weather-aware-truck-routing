@@ -26,7 +26,7 @@ function createFakeMap() {
     getContainer: () => ({ clientWidth: 800, clientHeight: 600 }),
     getCanvas: () => canvas,
     /** Everything is in view unless a test says otherwise. */
-    getBounds: vi.fn(() => ({ contains: () => true })),
+    getBounds: vi.fn(() => ({ contains: (): boolean => true })),
     getSource: (id: string) => (fake.sources.has(id) ? {} : undefined),
     on: vi.fn(),
     off: vi.fn(),
