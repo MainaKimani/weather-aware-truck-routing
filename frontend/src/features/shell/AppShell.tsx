@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { Header } from './Header'
+import { Toaster } from './Toaster'
 
 interface AppShellProps {
   badges?: ReactNode
@@ -14,6 +15,7 @@ export function AppShell({ badges, children }: AppShellProps) {
     <div className="flex h-dvh flex-col">
       <Header badges={badges} />
       {children}
+      <Toaster />
     </div>
   )
 }

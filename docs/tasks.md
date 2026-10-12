@@ -94,7 +94,7 @@ link to their sections instead of repeating them.
 | SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
 | SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
 | SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | Done        |
-| SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
+| SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | To do       |
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do       |
@@ -3172,17 +3172,42 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P1 | To do | SPOT-120, SPOT-114 |
+| Frontend · 2 | P1 | Done | SPOT-120, SPOT-114 |
 
 **Sub-tasks**
-- [ ] Forms with inline server errors and password hints; redirect to `next`.
-- [ ] Toast after sign-in: "N trips from this device were added to your account."
+- [x] Forms with inline server errors and password hints; redirect to `next`.
+- [x] Toast after sign-in: "N trips from this device were added to your account."
 
 **Acceptance criteria**
 - Keyboard-only sign-up and login work; errors are announced to screen readers.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: log in and sign up (`features/account/AuthPage.tsx`, `state/toasts.ts`,
+  `features/shell/Toaster.tsx`).
+  - `/login` and `/signup`, one form: email (`autocomplete=email`) and password
+    (`current-password` / `new-password`), with Django's rules as a hint on sign-up. Checked
+    before sending (required, email shape, 8 characters for a new password).
+  - **Server reasons:** allauth's `email` and `password` errors go on those fields
+    (`aria-invalid`, described by the message, announced as alerts) and the first is
+    focused. Reasons with no field (too many attempts, a refused CSRF check, a dropped
+    connection) are an alert above the form.
+  - **After success:** to `next` if it is a path on this site, else the planner.
+    `//evil.example`, `/\…`, full URLs and bare words are refused, so a crafted link
+    can't send someone away after logging in. A signed-in user opening either page goes
+    straight on. Each page links to the other, keeping `next`.
+  - **Toast:** "3 trips from this device were added to your account." (or "1 trip … was")
+    when a guest with trips signs up or logs in. The count comes from `/me` just before;
+    the server claims them (SPOT-115). Toasts are announced politely, have a close button
+    and go after 6 s.
+  - **Header:** Log in and Sign up for anyone not signed in.
+- Verified (20 new tests, 347 total):
+  - Sign-up with the keyboard alone (the password hint is its description), then on to
+    `next` with the header showing the user; login to the planner by default.
+  - Server field errors announced, on their fields, first one focused; a fieldless reason
+    above the form; client checks with no request sent.
+  - The toast for 3 and for 1 trip, none for a visitor, gone after 6 s.
+  - Signed in already: sent on. `next` kept across the two pages. Header links.
+  - `safeNext` against eight inputs, including the three ways out of the site.
 
 ### SPOT-124 · My trips page
 

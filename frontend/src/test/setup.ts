@@ -3,6 +3,7 @@ import { cleanup } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest'
 
 import { resetTimelineStore } from '../state/timeline'
+import { resetToastStore } from '../state/toasts'
 import { resetUiStore } from '../state/ui'
 import { resetFakeMap } from './fakeMap'
 import { setReducedMotion, setSystemDark } from './matchMedia'
@@ -25,6 +26,7 @@ beforeEach(() => {
   delete document.documentElement.dataset.theme
   resetUiStore()
   resetTimelineStore()
+  resetToastStore()
   resetFakeMap()
 })
 
