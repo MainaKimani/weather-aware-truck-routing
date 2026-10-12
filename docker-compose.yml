@@ -1,4 +1,4 @@
-# Local stack: api + postgres + redis + web. Production deploy is SPOT-100/101.
+# Local stack: api + postgres + redis + web. Not used for production.
 services:
   api:
     image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim

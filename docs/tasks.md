@@ -12,7 +12,8 @@ link to their sections instead of repeating them.
 - **Priority:** P0 must ship, P1 should ship, P2 stretch (matches PRD §5).
 - **Updating:** when a task changes, update its row in the board **and** add a dated line to its
   progress log saying what was done, what's left and any decision made. Tick sub-tasks as they
-  finish. Branches and commits carry the task id, e.g. `feat(risk): apply load rules [SPOT-23]`.
+  finish. Branch names may carry the task id; commit messages and code comments don't. They
+  say what changed and why in plain words, e.g. `feat(risk): raise wind risk for heavy loads`.
 - **Done means** every acceptance criterion is met, tests pass in CI, and the progress log says so.
 - **Branches:** backend work goes on `dev-backend`, frontend work on `dev-frontend`. Feature
   branches merge into a dev branch, and `main` accepts PRs only from `dev-backend` or
@@ -37,26 +38,26 @@ link to their sections instead of repeating them.
 | SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done      |
-| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | In review |
-| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | In review |
-| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | In review |
-| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | In review |
-| SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | To do     |
-| SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | To do     |
-| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | To do     |
-| SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | To do     |
-| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | To do     |
-| SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | To do     |
-| SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | To do     |
+| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | Done      |
+| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | Done      |
+| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | Done      |
+| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | Blocked   |
+| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | Done      |
+| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | Done      |
+| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | Done      |
+| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done      |
+| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done      |
+| SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | In review |
+| SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | In review |
+| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress|
+| SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | In review |
+| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | In progress|
+| SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | In review |
+| SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | In review |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | To do     |
 | SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | To do     |
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | To do     |
@@ -464,9 +465,9 @@ rewriting migrations.
 
 ### SPOT-21 · Checkpoint sampling and owned miles
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-20 |
+| Backend · 2 | P0 | Done | SPOT-20 |
 
 Spec: RFC §6.1, PRD §7.3, §7.5.
 
@@ -495,12 +496,13 @@ Spec: RFC §6.1, PRD §7.3, §7.5.
   distances ±10% off the geometry, with owned miles summing to the reported distance within
   0.01 mi, all positive, and miles strictly increasing. A route shorter than N gives exactly
   two checkpoints. An exact multiple (50 mi every 25) doesn't duplicate the destination.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-22 · ETA interpolation
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-20 |
+| Backend · 2 | P0 | Done | SPOT-20 |
 
 Spec: RFC §6.2.
 
@@ -530,12 +532,13 @@ Spec: RFC §6.2.
   - An ETA exactly on the hour selects that hour; one second (or one microsecond) past selects
     the next.
   - Non-UTC and half-hour zones normalise to UTC hours.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-23 · Risk classification and load rules
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-20 |
+| Backend · 3 | P0 | Done | SPOT-20 |
 
 Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
 
@@ -574,12 +577,13 @@ Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
     44.99). Gust 55 is No Travel at 1 lb, and the 40 mph / 35,000 lb gap case stays High.
   - Tie-breaks, and sustained wind 80 with gust 10 rating Low.
   - Hypothesis: the level is the worst component, and a heavier load is never safer.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-24 · Hours of Service planner
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 5 | P1 | To do | SPOT-22 |
+| Backend · 5 | P1 | Done | SPOT-22 |
 
 Spec: PRD §7.3.1, RFC §6.2.1.
 
@@ -618,12 +622,13 @@ Spec: PRD §7.3.1, RFC §6.2.1.
   - Hypothesis, up to 120 h with random clocks: an independent replay checks that no driving
     stretch breaks any limit; stops are strictly ordered within the trip; `clock_offset` is
     monotonic and ends at `trip_duration_s`.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-25 · Route metrics
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-21, SPOT-23 |
+| Backend · 2 | P0 | Done | SPOT-21, SPOT-23 |
 
 Spec: PRD §7.5, RFC §6.5.
 
@@ -648,12 +653,13 @@ Spec: PRD §7.5, RFC §6.5.
   average; an all-Unknown route has no average and no Low miles; one No Travel checkpoint makes
   the route not drivable. Hypothesis: miles by level sum to the route distance, the average
   stays within 0–4, and drivable means no No Travel.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-26 · Ranking and recommendation reason
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-25 |
+| Backend · 2 | P0 | Done | SPOT-25 |
 
 Spec: PRD §7.6, RFC §6.6.
 
@@ -692,6 +698,7 @@ Spec: PRD §7.6, RFC §6.6.
   and time decides; 1.04 vs 1.06 doesn't tie; rounded miles; Unknown average; deterministic
   order by id; no drivable route; single route; the 20% warning boundary; reason text for
   each criterion.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ---
 
@@ -699,9 +706,9 @@ Spec: PRD §7.6, RFC §6.6.
 
 ### SPOT-30 · Provider protocols, fakes and demo scenarios
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-20 |
+| Backend · 3 | P0 | Done | SPOT-20 |
 
 **Sub-tasks**
 - [x] `RoutingProvider`, `WeatherProvider`, `Geocoder` protocols in `providers/base.py`.
@@ -742,12 +749,13 @@ Spec: PRD §7.6, RFC §6.6.
 - Fixed along the way: `geo.interpolate` returned the endpoints with float noise
   (-96.79700000000001); it now returns them exactly.
 - Left: the `real` branch of the registry is wired in SPOT-31/33/34.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-31 · HERE truck routing adapter
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-30 |
+| Backend · 3 | P0 | Blocked | SPOT-30 |
 
 Spec: RFC §5.1.
 
@@ -791,12 +799,14 @@ Spec: RFC §5.1.
   allocation per service, but HERE's plans page wouldn't load (TLS error). Third-party sites
   quote ~30,000 transactions a month. Q3 stays open for the owner: a card on file with
   usage inside the free allocation, or a different router.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Blocked: the acceptance check needs
+  a real HERE request, which needs a key and the PRD Q3 decision on the paid plan.
 
 ### SPOT-32 · Route alternatives: dedupe and via-point fallback
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-31 |
+| Backend · 3 | P0 | Done | SPOT-31 |
 
 Spec: RFC §5.1.
 
@@ -830,12 +840,13 @@ Spec: RFC §5.1.
   in under 2 s. Two identical routes reduce to one, the fallback fills the set to three, the
   fastest three are kept, a failed fallback gives the warning, and via points sit 10% either
   side of the midpoint.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-33 · HERE autosuggest adapter
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-30 |
+| Backend · 1 | P0 | Done | SPOT-30 |
 
 **Sub-tasks**
 - [x] Autosuggest call biased to North America; return label, lat, lon, time zone.
@@ -859,12 +870,14 @@ Spec: RFC §5.1.
   `None`; a short query makes no call; HTTP 401/429/503 and malformed bodies are handled.
 - **Not verified against the live API** (no key). The fixture is synthetic, shaped to HERE's
   documented response.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done against the fixture; the live
+  check goes with SPOT-31's.
 
 ### SPOT-34 · Open-Meteo forecast adapter
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-30 |
+| Backend · 3 | P0 | Done | SPOT-30 |
 
 Spec: RFC §5.2, §6.3.
 
@@ -904,12 +917,13 @@ Spec: RFC §5.2, §6.3.
   - Changed units fail loudly, and a wrong location count is an error.
   - 250 points go out as batches of 100, 100 and 50, kept in order.
   - Live run: 120 points × 49 h in 1.2 s, with every point-hour rated.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-35 · Forecast cache
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-34, SPOT-13 |
+| Backend · 3 | P0 | Done | SPOT-34, SPOT-13 |
 
 Spec: RFC §9, §18.2, §18.3, §18.4.
 
@@ -955,12 +969,14 @@ Spec: RFC §9, §18.2, §18.3, §18.4.
 - Left: the plan-level criterion "plan succeeds with `stale: true`" gets its end-to-end check
   in SPOT-40/41, which put `stale` in the response. Running against real Redis: SPOT-100
   (Docker isn't available here).
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done; the plan-level `stale`
+  check moves to SPOT-40.
 
 ### SPOT-36 · Provider resilience
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-31, SPOT-34 |
+| Backend · 2 | P0 | Done | SPOT-31, SPOT-34 |
 
 Spec: RFC §18.3.
 
@@ -999,6 +1015,7 @@ Spec: RFC §18.3.
   `weather_unavailable`.
 - Tests zero the retry pause (`tests/providers/conftest.py`), so the suite stays at about 10 s;
   one test checks the real jitter range.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ---
 
@@ -1008,13 +1025,13 @@ Spec: RFC §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-21–26, SPOT-32, SPOT-35 |
+| Backend · 3 | P0 | In review | SPOT-21–26, SPOT-32, SPOT-35 |
 
 **Sub-tasks**
-- [ ] `plan_trip(request)`: routes → checkpoints → ETAs (+ HOS) → forecasts (one batched call
+- [x] `plan_trip(request)`: routes → checkpoints → ETAs (+ HOS) → forecasts (one batched call
   across all routes) → risk → metrics → ranking.
-- [ ] Return domain objects; saving as a trip is SPOT-111.
-- [ ] Add `rules_version`, `generated_at`, `stale`, warnings.
+- [x] Return domain objects; saving as a trip is SPOT-111.
+- [x] Add `rules_version`, `generated_at`, `stale`, warnings.
 
 **Acceptance criteria**
 - End-to-end test with fakes reproduces the demo scenario exactly (golden JSON file).
@@ -1022,19 +1039,52 @@ Spec: RFC §18.3.
 - Cold plan with fakes plus 300 ms simulated latency per provider call finishes in < 2 s.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: `planner/services/plan.py` holds `plan_trip(request, providers, forecasts, clock)`.
+  - **Pipeline:** `find_routes` → per route a `RouteGeometry`, checkpoints, a `DriveProfile`
+    and, with HOS on, `plan_hos` → ETAs through `HosPlan.clock_offset` → one `ForecastStore.get`
+    for every checkpoint of every route → `classify` → `route_metrics` → `rank_routes`, with
+    HOS trip time as the duration → `place_stops`.
+  - **Output** is domain objects: `Plan` with `PlannedRoute`s in rank order, each with its
+    `Checkpoint`s (mile, owned miles, position, ETA, forecast, `RiskResult`), placed HOS
+    stops, metrics, departure and arrival. It also carries `rules_version`, `generated_at`,
+    `stale`, `forecast_as_of` (oldest fetch used) and `demo`.
+  - **Ids and names** follow provider order, fastest first: `r1`–`r3` and Route A–C. They
+    stay stable when ranking reorders the routes, so Dallas → Denver gives
+    "Route A · via Amarillo", as in the design.
+  - **Warnings:** `only_n_routes_found` (SPOT-32), `high_unknown` (> 20% Unknown, SPOT-26),
+    `partial_forecast` for any smaller Unknown share (RFC §11 asks for a warning whenever some
+    checkpoints have no data), and `eta_estimated` when a route has no speed spans.
+- Decision: with HOS on, trip time is the exact drive time plus the planner's stops. The
+  planner works in whole seconds, and using its rounded total left arrival half a second off
+  the last checkpoint's ETA.
+- Verified (16 tests, `tests/test_plan_service.py`):
+  - **Golden file** `tests/golden/plan_demo.json`: the full demo plan (Dallas → Denver, 06:00
+    CDT, 42,000 lb, every 25 mi) minus geometry. Route A is recommended, "Fewest severe miles
+    (0 vs 100)". `tests/golden.py` compares it, and `UPDATE_GOLDEN=1` rewrites it.
+  - **Batching:** one routing call and one weather call per plan for all three routes.
+  - **Latency:** with 300 ms added to every provider call, a cold plan takes 0.8 s
+    (limit 2 s).
+  - **Stale:** with the provider down and an hour-old cache, the plan succeeds with
+    `stale: true`, `forecast_as_of` set and the same recommendation. This closes SPOT-35's
+    open criterion. With nothing cached, `WeatherUnavailable`; routing down,
+    `RoutingUnavailable`.
+  - **HOS on** gives a break and a rest on each route, shifts every later ETA by 10.5 h, and
+    makes arrival equal the last ETA.
+  - Missing forecasts are Unknown with a warning; ETAs read the hour being driven through;
+    the strong scenario ranks Route B last as not drivable.
+- `tests/conftest.py` now clears the cache around every test (it was local to the cache tests).
 
 ### SPOT-41 · `POST /api/v1/plans` endpoint
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-40 |
+| Backend · 2 | P0 | In review | SPOT-40 |
 
 Spec: RFC §7.2, §11.
 
 **Sub-tasks**
-- [ ] Request/response serializers including HOS block and its cross-field rules.
-- [ ] Single error shape `{"error": {"code", "message", "fields"?}}` via a DRF exception handler.
+- [x] Request/response serializers including HOS block and its cross-field rules.
+- [x] Single error shape `{"error": {"code", "message", "fields"?}}` via a DRF exception handler.
 
 **Acceptance criteria**
 - Invalid interval, weight, departure window, identical origin/destination and each HOS rule
@@ -1042,20 +1092,56 @@ Spec: RFC §7.2, §11.
 - `no_route` → 422; provider failures → 502 with the right code.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: `POST /api/v1/plans` (`planner/api/views.py`, `serializers.py`, `errors.py`).
+  - **Request:** `PlanRequestSerializer` validates origin and destination (lat/lon ranges,
+    label, optional IANA `tz`), departure, load, interval and the HOS block, then builds a
+    domain `PlanRequest`.
+    - Departure must carry a UTC offset and fall within [now − 15 min, now + 7 days].
+    - Origin and destination must be more than a mile apart.
+    - HOS clocks arrive as hours with at most two decimals and become whole seconds. With HOS
+      on, every clock is required, each within its limit, the cycle limit follows the chosen
+      cycle (70 or 60 h), and drive ≤ min(window, cycle).
+  - **Response:** output serializers read the domain `Plan` directly, in the RFC §7.2 shape:
+    UTC times to the second, geometry re-encoded as a precision-5 polyline, rounded numbers,
+    and the corridor bbox. They add `demo`, `forecast_as_of`, `reason_code`, `inputs` and,
+    per route, `name`, `label` and `eta_estimated` (RFC §7.2 updated).
+  - **Errors:** a DRF exception handler gives every failure the
+    `{"error": {code, message, fields?}}` shape.
+    - Nested validation errors get dotted names (`hos.drive_left_h`, `origin.lat`).
+    - `NoRoute` → 422 `no_route`; other provider errors → 502 with their code, and the user
+      message never echoes the provider's text.
+    - Throttling → 429 `rate_limited`, keeping `Retry-After`. 404, 405 and the other DRF
+      errors get codes too.
+- Decisions:
+  - A departure without an offset is rejected rather than read as UTC: a trip crossing zones
+    makes a bare local time ambiguous.
+  - With `hos.enabled: false`, the clocks are ignored rather than validated, so a form that
+    keeps its last values still submits.
+  - No `trip_id` yet: the plan isn't saved until SPOT-111, which adds the id and the
+    `Idempotency-Key` handling.
+- Verified (72 API tests):
+  - Invalid interval (0, 5, 20, 30, 100, "25.5", null), weight (0, −1, 80,001, 1.5, text),
+    departure (past, 7 days + 1 h, no offset, unparseable, empty), identical and
+    < 1 mile apart places, out-of-range lat/lon, an unknown time zone, missing fields and
+    malformed JSON all give 400 `invalid_input` with the field named.
+  - Each HOS rule (each missing clock, each limit, 60 h cycle, drive > window, drive >
+    cycle, 3 decimals, bad cycle, non-boolean `enabled`) names its `hos.*` field.
+  - `no_route` → 422, `routing_unavailable` and `weather_unavailable` → 502.
+  - The demo response's shape and geometry round trip.
+  - The demo plan is 44 KB of JSON, 6.6 KB gzipped.
 
 ### SPOT-42 · Corridor grid and heatmap endpoint
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-40, SPOT-111 |
+| Backend · 3 | P0 | In progress | SPOT-40, SPOT-111 |
 
 Spec: RFC §7.3, §8.
 
 **Sub-tasks**
-- [ ] Union of simplified routes, 40 mi buffer, lattice points inside, point cap with coarser
+- [x] Union of simplified routes, 40 mi buffer, lattice points inside, point cap with coarser
   step.
-- [ ] Classify every point-hour (0–48) with `classify()` and the plan's load.
+- [x] Classify every point-hour (0–48) with `classify()` and the plan's load.
 - [ ] `GET /api/v1/trips/{id}/heatmap`: compute from the stored trip on first request, save as
   `TripHeatmap`, read the saved copy afterwards; same access rules as the trip.
 
@@ -1065,31 +1151,73 @@ Spec: RFC §7.3, §8.
 - A grid point that equals a checkpoint location and hour has the same level as the checkpoint.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: grid half done; the endpoint waits for SPOT-111.
+  - `planner/services/corridor.py`: `corridor_points` simplifies each route (~1 km), takes
+    lattice points within 40 mi of any route (`lattice_near`), and steps the lattice
+    0.25° → 0.5° → 1° until there are at most 700 points.
+  - `corridor_grid(lines, load_lb, store, clock)` fetches every point's forecasts in one
+    cache-first batch at the lattice's own step, then classifies all 49 hours per point with
+    `classify` and the plan's load. It returns `HeatmapGrid` with start hour, cell size, points,
+    `risk[i][h]` (`None` = Unknown), `stale` and `forecast_as_of`.
+  - `HeatmapSerializer` gives the RFC §7.3 shape: `[lon, lat]` points and integer levels,
+    with null for Unknown.
+- Decisions (RFC §7.3 updated):
+  - Hours count from when the grid is computed, not from departure (PRD A10). Hour 0 is the
+    hour in progress, read from the record stamped at its end, exactly as a checkpoint whose
+    ETA falls in that hour would read it.
+  - Without Redis, Django's local-memory cache kept only 300 entries, fewer than one heatmap
+    needs, so the grid was refetched every time. It now holds 10,000 entries.
+- Verified (16 tests in `tests/test_corridor.py`, plus one in `test_cache_config.py`):
+  - **Point cap:** LA → New York and Seattle → Miami (three fake routes each) step to 0.5°
+    and stay under the cap (580 and 662 points). Dallas → Denver keeps 0.25° (649 points).
+    Points sit on the global lattice and within the buffer.
+  - **Payload:** the strong-storm Dallas → Denver grid (649 points × 49 h) is under 20 KB
+    gzipped.
+  - **Grid matches checkpoints:** a plan whose checkpoints sit on lattice points has the same
+    level on the grid at the same point and hour. Gusts vary by place and hour in that test,
+    so reading the wrong point or hour would show.
+  - Every sampled point-hour equals `classify` for three loads, and a heavier load raises
+    No Travel cells (load rules apply).
+  - Missing points are Unknown in every hour, and stale data is flagged.
+  - One weather call per grid. A cached coast-to-coast grid is recomputed in about 1 s.
+- Left: `GET /api/v1/trips/{id}/heatmap`, which stores the grid as `TripHeatmap` and shares
+  the trip's access rules, needs trips (SPOT-110–112). Its throttle rate is set in SPOT-45.
 
 ### SPOT-43 · Geocode suggest endpoint
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-33 |
+| Backend · 1 | P0 | In review | SPOT-33 |
 
 **Sub-tasks**
-- [ ] `GET /api/v1/geocode/suggest?q=`; min 2 characters; 24 h cache.
+- [x] `GET /api/v1/geocode/suggest?q=`; min 2 characters; 24 h cache.
 
 **Acceptance criteria**
 - Query under 2 characters returns an empty list without calling the provider.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: `GET /api/v1/geocode/suggest?q=` (`GeocodeSuggestView`, `services/geocoding.py`).
+  - Queries are trimmed, lower-cased and whitespace-collapsed. Under 2 characters returns `[]`
+    without calling the geocoder; `q` is required, and over 100 characters is
+    `invalid_input`.
+  - Up to five places as `{label, lat, lon, tz}`. `tz` was added to RFC §7.1, since the form's
+    time-zone chip needs it.
+  - Results are cached for 24 h under `geo1:<sha256 of the normalised query>`, because cache
+    keys can't hold arbitrary user text. Failures aren't cached, and a geocoder failure is
+    502 `geocoding_unavailable`.
+- Verified (13 tests): "dall" gives Dallas, TX first with coordinates and `America/Chicago`.
+  "", "d", " d " and whitespace return `[]` with no provider call. "Den", "  den " and "DEN"
+  make one provider call. No matches is `[]`. A failure is 502 and the next request retries.
+  The cache TTL is 24 h, and keys are ASCII for any input.
 
 ### SPOT-44 · OpenAPI schema and TS type generation
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 1 | P0 | To do | SPOT-41 |
+| Full stack · 1 | P0 | In progress | SPOT-41 |
 
 **Sub-tasks**
-- [ ] drf-spectacular schema at `/api/v1/schema`; committed `openapi.yaml`.
+- [x] drf-spectacular schema at `/api/v1/schema`; committed `openapi.yaml`.
 - [ ] `openapi-typescript` generates `frontend/src/api/schema.d.ts`.
 - [ ] CI fails if the committed schema or generated types are out of date.
 
@@ -1097,21 +1225,44 @@ Spec: RFC §7.3, §8.
 - Renaming a response field without regenerating fails CI.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: backend half done. The frontend half lands on `dev-frontend` after it's synced
+  with `main` (full-stack tasks land their backend half first).
+  - drf-spectacular 0.30 serves the schema at `GET /api/v1/schema`. The schema is committed as
+    `backend/openapi.yaml`, and `make schema` regenerates it with `--validate --fail-on-warn`.
+  - Request and response components are split, so the generated client gets separate input
+    and output types. Their names read as types: `PlanRequest` / `Plan`, `Place`, `Hos`,
+    `Route`, `Checkpoint`, `Error`.
+  - Every fixed set of values is an enum: `RiskLevelEnum`, `RiskDriverEnum`, `LoadRuleEnum`,
+    `ReasonCodeEnum`, `WarningCodeEnum`, `HosStopKindEnum`, `HosStopReasonEnum`, `CycleEnum`,
+    `IntervalMiEnum`. They come from the domain's `Literal` types, so adding a value updates
+    the schema.
+  - Both operations document their error responses with the shared `Error` shape (400, 422,
+    429, 502). Health checks are left out of the schema.
+  - The suggest endpoint now returns the same `Place` shape as the plan's inputs; its own
+    duplicate serializer is gone.
+- Verified: `tests/api/test_openapi.py` regenerates the schema and compares it with the
+  committed file. Renaming `eta_estimated` without regenerating fails it with "run
+  `make schema`", and restoring the name passes. Since CI runs pytest, CI fails on drift too.
+  The served schema lists exactly the two endpoints. Pre-commit's `check-yaml` passes on the
+  file.
+- Left (frontend, on `dev-frontend`): add `openapi-typescript`, generate
+  `frontend/src/api/schema.d.ts` from `backend/openapi.yaml`, and fail CI when it's stale.
+  Also add `backend/openapi.yaml` to the frontend's change filter in `ci.yml`, so a schema
+  change runs the frontend job.
 
 ### SPOT-45 · Security settings, throttling, health checks
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-41 |
+| Backend · 2 | P0 | In review | SPOT-41 |
 
 Spec: RFC §12, §18.3.
 
 **Sub-tasks**
-- [ ] DRF throttles: plans 10/min per guest, 30/min per user; heatmap 20/min; geocode 60/min.
-- [ ] Secure, httpOnly, `SameSite=Lax` session and CSRF cookies; `CSRF_TRUSTED_ORIGINS`;
+- [x] DRF throttles: plans 10/min per guest, 30/min per user; heatmap 20/min; geocode 60/min.
+- [x] Secure, httpOnly, `SameSite=Lax` session and CSRF cookies; `CSRF_TRUSTED_ORIGINS`;
   `ALLOWED_HOSTS`, HTTPS redirect, HSTS, security middleware. No CORS (one origin).
-- [ ] `/healthz` and `/readyz` (Redis ping, settings check).
+- [x] `/healthz` and `/readyz` (Redis ping, settings check).
 
 **Acceptance criteria**
 - 11th plan request in a minute gets 429 `rate_limited`.
@@ -1119,24 +1270,94 @@ Spec: RFC §12, §18.3.
 - `manage.py check --deploy` passes with prod settings.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: throttling, cookie and HTTPS settings, and health endpoints.
+  - **Throttles** (`planner/api/throttles.py`, rates in settings): plans 10/min for guests
+    (`PlanGuestThrottle`) and 30/min per account (`PlanUserThrottle`), and geocode 60/min
+    (`ScopedRateThrottle`). The `heatmap` rate (20/min) is defined for SPOT-42's endpoint.
+    Counters live in the default cache. A 429 uses the error shape with `rate_limited` and
+    `Retry-After`.
+  - **Client IP:** `NUM_PROXIES` (env, default 0) says how many proxies' `X-Forwarded-For`
+    entries to trust. DRF's default trusts the whole header, which would let a client pick its
+    own throttle key.
+  - **Cookies (all environments):** the session cookie is httpOnly and `SameSite=Lax`. The
+    CSRF cookie is Lax but readable by JavaScript, since the client copies it into
+    `X-CSRFToken` (RFC §7.5), and Django's docs say an httpOnly CSRF cookie adds nothing.
+    `nosniff`, `Referrer-Policy: same-origin` and `X-Frame-Options: DENY` are set. No CORS:
+    one origin.
+  - **Production:** trusts `X-Forwarded-Proto`, redirects HTTP to HTTPS (except
+    `/healthz` and `/readyz`), uses Secure session and CSRF cookies, and sends HSTS for a
+    year (`SECURE_HSTS_SECONDS`).
+  - **Health:** `config/health.py`. `/healthz` checks nothing beyond the process.
+    `/readyz` pings Redis (with `IGNORE_EXCEPTIONS`, `cache.get` would hide an outage), runs
+    `SELECT 1`, and checks that the provider settings build. It returns 200, or 503 naming the
+    failed check without details (those go to the log). `/api/v1/healthz` stays for the
+    frontend placeholder.
+- Decisions (RFC §12 updated):
+  - **HSTS** leaves out `includeSubDomains` and preload: the app runs on a host's domain, not
+    one we own. Deploy-check warnings W005 and W021 are silenced for that reason.
+  - **Guests** are counted by IP until guest sessions exist (SPOT-112).
+  - The task's "httpOnly CSRF cookie" conflicts with the RFC's CSRF flow; the RFC wins.
+- Verified (25 tests):
+  - The 11th guest plan in a minute gets 429 `rate_limited` with `Retry-After`. Guests are
+    counted per IP, and a changing `X-Forwarded-For` doesn't reset the count.
+  - A signed-in user gets 30, then 429. The 61st suggestion gets 429. Plan and geocode limits
+    are separate.
+  - `/readyz` is 503 with `cache: fail` when Redis is unreachable (port 1), 503 when the
+    database check fails or `PROVIDERS=real` has no key, and leaks no setting names. Both
+    health endpoints are GET only and skip the HTTPS redirect.
+  - `manage.py check --deploy --fail-level WARNING` passes with prod settings and a proper
+    key ("no issues (2 silenced)"). A subprocess confirms prod's redirect, Secure cookies,
+    HSTS and proxy header.
+- Left: point the host's health checks at `/healthz` and `/readyz` and set `NUM_PROXIES` for
+  its proxy chain (SPOT-100/101).
 
 ### SPOT-46 · Structured logging and request ids
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-40 |
+| Backend · 1 | P0 | In review | SPOT-40 |
 
 **Sub-tasks**
-- [ ] JSON logs; request id middleware; `X-Request-ID` response header.
-- [ ] One summary line per plan: provider latencies, cache hit ratio, checkpoint and grid
+- [x] JSON logs; request id middleware; `X-Request-ID` response header.
+- [x] One summary line per plan: provider latencies, cache hit ratio, checkpoint and grid
   counts, stale flag.
 
 **Acceptance criteria**
 - A plan's log lines (including provider calls) can be found by request id.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: `config/observability.py` and logging settings.
+  - **Request ids:** `RequestIdMiddleware` (first in the stack) keeps an incoming
+    `X-Request-ID` if it looks like an id (8–64 of `[A-Za-z0-9._-]`), otherwise makes a uuid4,
+    and echoes it in the response header. It sits in a context variable for the request, and
+    the middleware logs one access line (method, path, status, duration).
+  - **JSON logs:** `RequestIdFilter` stamps the id on every record, and `JsonFormatter`
+    writes one object per line with time, level, logger, message, request id, any
+    `extra={...}` fields and the traceback. `LOG_FORMAT=plain` (the local default) gives
+    readable lines with the id in brackets. `LOG_LEVEL` sets the level.
+  - **Provider calls:** `HttpClient.get_json` logs one line per call (provider, outcome,
+    attempts, duration, status, error) and never the URL. Open-Meteo's worker threads run in
+    a copy of the caller's context, so their lines carry the request id.
+  - **Summaries:** `plan_trip` logs one line per plan: routes, checkpoints, forecast points,
+    cache hit ratio, routing/weather/total ms, stale, recommendation, reason, warnings, via
+    fallback, HOS, interval, demo. `corridor_grid` logs its own line with the grid point
+    count, cell size, hit ratio, weather ms and stale. The grid is a separate request (RFC
+    §7.3), so its count is on that line rather than the plan's. `ForecastLookup` now reports
+    `cache_hits`.
+- **Fixed in passing:** httpx logs every request URL at INFO, query string included, and
+  HERE's API key is in the query string. With the root logger at INFO, the key would have
+  reached the production logs. The `httpx` and `httpcore` loggers are now at WARNING, and a
+  test guards it.
+- Verified (13 tests in `tests/test_observability.py`):
+  - **End to end:** a Dallas → Denver plan in real-weather mode (Open-Meteo mocked with respx,
+    about 250 points in three parallel batches). Every provider call, from every worker
+    thread, the plan summary and the access line carry the response's `X-Request-ID`, and no
+    planner line is missing it.
+  - A second identical plan logs a cache hit ratio of 1.0 (the first, 0.0).
+  - Incoming ids are kept; empty, short, spaced, overlong or newline-containing ones are
+    replaced. Ids are unique per request, and the context resets afterwards.
+  - A failed provider call logs WARNING with status 503, 2 attempts and no query string.
+  - JSON lines carry extras and tracebacks.
 
 ---
 

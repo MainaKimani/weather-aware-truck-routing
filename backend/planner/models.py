@@ -1,1 +1,1 @@
-# Trip, TripRoute and TripHeatmap land in SPOT-110 (RFC §3.1).
+# Trip, TripRoute and TripHeatmap (RFC §3.1) are not defined yet.

@@ -10,6 +10,7 @@ instead of skewing every rating.
 import math
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from datetime import UTC, datetime, timedelta
 from typing import Any, Final
 
@@ -76,7 +77,12 @@ class OpenMeteoWeather:
             results = [self._fetch(batches[0], start, hours)]
         else:
             with ThreadPoolExecutor(max_workers=min(self._workers, len(batches))) as pool:
-                results = list(pool.map(lambda b: self._fetch(b, start, hours), batches))
+                # Each task runs in a copy of the caller's context, so its log
+                # lines carry the request id.
+                futures = [
+                    pool.submit(copy_context().run, self._fetch, b, start, hours) for b in batches
+                ]
+                results = [f.result() for f in futures]
         return [series for batch in results for series in batch]
 
     def _fetch(

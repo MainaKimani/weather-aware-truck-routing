@@ -571,7 +571,10 @@ generated from it with `openapi-typescript`, so the contract can't drift silentl
 ### 7.1 `GET /api/v1/geocode/suggest?q=…`
 
 Proxies HERE autosuggest (hides the key, applies throttling, caches by query for 24 h).
-Returns `[{label, lat, lon}]`. The client debounces input by 250 ms.
+Returns up to five `[{label, lat, lon, tz}]`, where `tz` is the IANA zone or null. Queries are
+trimmed, lower-cased and whitespace-collapsed before the lookup and the cache key, so "Dallas"
+and " dallas " share an entry. Under 2 characters returns `[]` without calling HERE; over 100
+is `invalid_input`. The client debounces input by 250 ms.
 
 ### 7.2 `POST /api/v1/plans`
 
@@ -666,7 +669,16 @@ Response (abridged):
   `origin.tz` from the geocoder, or derived client-side).
 - Errors use one shape: `{"error": {"code": "routing_unavailable", "message": "…"}}` with
   codes `invalid_input`, `no_route`, `routing_unavailable`, `weather_unavailable`,
-  `rate_limited`.
+  `rate_limited`. Validation errors add `"fields": {"hos.drive_left_h": ["…"]}`, with nested
+  fields named by dotted path. Provider messages go to the logs, not the client.
+- Also in the response: `demo` (fake providers), `forecast_as_of` (when
+  the oldest forecast used was fetched, for the stale banner), `reason_code` (the ranking
+  criterion that decided, for the UI to key on), `inputs` (the request as understood, so a
+  trip page can show the form), and per route `name` ("Route A"), `label` ("via Amarillo"),
+  `eta_estimated` and warnings' `route_id`. Route ids and letters follow provider order
+  (fastest first), so they don't change when the ranking does.
+- Departure must carry a UTC offset; a bare local time is rejected as ambiguous. With
+  `hos.enabled` false, any clock values sent are ignored rather than validated.
 
 ### 7.3 `GET /api/v1/trips/{trip_id}/heatmap`
 
@@ -689,7 +701,11 @@ Response:
 }
 ```
 
-`risk[i][h]` is the composite level (0–4) at point `i`, hour `h`, for the trip's load. Raw
+`risk[i][h]` is the composite level (0–4) at point `i`, hour `h`, for the trip's load, or
+`null` where there's no forecast (Unknown, never Low). Hours count from when the grid is
+computed (PRD A10): hour 0 is the hour in progress, and like a checkpoint whose ETA falls in it,
+it reads the record stamped at the end of that hour (`start_hour`, §6.3). The response also
+carries `stale` and `forecast_as_of`, as the plan does. Raw
 metrics are included only if the P1 metric switcher is built (`?include=metrics`). Size for
 ~600 points × 49 hours of single-digit integers is about 60 KB raw, under 15 KB gzipped.
 
@@ -865,8 +881,13 @@ Rule: **never show a missing value as safe.**
 
 - HERE key only in backend env vars; Open-Meteo needs no key.
 - DRF throttling: `plans` 10/min per guest session and IP, 30/min per signed-in user;
-  `geocode` 60/min; login attempts limited by allauth.
-- Sessions: httpOnly, Secure, `SameSite=Lax` cookies; CSRF enforced on unsafe methods;
+  `geocode` 60/min; `heatmap` 20/min; login attempts limited by allauth. Until guest sessions
+  exist, guests are counted by IP. The client IP comes from `X-Forwarded-For` only
+  as far as `NUM_PROXIES` trusted proxies allow (default 0), so a client can't choose its own
+  throttle key.
+- Sessions: httpOnly, Secure, `SameSite=Lax` cookies; CSRF enforced on unsafe methods. The
+  CSRF cookie is Secure and Lax but not httpOnly, because the client reads it into
+  `X-CSRFToken` (§7.5);
   `CSRF_TRUSTED_ORIGINS` set to the site origin. Same-origin deployment through the frontend's
   `/api` proxy, so no CORS (§3.2).
 - Passwords hashed with Argon2; Django password validators on; account deletion requires the
@@ -875,6 +896,11 @@ Rule: **never show a missing value as safe.**
   Tests cover every combination of caller (owner, other user, guest, other guest, anonymous)
   and trip state (private, shared).
 - `DEBUG=False`, strict `ALLOWED_HOSTS`, HTTPS only, standard Django security middleware.
+  Production redirects HTTP to HTTPS (except `/healthz` and `/readyz`, which the host calls
+  internally), trusts `X-Forwarded-Proto` from the host's proxy, and sends HSTS for a year
+  without `includeSubDomains` or preload, since the app runs on a domain we don't own
+  outright. `manage.py check --deploy` passes, with the two warnings about those flags
+  silenced on purpose.
 - Input sizes bounded by validation (no free-form geometry accepted from clients).
 
 ## 13. Testing

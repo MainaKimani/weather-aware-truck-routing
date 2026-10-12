@@ -1,6 +1,6 @@
 """A minimal plan pipeline over the domain modules, for provider and demo tests.
 
-SPOT-40's plan service is the real orchestration (caching, HOS, persistence);
+The plan service is the real orchestration (caching, HOS, persistence);
 this is the same chain of pure functions without any of that.
 """
 
