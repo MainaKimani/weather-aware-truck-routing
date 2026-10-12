@@ -14,10 +14,12 @@ from planner.domain.types import Forecast, LatLon, Route
 from planner.providers.base import Place, RouteRequest, WeatherUnavailable
 from planner.providers.fakes import DALLAS, DENVER, FakeGeocoder, FakeRouting, FakeWeather
 from planner.providers.registry import Providers
+from planner.services import corridor
 from planner.services.corridor import (
     BUFFER_MI,
     HOURS,
     POINT_CAP,
+    STEPS_DEG,
     corridor_grid,
     corridor_points,
 )
@@ -104,6 +106,12 @@ class TestCorridorPoints:
         step, points = corridor_points(lines(DALLAS, DENVER), cap=200)
 
         assert step == 0.5 and len(points) <= 200
+
+    def test_over_the_cap_even_coarsest_keeps_the_coarsest_lattice(self) -> None:
+        step, points = corridor_points(lines(DALLAS, DENVER), cap=5)
+
+        assert step == STEPS_DEG[-1] == 1.0
+        assert len(points) > 5  # every point kept rather than leaving gaps
 
 
 class TestCorridorGrid:
@@ -251,3 +259,22 @@ def test_coast_to_coast_grid_is_quick_with_cached_forecasts() -> None:
 
     assert weather.calls == 1
     assert time.perf_counter() - started < 1.5
+
+
+@pytest.mark.parametrize(
+    ("series_start_h", "length"),
+    [(0, 240), (-3, 240), (5, 240), (0, 20), (-50, 60), (60, 10)],
+)
+def test_the_grid_window_matches_reading_hour_by_hour(series_start_h: int, length: int) -> None:
+    start = datetime(2026, 10, 12, 11, tzinfo=UTC)
+    series_start = start + timedelta(hours=series_start_h)
+    full = StripedWeather().hourly([DALLAS], series_start, length)[0]
+    assert full is not None
+
+    window = corridor._window(full, start)
+
+    assert list(window) == [full.at(start + timedelta(hours=h)) for h in range(HOURS)]
+
+
+def test_the_grid_window_is_unknown_without_a_series() -> None:
+    assert list(corridor._window(None, datetime(2026, 10, 12, 11, tzinfo=UTC))) == [None] * HOURS
