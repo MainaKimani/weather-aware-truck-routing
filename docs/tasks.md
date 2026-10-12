@@ -55,7 +55,7 @@ link to their sections instead of repeating them.
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress |
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | Done        |
-| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | In progress |
+| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | Done        |
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | Done        |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | To do       |
@@ -99,7 +99,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do       |
 
-**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 27 (57 points).
+**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 28 (58 points).
 
 ## Open items
 
@@ -125,7 +125,6 @@ here when that task closes it.
 |---|---|---|
 | SPOT-41 | Plan response has no `trip_id`; plans aren't saved. Add it (and `Idempotency-Key`), then `make schema`. | SPOT-111 |
 | SPOT-42 | `GET /api/v1/trips/{id}/heatmap`: store the grid as `TripHeatmap`, same access as the trip, `heatmap` throttle scope. | SPOT-42, once trips exist (SPOT-111) |
-| SPOT-44 | Frontend half: `openapi-typescript` types from `backend/openapi.yaml`, a CI staleness check, and `backend/openapi.yaml` in the frontend change filter. | SPOT-44 on `dev-frontend`, before SPOT-51 |
 | SPOT-45 | Guest plan throttle counts by IP only; count by session `guest_id` too. | SPOT-112 |
 | SPOT-45 | Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite + host); point host checks at `/healthz` and `/readyz`. | SPOT-100 |
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
@@ -1252,12 +1251,12 @@ Spec: RFC §7.3, §8.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 1 | P0 | In progress | SPOT-41 |
+| Full stack · 1 | P0 | Done | SPOT-41 |
 
 **Sub-tasks**
 - [x] drf-spectacular schema at `/api/v1/schema`; committed `openapi.yaml`.
-- [ ] `openapi-typescript` generates `frontend/src/api/schema.d.ts`.
-- [ ] CI fails if the committed schema or generated types are out of date.
+- [x] `openapi-typescript` generates `frontend/src/api/schema.ts`.
+- [x] CI fails if the committed schema or generated types are out of date.
 
 **Acceptance criteria**
 - Renaming a response field without regenerating fails CI.
@@ -1287,6 +1286,24 @@ Spec: RFC §7.3, §8.
   `frontend/src/api/schema.d.ts` from `backend/openapi.yaml`, and fail CI when it's stale.
   Also add `backend/openapi.yaml` to the frontend's change filter in `ci.yml`, so a schema
   change runs the frontend job.
+- 2026-10-12: frontend half done, on `dev-frontend`.
+  - `npm run gen:api` runs `openapi-typescript` on `backend/openapi.yaml` and writes
+    `frontend/src/api/schema.ts`: path and component types, named root types (`Plan`, `Route`,
+    `Checkpoint`, …) and a values array for every enum (`riskLevelEnumValues`, …), so UI lists
+    such as the legend come from the contract.
+  - The generated file is excluded from eslint and prettier.
+  - **CI:** the frontend job runs `npm run gen:api:check`, which regenerates the file and fails
+    if it is untracked or differs from the committed one. `ci.yml` runs the frontend job when
+    `backend/openapi.yaml` changes, so a backend contract change can't skip the check.
+- Decisions:
+  - The output is `schema.ts`, not `schema.d.ts`: enum value arrays are runtime constants, and
+    a declaration file can't provide values at runtime.
+  - `openapi-typescript` 7.13 (latest) declares a TypeScript 5 peer. The project is on
+    TypeScript 6, so `package.json` has an `overrides` entry for that one package rather than
+    installing everything with `--legacy-peer-deps`. Its output type-checks under the project's
+    strict config.
+- Verified: the check fails when the file is untracked, and when the schema changes (a
+  renamed enum value) without regenerating; it passes once regenerated and committed.
 
 ### SPOT-45 · Security settings, throttling, health checks
 

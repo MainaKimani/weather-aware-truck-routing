@@ -12,7 +12,9 @@
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "gen:api": "openapi-typescript ../backend/openapi.yaml --output src/api/schema.ts --enum-values --root-types --root-types-no-schema-prefix",
+    "gen:api:check": "npm run gen:api && git ls-files --error-unmatch src/api/schema.ts && git diff --exit-code -- src/api/schema.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -34,11 +36,17 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
     "jsdom": "^29.1.1",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.0",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   }
 }
