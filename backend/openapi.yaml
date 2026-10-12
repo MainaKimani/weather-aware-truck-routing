@@ -130,6 +130,17 @@ paths:
         so a reopened trip shows the heatmap as it was. Visible to whoever can see
         the trip.
       parameters:
+      - in: query
+        name: include
+        schema:
+          enum:
+          - metrics
+          type: string
+          minLength: 1
+        description: |-
+          `metrics` adds each condition's levels, for the map's metric switcher.
+
+          * `metrics` - metrics
       - in: path
         name: trip_id
         schema:
@@ -318,6 +329,12 @@ components:
               type: integer
               nullable: true
           readOnly: true
+        metrics:
+          allOf:
+          - $ref: '#/components/schemas/HeatmapMetrics'
+          nullable: true
+          description: Only with `?include=metrics`. Null for a heatmap kept before
+            conditions were.
       required:
       - cell_deg
       - forecast_as_of
@@ -326,6 +343,43 @@ components:
       - risk
       - stale
       - start_hour
+    HeatmapMetrics:
+      type: object
+      description: |-
+        Each condition's level (0-4; null for no data), indexed like `risk`.
+
+        The levels a checkpoint's rating shows for each condition, so whichever
+        one the map shows, it agrees with the checkpoint table.
+      properties:
+        wind:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              nullable: true
+          readOnly: true
+          description: Gusts, after the trip's load rules.
+        rain:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              nullable: true
+          readOnly: true
+        snow:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              nullable: true
+          readOnly: true
+      required:
+      - rain
+      - snow
+      - wind
     Hos:
       type: object
       properties:

@@ -8,7 +8,9 @@
    coast-to-coast trips.
 3. Fetch forecasts cache-first and classify every point-hour with the same
    `classify` as the checkpoints, for the plan's load, so the map and the
-   route cards can't disagree.
+   route cards can't disagree. The levels of each condition (wind for the
+   load, rain, snow) are kept too, for the map's metric switcher; they are
+   the same levels a checkpoint's rating shows.
 
 Hours run from now (PRD A10), not from departure. Hour 0 is the hour in
 progress: like a checkpoint whose ETA falls in it, it reads the forecast
@@ -46,6 +48,10 @@ class HeatmapGrid:
     risk: tuple[tuple[Level | None, ...], ...]  # risk[i][h]; None is Unknown
     stale: bool
     forecast_as_of: datetime | None
+    # Each condition's level, indexed like `risk`: wind after the load rules.
+    wind: tuple[tuple[Level | None, ...], ...]
+    rain: tuple[tuple[Level | None, ...], ...]
+    snow: tuple[tuple[Level | None, ...], ...]
 
 
 def corridor_points(
@@ -73,10 +79,14 @@ def corridor_grid(
     lookup = store.get(points, step)
     weather_ms = round((time.perf_counter() - weather_started) * 1000)
     hours = [start + timedelta(hours=h) for h in range(HOURS)]
-    risk = []
+    risk, wind, rain, snow = [], [], [], []
     for p in points:
         series = lookup.for_point(p)
-        risk.append(tuple(classify(series.at(t) if series else None, load_lb).level for t in hours))
+        ratings = [classify(series.at(t) if series else None, load_lb) for t in hours]
+        risk.append(tuple(r.level for r in ratings))
+        wind.append(tuple(r.wind_adjusted for r in ratings))
+        rain.append(tuple(r.rain for r in ratings))
+        snow.append(tuple(r.snow for r in ratings))
     logger.info(
         "heatmap %d points at %g deg",
         len(points),
@@ -99,4 +109,7 @@ def corridor_grid(
         risk=tuple(risk),
         stale=lookup.stale,
         forecast_as_of=lookup.oldest_fetch,
+        wind=tuple(wind),
+        rain=tuple(rain),
+        snow=tuple(snow),
     )

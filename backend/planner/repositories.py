@@ -186,14 +186,16 @@ def route_lines(trip: Trip) -> list[list[LatLon]]:
 # --- Heatmap -----------------------------------------------------------------
 
 
-def load_heatmap(trip: Trip) -> Snapshot | None:
+def load_heatmap(trip: Trip, *, include_metrics: bool = False) -> Snapshot | None:
     """The trip's saved heatmap response, or None before it is first computed."""
     heatmap = TripHeatmap.objects.filter(trip=trip).first()
-    return None if heatmap is None else _heatmap_snapshot(heatmap)
+    return None if heatmap is None else _heatmap_snapshot(heatmap, include_metrics)
 
 
-def save_heatmap(trip: Trip, snapshot: Mapping[str, Any]) -> Snapshot:
-    """Keep a computed heatmap, and return what is kept.
+def save_heatmap(
+    trip: Trip, snapshot: Mapping[str, Any], *, include_metrics: bool = False
+) -> Snapshot:
+    """Keep a computed heatmap, with its metrics, and return what is kept.
 
     Two first requests can compute it at once; the second insert hits the
     one-to-one key, and both get the copy that was saved first.
@@ -209,14 +211,15 @@ def save_heatmap(trip: Trip, snapshot: Mapping[str, Any]) -> Snapshot:
                 forecast_as_of=_maybe_time(snapshot["forecast_as_of"]),
                 points=snapshot["points"],
                 risk=snapshot["risk"],
+                metrics=snapshot.get("metrics"),
             )
     except IntegrityError:
         heatmap = TripHeatmap.objects.get(trip=trip)
-    return _heatmap_snapshot(heatmap)
+    return _heatmap_snapshot(heatmap, include_metrics)
 
 
-def _heatmap_snapshot(heatmap: TripHeatmap) -> Snapshot:
-    return {
+def _heatmap_snapshot(heatmap: TripHeatmap, include_metrics: bool) -> Snapshot:
+    snapshot: Snapshot = {
         "start_hour": _wire(heatmap.start_hour),
         "hours": heatmap.hours,
         "cell_deg": heatmap.cell_deg,
@@ -225,6 +228,9 @@ def _heatmap_snapshot(heatmap: TripHeatmap) -> Snapshot:
         "points": heatmap.points,
         "risk": heatmap.risk,
     }
+    if include_metrics:
+        snapshot["metrics"] = heatmap.metrics
+    return snapshot
 
 
 def _place(label: str, lat: Decimal, lon: Decimal, tz: str | None) -> Snapshot:

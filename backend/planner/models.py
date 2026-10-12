@@ -166,6 +166,9 @@ class TripHeatmap(models.Model):
     forecast_as_of = models.DateTimeField(null=True, blank=True)
     points = models.JSONField()  # [[lon, lat], ...]
     risk = models.JSONField()  # risk[i][h]: level 0-4, null for Unknown
+    # {"wind", "rain", "snow"}: each condition's levels, indexed like `risk`.
+    # Null on heatmaps kept before conditions were.
+    metrics = models.JSONField(null=True, blank=True)
 
     def __str__(self) -> str:
         return f"Heatmap for {self.trip_id}"

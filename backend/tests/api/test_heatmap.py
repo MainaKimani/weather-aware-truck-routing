@@ -125,3 +125,49 @@ def test_response_matches_the_schema_names(client: Client, planned: str) -> None
         "points",
         "risk",
     }
+
+
+class TestMetrics:
+    """`?include=metrics`: each condition's levels, for the map's metric switcher."""
+
+    def test_only_when_asked_for(self, client: Client, planned: str) -> None:
+        plain = client.get(heatmap_url(planned)).json()
+        full = client.get(heatmap_url(planned), {"include": "metrics"}).json()
+
+        assert "metrics" not in plain
+        assert set(full["metrics"]) == {"wind", "rain", "snow"}
+        for rows in full["metrics"].values():
+            assert len(rows) == len(full["points"])
+            assert all(len(row) == 49 for row in rows)
+            assert {v for row in rows for v in row} <= {None, 0, 1, 2, 3, 4}
+        assert {k: v for k, v in full.items() if k != "metrics"} == plain
+
+    def test_come_from_the_kept_copy_whichever_is_asked_first(
+        self, client: Client, planned: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        first = client.get(heatmap_url(planned), {"include": "metrics"}).json()
+
+        def no_recompute(*args: object, **kwargs: object) -> None:
+            raise AssertionError("recomputed")
+
+        monkeypatch.setattr(views, "corridor_grid", no_recompute)
+        assert client.get(heatmap_url(planned), {"include": "metrics"}).json() == first
+        assert "metrics" not in client.get(heatmap_url(planned)).json()
+
+    def test_are_null_on_a_heatmap_kept_without_them(self, client: Client, planned: str) -> None:
+        client.get(heatmap_url(planned))
+        TripHeatmap.objects.filter(trip_id=planned).update(metrics=None)
+
+        assert client.get(heatmap_url(planned), {"include": "metrics"}).json()["metrics"] is None
+
+    def test_an_unknown_include_is_invalid(self, client: Client, planned: str) -> None:
+        response = client.get(heatmap_url(planned), {"include": "everything"})
+
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == "invalid_input"
+        assert "include" in response.json()["error"]["fields"]
+
+    def test_add_little_once_gzipped(self, client: Client, planned: str) -> None:
+        full = client.get(heatmap_url(planned), {"include": "metrics"}).content
+
+        assert len(gzip.compress(full)) < 20_000  # the same budget as without; 5.7 KB for the demo
