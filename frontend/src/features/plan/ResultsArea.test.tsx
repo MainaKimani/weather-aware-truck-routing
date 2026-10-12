@@ -34,7 +34,8 @@ function renderApp() {
 
 /** A successful plan opens its trip page; it's settled once the saved trip's banner shows. */
 async function tripPageOpened() {
-  await screen.findByText(/with the forecast as of then/)
+  // Plan, navigation and the saved trip's request: allow for a busy test run.
+  await screen.findByText(/with the forecast as of then/, undefined, { timeout: 3000 })
 }
 
 describe('planner states', () => {

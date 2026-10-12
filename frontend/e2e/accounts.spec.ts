@@ -5,7 +5,7 @@
  */
 import { expect, test } from '@playwright/test'
 
-import { planDemoTrip, uniqueEmail } from './support'
+import { planDemoTrip, signUp, uniqueEmail } from './support'
 
 test('plan as a guest, sign up, find the trip, share it and unshare it', async ({
   page,
@@ -53,4 +53,22 @@ test('plan as a guest, sign up, find the trip, share it and unshare it', async (
   await theirs.reload()
   await expect(theirs.getByRole('heading', { name: 'Trip not found' })).toBeVisible()
   await stranger.close()
+})
+
+test('delete the account: back on the planner as a guest with no recent trips', async ({
+  page,
+}) => {
+  await signUp(page)
+  await page.goto('/')
+  await planDemoTrip(page)
+
+  await page.getByRole('link', { name: /@example\.com$/ }).click()
+  await page.getByLabel('Password').fill('correct-horse-9')
+  await page.getByRole('button', { name: 'Delete account' }).click()
+  await page.getByRole('button', { name: 'Delete everything' }).click()
+
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByText('Your account and its trips were deleted.')).toBeVisible()
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Log in' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Recent trips/ })).toHaveCount(0)
 })

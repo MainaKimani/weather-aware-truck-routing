@@ -97,7 +97,7 @@ link to their sections instead of repeating them.
 | SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | Done        |
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
-| SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do       |
+| SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
 **Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 29 (60 points).
 
@@ -117,16 +117,15 @@ here when that task closes it.
 - PRD Q3: paid routing tier (see Blocked).
 
 **Branch housekeeping**
-- Unpushed: `feat/spot-110-112-trips` (trips, heatmap endpoint and its per-condition
-  levels) and `feat/spot-80-92-heatmap`, which holds the map commits (70–74), the trips
-  branch merged in, and 80–92.
+- Unpushed: `feat/spot-113-119-accounts` (trip read and action endpoints, accounts, guest
+  claim, account deletion, purge, demo seed; from `main`) and `feat/spot-120-126-account-ui`
+  (the routed app, trip pages, recent trips, log-in and sign-up, My trips, trip actions,
+  account page; from `main` with the accounts branch merged in).
 - Merge order, so each PR shows only its own side:
-  1. `feat/spot-110-112-trips` → `dev-backend` → `main`. It starts from `main`, so it also
-     brings `dev-backend` up to date.
-  2. Merge `main` into `dev-frontend` (it is one merge behind).
-  3. `feat/spot-80-92-heatmap` → `dev-frontend` → `main`; the backend commits are then
+  1. `feat/spot-113-119-accounts` → `dev-backend` → `main`.
+  2. `feat/spot-120-126-account-ui` → `dev-frontend` → `main`; the backend commits are then
      already there, so its diff is frontend, docs and CI only.
-  4. Merge `main` back into both dev branches.
+  3. Merge `main` back into both dev branches.
 
 **Carried over to a later task**
 
@@ -2495,6 +2494,9 @@ Spec: PRD §8.
     the obvious saving if one is set.
 - Left: plan latency on the hosted app with real providers (SPOT-100/101); frame times in a
   visible desktop Chrome rather than headless.
+- 2026-10-12: with the routed app and account pages (SPOT-120–126), the main chunk is
+  171.0 KB gzipped, from 131.6 KB: react-router and the new pages. Still no PRD budget; the
+  pages beyond the planner could be split out if one is set.
 
 ---
 
@@ -3325,13 +3327,41 @@ because it shows the result the user actually saw.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 1 | P1 | To do | SPOT-123, SPOT-117 |
+| Frontend · 1 | P1 | Done | SPOT-123, SPOT-117 |
 
 **Sub-tasks**
-- [ ] Email, log out, delete-account danger zone with password confirmation.
+- [x] Email, log out, delete-account danger zone with password confirmation.
 
 **Acceptance criteria**
 - After deletion the user lands on the planner as a guest with an empty recent-trips list.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: account page (`features/account/AccountPage.tsx`, `sessionHandoff.ts`,
+  `api/me.ts` `deleteAccount`).
+  - `/account`, for signed-in users, linked from the header's email ("Account" on a phone):
+    who is signed in, Log out, and a Delete account danger zone. Deleting needs the
+    password, checked as present first, then asks once more ("Delete your account?",
+    focus on Cancel). A wrong password goes back to its field, announced; nothing changes.
+  - **After logging out or deleting**, the page goes to the planner and says what
+    happened in the navigation's state; the planner then refreshes who the caller is (and,
+    after a deletion, drops every cached trip). Done the other way round, the account
+    page's guard saw a visitor first and sent them to log in: React Router's `navigate()`
+    finishes later and can't be awaited. So the person lands on the planner as a visitor,
+    with no Recent trips, and a toast.
+  - `deleteAccount` is a plain fetch with the CSRF header: OpenAPI 3.0 gives a DELETE body
+    no meaning, so the generated client has no type for it, though the API reads it.
+- Verified (6 tests, 373 total; 28 end-to-end tests pass with 2 workers):
+  - The header link opens the page; Log out lands on the planner.
+  - No password: an announced error and no request. A wrong one: back on the field,
+    `aria-invalid`, nothing deleted.
+  - Right password: DELETE with the password and CSRF token, the planner, "Log in" in the
+    header, no Recent trips, no trip data left in the cache, and the toast.
+  - A visitor is sent to log in.
+  - **End to end:** sign up, plan, delete with the password, land on `/` with Log in and no
+    Recent trips. axe, both themes: the account page, the missing-password error, and the
+    confirmation dialog.
+  - In Chrome (dev servers): My trips, a trip page with its actions and the account page
+    look right. With 34 trips, scrolling to the end of My trips loaded the second page by
+    itself, and Load more went once there was nothing left.
+  - The trip-page waits in the planner tests allow 3 s: under a full parallel run, plan,
+    navigation and the saved trip's request took over the default 1 s twice.

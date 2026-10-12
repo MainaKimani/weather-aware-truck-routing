@@ -1,6 +1,7 @@
 /** The app's pages (RFC §10.5). */
 import type { RouteObject } from 'react-router'
 
+import { AccountPage } from '../features/account/AccountPage'
 import { AuthPage } from '../features/account/AuthPage'
 import { PlannerHome } from '../features/planner/PlannerHome'
 import { NotFound } from '../features/shell/NotFound'
@@ -30,6 +31,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequireAccount>
                 <TripsPage />
+              </RequireAccount>
+            ),
+          },
+          {
+            path: 'account',
+            element: (
+              <RequireAccount>
+                <AccountPage />
               </RequireAccount>
             ),
           },

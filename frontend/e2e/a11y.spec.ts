@@ -139,6 +139,21 @@ for (const theme of ['light', 'dark'] as const) {
       await stranger.close()
     })
 
+    test('the account page, and confirming its deletion', async ({ page }) => {
+      await signUp(page)
+      await page.goto('/account')
+      await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible()
+      await expectAccessible(page, 'account')
+
+      await page.getByRole('button', { name: 'Delete account' }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+      await expectAccessible(page, 'account, password missing')
+      await page.getByLabel('Password').fill('correct-horse-9')
+      await page.getByRole('button', { name: 'Delete account' }).click()
+      await expect(page.getByRole('alertdialog')).toBeVisible()
+      await expectAccessible(page, 'delete account dialog')
+    })
+
     test('a failed plan', async ({ page }) => {
       await page.route('**/api/v1/plans', (route) =>
         route.fulfill({

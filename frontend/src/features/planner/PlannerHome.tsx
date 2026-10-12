@@ -1,9 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 
 import { planKeys, useLatestPlanAttempt, usePlan } from '../../api/plans'
 import type { Plan } from '../../api/schema'
 import { useUiStore } from '../../state/ui'
+import { finishSessionEnd, sessionEndedIn } from '../account/sessionHandoff'
 import { ResultsArea } from '../plan/ResultsArea'
 import { TripForm } from '../trip-form/TripForm'
 import { useOpenTrip } from './useOpenTrip'
@@ -13,6 +15,7 @@ const hasPlan = (plan: Plan) => plan.routes.length > 0
 /** `/`: a new trip. Whatever trip was on screen before is cleared. */
 export function PlannerHome() {
   useClearedPlan()
+  useSessionHandoff()
   const openTrip = useOpenTrip()
   const planned = usePlan(hasPlan)
   const attempt = useLatestPlanAttempt()
@@ -43,4 +46,18 @@ function useClearedPlan() {
     void queryClient.resetQueries({ queryKey: planKeys.current(), exact: true })
     useUiStore.getState().showPlan(null)
   }, [queryClient])
+}
+
+/** Arriving from a session that just ended (sessionHandoff.ts): refresh it here, once. */
+function useSessionHandoff() {
+  const queryClient = useQueryClient()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const ended = sessionEndedIn(location.state)
+  useEffect(() => {
+    if (!ended) return
+    void finishSessionEnd(queryClient, ended)
+    // Clear the note, so going back and forth doesn't repeat it.
+    void navigate(location.pathname, { replace: true, state: null })
+  }, [ended, queryClient, navigate, location.pathname])
 }

@@ -6,9 +6,10 @@
  * Asking also sets Django's CSRF cookie, which every later sign-up, login
  * and plan sends back, so the app asks as soon as it starts.
  */
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
-import { api, unwrap } from './client'
+import { api, readCookie, unwrap } from './client'
+import { fromResponse, networkError, type ApiError } from './errors'
 import type { Me } from './schema'
 
 export const meKeys = {
@@ -38,4 +39,33 @@ const selectUser = (me: Me) => me.user
 /** The signed-in user, null for a guest or visitor, undefined until known. */
 export function useCurrentUser() {
   return useQuery({ ...meQuery, select: selectUser }).data
+}
+
+/**
+ * Delete the account and everything in it (RFC §7.5); needs the password.
+ *
+ * A plain fetch: the body of a DELETE has no meaning in OpenAPI 3.0, so the
+ * generated client has no type for it, though the API reads it.
+ */
+export async function deleteAccount(password: string): Promise<null> {
+  let response: Response
+  try {
+    response = await globalThis.fetch('/api/v1/me', {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': readCookie('csrftoken') ?? '',
+      },
+      body: JSON.stringify({ password }),
+    })
+  } catch (cause) {
+    throw networkError(cause)
+  }
+  if (response.ok) return null
+  throw fromResponse(response, await response.json().catch(() => null))
+}
+
+export function useDeleteAccount() {
+  return useMutation<null, ApiError, string>({ mutationFn: deleteAccount })
 }

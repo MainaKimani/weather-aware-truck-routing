@@ -33,9 +33,15 @@ export function SessionMenu() {
       <Link to="/trips" className="rounded-md px-2 py-1 font-medium hover:bg-surface-raised">
         My trips
       </Link>
-      <span className="hidden max-w-48 truncate text-muted sm:inline" title={user.email}>
-        {user.email}
-      </span>
+      <Link
+        to="/account"
+        title={`Account: ${user.email}`}
+        className="max-w-48 truncate rounded-md px-2 py-1 text-muted hover:bg-surface-raised"
+      >
+        {/* The email where there's room; "Account" on a phone. */}
+        <span className="sm:hidden">Account</span>
+        <span className="hidden sm:inline">{user.email}</span>
+      </Link>
       <button
         type="button"
         disabled={logOut.isPending}
