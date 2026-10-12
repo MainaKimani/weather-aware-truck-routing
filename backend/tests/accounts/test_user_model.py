@@ -51,5 +51,13 @@ def test_email_is_unique_ignoring_case_even_bypassing_the_manager() -> None:
         )
 
 
+def test_clean_lowercases_and_trims_email_set_directly() -> None:
+    user = User(email="  Driver@Example.COM ")
+
+    user.clean()
+
+    assert user.email == "driver@example.com"
+
+
 def test_tests_run_on_postgres() -> None:
     assert connection.vendor == "postgresql"

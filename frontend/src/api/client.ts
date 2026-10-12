@@ -83,3 +83,16 @@ export async function unwrap<T>(request: Promise<FetchResult<T>>): Promise<T> {
   }
   return data
 }
+
+/** For endpoints that answer 204 No Content: null when it worked, an ApiError when not. */
+export async function unwrapEmpty(request: Promise<FetchResult<unknown>>): Promise<null> {
+  let result: FetchResult<unknown>
+  try {
+    result = await request
+  } catch (cause) {
+    if (isAbort(cause)) throw cause
+    throw networkError(cause)
+  }
+  if (!result.response.ok) throw fromResponse(result.response, result.error)
+  return null
+}

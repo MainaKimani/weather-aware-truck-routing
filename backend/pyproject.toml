@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Weather-aware truck routing API"
 requires-python = ">=3.12"
 dependencies = [
+    "argon2-cffi>=25.1.0",
     "django>=5.2,<6",
+    "django-allauth>=65.19.4",
     "django-environ>=0.14.0",
     "django-redis>=7.0.0",
     "django-stubs-ext>=6.1.2",
@@ -59,7 +61,7 @@ strict = true
 exclude = ["/migrations/"]
 
 [[tool.mypy.overrides]]
-module = ["environ.*", "flexpolyline.*", "django_redis.*"]
+module = ["environ.*", "flexpolyline.*", "django_redis.*", "allauth.*"]
 ignore_missing_imports = true
 
 [tool.django-stubs]

@@ -2,12 +2,12 @@
  * The PRD's user stories with the keyboard alone (PRD §6, stories 1-7):
  * every control is reached with Tab and used with Enter, Space, the arrows,
  * Home and End. Nothing here clicks. Stories 8-11 need accounts and trip
- * pages, which don't exist yet.
+ * pages: those are walked through below as well (stories 8-11).
  */
 import { expect, test, type Page } from '@playwright/test'
 
 import { strongHosPlan } from '../src/test/fixtures/strongHosPlan'
-import { respondToPlanWith, tabTo } from './support'
+import { respondToPlanWith, tabTo, uniqueEmail } from './support'
 
 /** Story 1: the form, filled with the keyboard, then submitted. */
 async function planByKeyboard(page: Page, { hos = false } = {}) {
@@ -106,4 +106,66 @@ test('story 7: Hours of Service on, and a stop opened', async ({ page }) => {
   await tabTo(page, stop, { limit: 200 })
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: /stop$/ })).toBeVisible()
+})
+
+test('story 8: a guest comes back to a recent trip from the header', async ({ page }) => {
+  await planByKeyboard(page)
+  const tripUrl = page.url()
+  await page.goto('/')
+
+  const menu = page.getByRole('button', { name: /^Recent trips/ })
+  await tabTo(page, menu)
+  await page.keyboard.press('Enter')
+  await expect(menu).toHaveAttribute('aria-expanded', 'true')
+  await tabTo(page, page.getByRole('region', { name: 'Recent trips' }).getByRole('link').first())
+  await page.keyboard.press('Enter')
+
+  await expect(page).toHaveURL(tripUrl)
+  await expect(page.getByText(/with the forecast as of then/)).toBeVisible()
+})
+
+test('stories 9-11: sign up keeping the trip, save it, re-plan it, share it', async ({ page }) => {
+  test.setTimeout(60_000)
+  await planByKeyboard(page)
+
+  // 9: sign up from the header; the guest's trip comes along.
+  await tabTo(page, page.getByRole('banner').getByRole('link', { name: 'Sign up' }))
+  await page.keyboard.press('Enter')
+  await tabTo(page, page.getByLabel('Email'))
+  await page.keyboard.type(uniqueEmail())
+  await page.keyboard.press('Tab')
+  await page.keyboard.type('correct-horse-9')
+  await page.keyboard.press('Enter')
+  await expect(page.getByText('1 trip from this device was added to your account.')).toBeVisible()
+
+  // 10: My trips, open the trip, save it under a name, re-plan it.
+  await tabTo(page, page.getByRole('link', { name: 'My trips' }))
+  await page.keyboard.press('Enter')
+  await tabTo(page, page.getByRole('list', { name: 'Trips' }).getByRole('link').first())
+  await page.keyboard.press('Enter')
+  await tabTo(page, page.getByRole('button', { name: '☆ Save' }))
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Control+A')
+  await page.keyboard.type('Weekly run')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: '★ Saved' })).toBeVisible()
+  const savedUrl = page.url()
+  await tabTo(page, page.getByRole('button', { name: 'Re-plan with current weather' }), {
+    backwards: true,
+  })
+  await page.keyboard.press('Enter')
+  await expect(page).not.toHaveURL(savedUrl)
+  await expect(page.getByText(/with the forecast as of then/)).toBeVisible()
+
+  // 11: share it, and turn sharing off again.
+  const share = page.getByRole('switch', { name: 'Share' })
+  await tabTo(page, share)
+  await page.keyboard.press('Space')
+  await expect(share).toHaveAttribute('aria-checked', 'true')
+  await tabTo(page, page.getByRole('button', { name: 'Copy link' }))
+  await page.keyboard.press('Enter')
+  await expect(page.getByText(/Link copied|the link is http/)).toBeVisible()
+  await tabTo(page, share, { backwards: true })
+  await page.keyboard.press('Space')
+  await expect(share).toHaveAttribute('aria-checked', 'false')
 })

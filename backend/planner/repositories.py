@@ -13,11 +13,12 @@ without old trips needing to be rebuilt from it.
 
 import uuid
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Final
 
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch, Q, QuerySet
 from django.utils.dateparse import parse_datetime
 
 from planner.access import Owner
@@ -42,7 +43,10 @@ WIRE_TIME: Final = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def save_trip(
-    snapshot: Mapping[str, Any], owner: Owner, idempotency_key: uuid.UUID | None = None
+    snapshot: Mapping[str, Any],
+    owner: Owner,
+    idempotency_key: uuid.UUID | None = None,
+    replanned_from: Trip | None = None,
 ) -> Trip:
     """Save a plan response as the owner's trip, with its routes, all or nothing."""
     inputs = snapshot["inputs"]
@@ -52,6 +56,7 @@ def save_trip(
         trip = Trip.objects.create(
             **owner.as_fields(),
             idempotency_key=idempotency_key,
+            replanned_from=replanned_from,
             rules_version=snapshot["rules_version"],
             snapshot_version=SNAPSHOT_VERSION,
             origin_label=origin["label"],
@@ -176,6 +181,95 @@ def _route_snapshot(route: TripRoute) -> Snapshot:
         },
         "checkpoints": route.checkpoints,
     }
+
+
+# --- Reading trips back ---------------------------------------------------------
+
+# What a trip list shows of each trip; the heavy JSON stays in the database.
+SUMMARY_FIELDS: Final = (
+    "id",
+    "created_at",
+    "name",
+    "saved",
+    "shared",
+    "user_id",
+    "guest_id",
+    "origin_label",
+    "destination_label",
+    "departure",
+    "load_lb",
+    "interval_mi",
+    "demo",
+    "stale",
+    "replanned_from_id",
+)
+RECOMMENDED_FIELDS: Final = ("trip_id", "key", "name", "label", "worst_level", "drivable")
+
+
+def summaries(trips: QuerySet[Trip], *, saved: bool | None = None, q: str = "") -> QuerySet[Trip]:
+    """Trips for a list, newest first, each with its recommended route.
+
+    Two queries for any page: the trips' summary columns, then their
+    recommended routes without geometry, checkpoints or stops (RFC §3.1).
+    """
+    if saved is not None:
+        trips = trips.filter(saved=saved)
+    if q:
+        trips = trips.filter(
+            Q(name__icontains=q) | Q(origin_label__icontains=q) | Q(destination_label__icontains=q)
+        )
+    recommended = TripRoute.objects.filter(recommended=True).only(*RECOMMENDED_FIELDS)
+    return (
+        trips.only(*SUMMARY_FIELDS)
+        .prefetch_related(Prefetch("routes", queryset=recommended, to_attr="recommended_routes"))
+        .order_by("-created_at", "-id")
+    )
+
+
+def load_trip(trip: Trip, owner: Owner | None) -> Snapshot:
+    """The trip's plan response, with what the owner has set and who is asking."""
+    return {
+        **load_snapshot(trip),
+        "name": trip.name,
+        "saved": trip.saved,
+        "shared": trip.shared,
+        "created_at": _wire(trip.created_at),
+        "is_owner": owner is not None and owner.owns(trip),
+        "replanned_from": None if trip.replanned_from_id is None else str(trip.replanned_from_id),
+    }
+
+
+def replan_request(trip: Trip, now: datetime) -> dict[str, Any]:
+    """The trip's inputs as a new plan request: the same places, load, interval
+    and HOS clocks, leaving now if the original departure has passed."""
+    return {
+        "origin": _place(trip.origin_label, trip.origin_lat, trip.origin_lon, trip.origin_tz),
+        "destination": _place(
+            trip.destination_label, trip.destination_lat, trip.destination_lon, trip.destination_tz
+        ),
+        "departure": _wire(max(trip.departure, now)),
+        "load_lb": trip.load_lb,
+        "interval_mi": trip.interval_mi,
+        "hos": trip.hos or {"enabled": False},
+    }
+
+
+# --- Retention ---------------------------------------------------------------
+
+GUEST_TRIP_DAYS: Final = 30
+UNSAVED_TRIP_DAYS: Final = 90
+
+
+def expired_trips(now: datetime) -> tuple[QuerySet[Trip], QuerySet[Trip]]:
+    """Trips past retention (RFC §3.1): guests' after 30 days, and users'
+    unsaved ones after 90. A saved trip is never expired."""
+    guests = Trip.objects.filter(
+        user__isnull=True, created_at__lt=now - timedelta(days=GUEST_TRIP_DAYS)
+    )
+    unsaved = Trip.objects.filter(
+        user__isnull=False, saved=False, created_at__lt=now - timedelta(days=UNSAVED_TRIP_DAYS)
+    )
+    return guests, unsaved
 
 
 def route_lines(trip: Trip) -> list[list[LatLon]]:

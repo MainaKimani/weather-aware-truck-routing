@@ -3,7 +3,7 @@
  * shows, entered as hh:mm. Limits and messages mirror the API's HOS
  * serializer.
  */
-import type { CycleEnum, HosRequest } from '../../api/schema'
+import type { CycleEnum, Hos, HosRequest } from '../../api/schema'
 import { MESSAGES } from './rules'
 
 export type Cycle = CycleEnum
@@ -65,6 +65,20 @@ export function parseClock(text: string): number | null {
   const m = /^\s*(\d{1,2}):([0-5]\d)\s*$/.exec(text)
   if (!m) return null
   return Number(m[1]) * 60 + Number(m[2])
+}
+
+/** A saved trip's clocks as form values: off, or what the driver entered. */
+export function hosFromInputs(hos: Hos | null): HosValues {
+  if (!hos?.enabled) return restedHos()
+  const clock = (hours: number) => formatClock(Math.round(hours * 60))
+  return {
+    enabled: true,
+    cycle: hos.cycle,
+    driveLeft: clock(hos.drive_left_h),
+    windowLeft: clock(hos.window_left_h),
+    untilBreak: clock(hos.until_break_h),
+    cycleLeft: clock(hos.cycle_left_h),
+  }
 }
 
 export function formatClock(minutes: number): string {

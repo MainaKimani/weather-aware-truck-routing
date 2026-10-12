@@ -28,7 +28,8 @@ export default defineConfig({
         'uv run python manage.py migrate --noinput && uv run python manage.py runserver 127.0.0.1:8001 --noreload',
       cwd: '../backend',
       url: `${API}/healthz`,
-      env: { PROVIDERS: 'fake', FAKE_SCENARIO: 'demo' },
+      // The specs plan dozens of trips a minute from one address; lift the API limits.
+      env: { PROVIDERS: 'fake', FAKE_SCENARIO: 'demo', THROTTLE_GENEROUS: '1' },
       reuseExistingServer: !CI,
       timeout: 120_000,
     },

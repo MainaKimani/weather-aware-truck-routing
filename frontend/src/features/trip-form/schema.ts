@@ -4,10 +4,17 @@
  */
 import { z } from 'zod'
 
-import type { Place, PlanRequest } from '../../api/schema'
+import type { Place, Plan, PlanRequest } from '../../api/schema'
 import { haversineMi } from '../../lib/geo'
-import { browserZone, zonedToUtc } from '../../lib/time'
-import { hosErrors, hosFieldFor, restedHos, toHosRequest, type HosValues } from './hos'
+import { browserZone, utcToZonedInput, zonedToUtc } from '../../lib/time'
+import {
+  hosErrors,
+  hosFieldFor,
+  hosFromInputs,
+  restedHos,
+  toHosRequest,
+  type HosValues,
+} from './hos'
 import {
   DEPARTURE_GRACE_MS,
   DEPARTURE_MAX_AHEAD_MS,
@@ -44,6 +51,20 @@ export function emptyValues(departureLocal: string): TripFormValues {
     loadLb: '',
     intervalMi: 25,
     hos: restedHos(),
+  }
+}
+
+/** A saved trip's inputs as form values, to show it and to plan it again with changes. */
+export function valuesFromInputs(inputs: Plan['inputs']): TripFormValues {
+  const { origin, destination } = inputs
+  const zone = origin.tz ?? browserZone()
+  return {
+    origin: { text: origin.label, place: origin },
+    destination: { text: destination.label, place: destination },
+    departureLocal: utcToZonedInput(new Date(inputs.departure), zone),
+    loadLb: inputs.load_lb.toLocaleString('en-US'),
+    intervalMi: INTERVALS.find((i) => i === inputs.interval_mi) ?? 25,
+    hos: hosFromInputs(inputs.hos),
   }
 }
 
