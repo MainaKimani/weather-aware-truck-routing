@@ -209,15 +209,43 @@ class TestIdempotency:
     ) -> None:
         key = str(uuid.uuid4())
         first = plan_with_key(client, key)
-        # The second request checked for the key before the first had saved.
-        calls = iter([None])
-        monkeypatch.setattr(views, "trip_for_key", lambda k: next(calls, None) or trip_for_key(k))
+        # The second request checked for the key before the first had saved: its first
+        # lookup finds nothing, so it plans, and saving hits the unique key.
+        lookups: list[uuid.UUID] = []
+
+        def racing_lookup(k: uuid.UUID) -> Trip | None:
+            lookups.append(k)
+            return None if len(lookups) == 1 else trip_for_key(k)
+
+        monkeypatch.setattr(views, "trip_for_key", racing_lookup)
 
         second = plan_with_key(client, key)
 
         assert second.status_code == 200
         assert second.json()["trip_id"] == first.json()["trip_id"]
         assert Trip.objects.count() == 1
+        assert len(lookups) == 2  # missed, then found after the failed save
+
+
+def test_a_save_failure_that_is_not_a_key_race_is_not_hidden(
+    client: Client, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail(*args: object, **kwargs: object) -> None:
+        raise IntegrityError("not about the key")
+
+    monkeypatch.setattr(views, "save_trip", fail)
+
+    with pytest.raises(IntegrityError, match="not about the key"):
+        post(client, body())
+
+
+def test_a_snapshot_with_an_unreadable_time_is_refused() -> None:
+    snapshot = snapshot_of()
+    snapshot["generated_at"] = "yesterday"
+
+    with pytest.raises(ValueError, match="not a date-time"):
+        save_trip(snapshot, GUEST)
+    assert not Trip.objects.exists()
 
 
 def test_the_domain_package_imports_nothing_from_django() -> None:

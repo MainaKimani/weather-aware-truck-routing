@@ -8,6 +8,7 @@ from django.test import Client, RequestFactory
 from accounts.models import User
 from planner.access import GUEST_KEY, claim_guest_trips
 from planner.models import Trip
+from planner.signals import keep_guest_trips
 from tests.accounts.test_auth import AUTH, browser, log_in, send, sign_up
 from tests.api.test_plans import body
 from tests.trips.factories import make_trip, make_user
@@ -87,3 +88,12 @@ def test_nothing_to_claim_without_a_guest(stored: str | None) -> None:
     assert claim_guest_trips(request, make_user()) == 0
     assert Trip.objects.get(pk=trip.pk).user is None
     assert GUEST_KEY not in request.session
+
+
+def test_a_login_without_a_request_claims_nothing() -> None:
+    # Logins outside a request (a script, a test client's force_login) have no session.
+    trip = make_trip()
+
+    keep_guest_trips(sender=None, request=None, user=make_user())
+
+    assert Trip.objects.get(pk=trip.pk).user is None

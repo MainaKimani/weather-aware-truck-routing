@@ -2688,6 +2688,11 @@ core features, per PRD §5.
   - **`domain/` imports nothing from Django:** an AST check over `planner/domain` allows
     only the standard library and `planner.domain`.
   - Existing plan API, OpenAPI drift and logging tests now run with the database.
+- 2026-10-12: the race test ("two requests racing with one key") never simulated the race:
+  its patched lookup fell through to the real one, which found the trip, so the recovery
+  path didn't run. It now misses once, the save hits the unique key, and the second lookup
+  finds the trip (checked by counting lookups). A save failure that isn't a key race now
+  has a test that it is re-raised, not hidden.
 
 ### SPOT-112 · Guest identity and access layer
 
