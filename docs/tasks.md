@@ -89,7 +89,7 @@ link to their sections instead of repeating them.
 | SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | Done        |
 | SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | Done        |
-| SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | To do       |
+| SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | Done        |
 | SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | To do       |
 | SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
 | SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
@@ -136,6 +136,7 @@ here when that task closes it.
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
+| SPOT-118 | Schedule `manage.py purge_trips` daily on the host. | SPOT-100 |
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
 | SPOT-90 | Second smoke flow: plan as a guest, sign up, see the trip in My trips, share it, open the link in a fresh context. Needs accounts and trip pages. | SPOT-125 |
@@ -2960,19 +2961,32 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-110 |
+| Backend · 1 | P0 | Done | SPOT-110 |
 
 **Sub-tasks**
-- [ ] `manage.py purge_trips`: guest trips > 30 days, unsaved user trips > 90 days; then
+- [x] `manage.py purge_trips`: guest trips > 30 days, unsaved user trips > 90 days; then
   `clearsessions`. Logs counts.
-- [ ] Scheduled daily on the host (wired up in SPOT-100).
+- [ ] Scheduled daily on the host (wired up in SPOT-100). _(moved to SPOT-100, which already lists it)_
 
 **Acceptance criteria**
 - Test with trips either side of each cut-off: exactly the expired ones are deleted; saved
   trips are never deleted.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: retention purge (`planner/management/commands/purge_trips.py`,
+  `repositories.expired_trips`).
+  - Deletes, in one transaction, guest trips created over 30 days ago and users' unsaved
+    trips over 90 days ago; saved trips are never expired. Routes and heatmaps cascade.
+    Then `clearsessions`.
+  - Logs the counts (`event: purge`, `guest_trips`, `unsaved_trips`) and prints them.
+    `--dry-run` counts without deleting.
+- Verified (5 tests, 705 total):
+  - Trips either side of each cut-off (guest 29 and 31 days, unsaved user 89 and 91 days,
+    a user's unsaved 31-day trip, a saved 400-day trip): exactly the 31-day guest and 91-day
+    unsaved trips go.
+  - Routes and heatmaps go with them; a dry run deletes nothing and reports what would go;
+    an expired session is cleared and a live one kept; the log record carries the counts.
+- Left: scheduling it daily on the host, which is SPOT-100's (already a sub-task there).
 
 ### SPOT-119 · Demo account seed
 

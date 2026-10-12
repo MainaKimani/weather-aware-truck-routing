@@ -13,7 +13,7 @@ without old trips needing to be rebuilt from it.
 
 import uuid
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Final
 
@@ -252,6 +252,24 @@ def replan_request(trip: Trip, now: datetime) -> dict[str, Any]:
         "interval_mi": trip.interval_mi,
         "hos": trip.hos or {"enabled": False},
     }
+
+
+# --- Retention ---------------------------------------------------------------
+
+GUEST_TRIP_DAYS: Final = 30
+UNSAVED_TRIP_DAYS: Final = 90
+
+
+def expired_trips(now: datetime) -> tuple[QuerySet[Trip], QuerySet[Trip]]:
+    """Trips past retention (RFC §3.1): guests' after 30 days, and users'
+    unsaved ones after 90. A saved trip is never expired."""
+    guests = Trip.objects.filter(
+        user__isnull=True, created_at__lt=now - timedelta(days=GUEST_TRIP_DAYS)
+    )
+    unsaved = Trip.objects.filter(
+        user__isnull=False, saved=False, created_at__lt=now - timedelta(days=UNSAVED_TRIP_DAYS)
+    )
+    return guests, unsaved
 
 
 def route_lines(trip: Trip) -> list[list[LatLon]]:
