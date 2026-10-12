@@ -40,8 +40,12 @@ export function planTrip({ request, idempotencyKey }: PlanVariables, signal?: Ab
   )
 }
 
+export interface PlanOptions {
+  onSuccess?: (plan: Plan) => void
+}
+
 export type PlanMutation = Omit<UseMutationResult<Plan, ApiError, PlanVariables>, 'mutate'> & {
-  plan: (request: PlanRequest) => void
+  plan: (request: PlanRequest, options?: PlanOptions) => void
 }
 
 export function usePlanTrip(): PlanMutation {
@@ -56,8 +60,8 @@ export function usePlanTrip(): PlanMutation {
     },
   })
   const plan = useCallback(
-    (request: PlanRequest) => {
-      mutate({ request, idempotencyKey: crypto.randomUUID() })
+    (request: PlanRequest, options?: PlanOptions) => {
+      mutate({ request, idempotencyKey: crypto.randomUUID() }, options)
     },
     [mutate],
   )

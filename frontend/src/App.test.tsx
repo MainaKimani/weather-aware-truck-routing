@@ -17,6 +17,11 @@ import { PLANS, apiError, server } from './test/server'
 
 const renderApp = () => render(<App queryClient={freshClient()} />)
 
+async function planDemoTrip() {
+  await userEvent.click(screen.getByRole('button', { name: 'Use the demo trip' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Plan trip' }))
+}
+
 describe('App shell', () => {
   it('lays out the header, planner panel, map and timeline as landmarks', () => {
     renderApp()
@@ -49,7 +54,7 @@ describe('planning the demo trip', () => {
   it('shows the ranked routes, the reason and the demo badge', async () => {
     renderApp()
 
-    await userEvent.click(screen.getByRole('button', { name: /Plan the demo trip/ }))
+    await planDemoTrip()
 
     const routes = await screen.findByRole('list')
     const items = within(routes).getAllByRole('button')
@@ -64,7 +69,7 @@ describe('planning the demo trip', () => {
 
   it('selects a route on click', async () => {
     renderApp()
-    await userEvent.click(screen.getByRole('button', { name: /Plan the demo trip/ }))
+    await planDemoTrip()
     await screen.findByRole('list')
     const routeA = screen.getByRole('button', { name: /Route A/ })
     const routeB = screen.getByRole('button', { name: /Route B/ })
@@ -86,7 +91,7 @@ describe('planning the demo trip', () => {
     )
     renderApp()
 
-    await userEvent.click(screen.getByRole('button', { name: /Plan the demo trip/ }))
+    await planDemoTrip()
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('No truck route was found.')

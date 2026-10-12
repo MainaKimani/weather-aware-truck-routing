@@ -60,7 +60,7 @@ link to their sections instead of repeating them.
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | Done        |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | Done        |
 | SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | In progress |
-| SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | To do       |
+| SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | To do       |
 | SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | To do       |
 | SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | To do       |
@@ -1568,22 +1568,67 @@ Spec: RFC §12, §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P0 | To do | SPOT-51, SPOT-43 |
+| Frontend · 3 | P0 | Done | SPOT-51, SPOT-43 |
 
 Spec: PRD §7.1.
 
 **Sub-tasks**
-- [ ] Origin/destination comboboxes (250 ms debounce, keyboard navigation, swap button).
-- [ ] Departure picker in the origin's time zone; > 48 h note.
-- [ ] Load weight with thousands separators; interval segmented control.
-- [ ] zod schema mirroring server validation; server field errors shown inline.
+- [x] Origin/destination comboboxes (250 ms debounce, keyboard navigation, swap button).
+- [x] Departure picker in the origin's time zone; > 48 h note.
+- [x] Load weight with thousands separators; interval segmented control.
+- [x] zod schema mirroring server validation; server field errors shown inline.
 
 **Acceptance criteria**
 - Every server validation rule also fails client-side with the same message.
 - Form is fully usable by keyboard.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip form (`features/trip-form`).
+  - **Form state:** React Hook Form with a Zod schema. Validation runs on submit, then on
+    change.
+  - **Rules** (`rules.ts`) mirror the API serializers rule for rule and word for word:
+    required fields, pick a suggestion, places more than a mile apart, departure within 15 min
+    ago to 7 days ahead, and load a whole number from 1 to 80,000. Errors the server still
+    finds land on the same fields (`formFieldFor` maps `origin.lat` → origin and so on).
+    Anything unmapped shows as a form-level alert.
+  - **Origin and destination:** `PlaceCombobox`, an ARIA 1.2 combobox built on `downshift`:
+    arrows, Enter, Escape, active descendant. Input is debounced 250 ms into
+    `usePlaceSuggestions`. It shows "Searching…", "No matches" or "Place search is unavailable"
+    in the list. Typing after picking clears the coordinates, so the label and position always
+    agree. The origin shows its IANA zone, and a swap button exchanges the two.
+  - **Departure:** a `datetime-local` input on the origin's clock (the browser's until an
+    origin is picked), with the zone abbreviation (CDT). It defaults to the next whole hour,
+    and adds a lower-confidence note beyond 48 h.
+  - **Time zones:** `lib/time.ts` converts between that wall-clock time and UTC with Intl
+    only. In the spring gap it reads forward; in the autumn overlap it takes the first
+    occurrence.
+  - **Load and interval:** load accepts separators and reformats to `42,000` on blur, with
+    the 30,000/40,000 lb hint from the design. The interval is a segmented radio group.
+  - **Submit** shows "Evaluating weather corridors…" while pending. On success the form
+    collapses to a one-line summary ("Dallas, TX → Denver, CO · Mon 06:00 CDT · 42,000 lb ·
+    every 25 mi") with Edit trip.
+  - "Use the demo trip" fills Dallas → Denver, 42,000 lb, next hour; it replaces the
+    temporary demo button.
+- Decisions:
+  - Places are stored as `{text, place}`, so the form can tell "nothing typed" (the API's
+    "This field is required.") from "typed but not picked" ("Choose a place from the
+    suggestions.", client-only because the API never sees text without coordinates).
+  - No date library: Intl covers zone conversion, and 18 tests pin it down.
+- Found in Chrome and fixed: typed text now reaches the form in the input's own `onChange`.
+  Through downshift's `onInputValueChange`, which runs after render, React reset the
+  controlled input between keystrokes, so fast typing dropped characters ("dal" became "l").
+  A regression test fires key events faster than effects can run.
+- Verified (39 new tests, 91 total):
+  - Every rule fails with the API's message (11 cases). Valid edges pass (1, 80,000,
+    `42 000`, 15 min ago).
+  - The departure is read on the origin's clock (Denver 06:00 → 12:00Z, Dallas → 11:00Z).
+  - Zone conversion: six zones including half-hour Kolkata, both DST transitions, and every
+    hour of 2026 round-tripping in five zones including Lord Howe's 30-minute DST.
+  - The form, through user events and MSW: a keyboard-only plan sends exactly the expected
+    body; empty submit shows three "This field is required." messages and sends nothing.
+    Typed-not-picked, typing after picking, no matches, search down, swap, the 48 h note,
+    server field errors placed inline, collapse and Edit, and a non-field error with retry
+    are all covered.
 
 ### SPOT-61 · Hours of Service fields
 

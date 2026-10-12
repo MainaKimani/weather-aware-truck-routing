@@ -4,8 +4,8 @@ import { AppProviders } from './app/AppProviders'
 import { usePlan } from './api/plans'
 import type { Plan } from './api/schema'
 import { DemoBadge } from './features/plan/DemoBadge'
-import { DemoTrip } from './features/plan/DemoTrip'
 import { RoutesPanel } from './features/routes-panel/RoutesPanel'
+import { TripForm } from './features/trip-form/TripForm'
 import { AppShell } from './features/shell/AppShell'
 import { HourSlider } from './features/timeline/HourSlider'
 
@@ -44,7 +44,7 @@ function Panel() {
           </p>
         </section>
       )}
-      <DemoTrip />
+      <TripForm />
       <RoutesPanel />
     </div>
   )

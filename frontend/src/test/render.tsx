@@ -4,9 +4,18 @@ import type { ReactElement, ReactNode } from 'react'
 
 import { createQueryClient } from '../api/queryClient'
 
-/** A fresh query cache per test, so no test sees another's plan. */
+/**
+ * A fresh query cache per test, so no test sees another's plan. Same retry
+ * rules as the app, without the back-off wait.
+ */
 export function freshClient() {
-  return createQueryClient()
+  const client = createQueryClient()
+  const { queries, mutations } = client.getDefaultOptions()
+  client.setDefaultOptions({
+    queries: { ...queries, retryDelay: 0 },
+    mutations: { ...mutations, retryDelay: 0 },
+  })
+  return client
 }
 
 export function withClient(client = freshClient()) {
