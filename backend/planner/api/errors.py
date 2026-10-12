@@ -17,9 +17,18 @@ from rest_framework.views import exception_handler as drf_exception_handler
 
 from planner.providers.base import NoRoute, ProviderError
 
+
+class IdempotencyConflict(exceptions.APIException):
+    """An Idempotency-Key already used for another caller's request."""
+
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "This request was already used to plan a trip. Plan the trip again."
+
+
 PROVIDER_STATUS: dict[type[ProviderError], int] = {NoRoute: status.HTTP_422_UNPROCESSABLE_ENTITY}
 
 _CODES: Mapping[type[exceptions.APIException], str] = {
+    IdempotencyConflict: "idempotency_conflict",
     exceptions.ValidationError: "invalid_input",
     exceptions.ParseError: "invalid_input",
     exceptions.Throttled: "rate_limited",

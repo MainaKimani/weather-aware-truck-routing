@@ -7,6 +7,7 @@ import pytest
 from django.test import Client
 
 from accounts.models import User
+from planner.access import GUEST_KEY
 
 PLANS = "/api/v1/plans"
 SUGGEST = "/api/v1/geocode/suggest"
@@ -61,3 +62,16 @@ def test_limits_are_separate_per_endpoint(client: Client) -> None:
 
     assert plan(client) == 429
     assert client.get(SUGGEST, {"q": "d"}).status_code == 200
+
+
+@pytest.mark.django_db
+def test_a_guest_is_counted_by_session_as_well_as_ip(client: Client) -> None:
+    session = client.session
+    session[GUEST_KEY] = "7d6f5b8e-0c55-4a37-9b0f-3d6ab3c1e2f4"
+    session.save()
+
+    for i in range(10):
+        assert plan(client, REMOTE_ADDR=f"10.0.1.{i}") == 400
+
+    # A new network, the same guest.
+    assert plan(client, REMOTE_ADDR="10.0.2.1") == 429

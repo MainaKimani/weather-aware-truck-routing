@@ -53,7 +53,7 @@ link to their sections instead of repeating them.
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
-| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress |
+| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | Done        |
 | SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | Done        |
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | Done        |
@@ -81,9 +81,9 @@ link to their sections instead of repeating them.
 | SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do       |
 | SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do       |
-| SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | To do       |
-| SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
-| SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | To do       |
+| SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
+| SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
+| SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
 | SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | To do       |
 | SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | To do       |
@@ -118,21 +118,19 @@ here when that task closes it.
 
 **Branch housekeeping**
 - `dev-frontend` is behind `main`; merge `main` into it before frontend work starts.
+- `dev-backend` is behind `main`. The trips branch starts from `main`, so its PR brings
+  `dev-backend` up to date.
 
 **Carried over to a later task**
 
 | From | What's left | Picked up in |
 |---|---|---|
-| SPOT-41 | Plan response has no `trip_id`; plans aren't saved. Add it (and `Idempotency-Key`), then `make schema`. | SPOT-111 |
-| SPOT-42 | `GET /api/v1/trips/{id}/heatmap`: store the grid as `TripHeatmap`, same access as the trip, `heatmap` throttle scope. | SPOT-42, once trips exist (SPOT-111) |
-| SPOT-45 | Guest plan throttle counts by IP only; count by session `guest_id` too. | SPOT-112 |
 | SPOT-45 | Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite + host); point host checks at `/healthz` and `/readyz`. | SPOT-100 |
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
-| SPOT-51 | Dependent heatmap query (starts after the plan resolves); the endpoint and its schema don't exist yet. | SPOT-51, once SPOT-42's endpoint lands |
+| SPOT-51 | Dependent heatmap query (starts after the plan resolves). The endpoint and its schema now exist. | SPOT-80, with the layer that draws it |
 | SPOT-74 | Heatmap switch in the map legend; the heatmap layer doesn't exist yet. | SPOT-80 |
-| SPOT-50 | Nothing calls `/api/v1/healthz` any more (hosts use `/healthz`); remove the route and its test. | Next backend change |
 
 ## Epics
 
@@ -1166,12 +1164,14 @@ Spec: RFC §7.2, §11.
   - The demo response's shape and geometry round trip.
   - The demo plan is 44 KB of JSON, 6.6 KB gzipped.
 - 2026-10-12: Done; lands with the API PR into `dev-backend`.
+- 2026-10-12: plans are now saved, and the response carries `trip_id` with
+  `Idempotency-Key` handling (SPOT-111).
 
 ### SPOT-42 · Corridor grid and heatmap endpoint
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | In progress | SPOT-40, SPOT-111 |
+| Backend · 3 | P0 | Done | SPOT-40, SPOT-111 |
 
 Spec: RFC §7.3, §8.
 
@@ -1179,7 +1179,7 @@ Spec: RFC §7.3, §8.
 - [x] Union of simplified routes, 40 mi buffer, lattice points inside, point cap with coarser
   step.
 - [x] Classify every point-hour (0–48) with `classify()` and the plan's load.
-- [ ] `GET /api/v1/trips/{id}/heatmap`: compute from the stored trip on first request, save as
+- [x] `GET /api/v1/trips/{id}/heatmap`: compute from the stored trip on first request, save as
   `TripHeatmap`, read the saved copy afterwards; same access rules as the trip.
 
 **Acceptance criteria**
@@ -1219,6 +1219,27 @@ Spec: RFC §7.3, §8.
   - One weather call per grid. A cached coast-to-coast grid is recomputed in about 1 s.
 - Left: `GET /api/v1/trips/{id}/heatmap`, which stores the grid as `TripHeatmap` and shares
   the trip's access rules, needs trips (SPOT-110–112). Its throttle rate is set in SPOT-45.
+- 2026-10-12: endpoint done (`TripHeatmapView`, `planner/repositories.py`).
+  - `GET /api/v1/trips/{id}/heatmap` finds the trip through `get_visible_trip` (owner or
+    shared, otherwise a JSON 404, including for a malformed id). The first request
+    computes `corridor_grid` from the saved routes' polylines and the trip's load, and
+    keeps it as `TripHeatmap`. Later requests read that copy, so a reopened trip shows the
+    heatmap as it was.
+  - Two first requests computing at once end with one kept copy: the second insert hits
+    the one-to-one key and returns the first.
+  - `heatmap` throttle scope, 20 a minute (set in SPOT-45). `openapi.yaml` and the
+    frontend's `schema.ts` regenerated with the path and `Heatmap`.
+- Verified (11 tests, 625 total):
+  - The shape: 49 hours, points and rows matched, levels 0–4 or null. The grid is kept,
+    and the second request reads it without recomputing.
+  - The trip's three routes and its load (31,000 lb in the test) are what the grid uses.
+  - The demo trip's response is under 20 KB gzipped.
+  - Another guest gets 404 and nothing is computed. A shared trip is open to anyone.
+    Unknown and malformed ids are JSON 404s.
+  - A concurrent second save returns the first copy. The 21st request in a minute is
+    429.
+  - All acceptance criteria now met (point cap, payload and grid-equals-checkpoint
+    were verified with the grid on 2026-10-12).
 
 ### SPOT-43 · Geocode suggest endpoint
 
@@ -1367,6 +1388,8 @@ Spec: RFC §12, §18.3.
 - Left: point the host's health checks at `/healthz` and `/readyz` and set `NUM_PROXIES` for
   its proxy chain (SPOT-100/101).
 - 2026-10-12: Done; lands with the API PR into `dev-backend`.
+- 2026-10-12: guest plans are now also counted by session `guest_id` (SPOT-112), so a
+  guest changing network keeps their count.
 
 ### SPOT-46 · Structured logging and request ids
 
@@ -1480,6 +1503,8 @@ Spec: RFC §12, §18.3.
   - Checked in Chrome: dark on first paint with a dark OS setting, light after toggling, no
     console errors. Production build is 47.6 KB of JS gzipped.
 - Left: removing the backend's `/api/v1/healthz` route goes with the next backend change.
+- 2026-10-12: the backend's `/api/v1/healthz` route is removed, with the trips work. Hosts
+  check `/healthz` and `/readyz`, and a test now confirms the old path is a 404.
 
 ### SPOT-51 · API client, query layer and UI state
 
@@ -1560,6 +1585,9 @@ Spec: RFC §12, §18.3.
 - Left: the dependent heatmap query, and its criterion "heatmap request starts only after the
   plan resolves". The endpoint doesn't exist until trips do (SPOT-42), and it isn't in the
   schema to type against.
+- 2026-10-12: `GET /api/v1/trips/{id}/heatmap` and its `Heatmap` type now exist (SPOT-42).
+  The query is built with the heatmap layer (SPOT-80), its first reader; this task
+  closes with it.
 
 ---
 
@@ -2104,6 +2132,8 @@ Spec: RFC §10.4.
 - [ ] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
 - [ ] Add a Heatmap switch to the map legend (`features/map/Legend.tsx`, `layers.heatmap` in
   `state/ui.ts`) (carried over from SPOT-74).
+- [ ] Dependent heatmap query on `trip_id`, starting after the plan resolves (carried over
+  from SPOT-51, which closes with it).
 
 **Acceptance criteria**
 - Heatmap colours agree with checkpoint colours at the same place and hour (visual check on
@@ -2313,14 +2343,14 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-14 |
+| Backend · 3 | P0 | Done | SPOT-14 |
 
 **Sub-tasks**
-- [ ] `Trip`, `TripRoute`, `TripHeatmap` as RFC §3.1, including `idempotency_key`.
-- [ ] All check and unique constraints and the two owner indexes.
-- [ ] Django admin: trip list (owner, route, created, saved, shared), routes inline read-only,
+- [x] `Trip`, `TripRoute`, `TripHeatmap` as RFC §3.1, including `idempotency_key`.
+- [x] All check and unique constraints and the two owner indexes.
+- [x] Django admin: trip list (owner, route, created, saved, shared), routes inline read-only,
   search by place, filter by saved/guest.
-- [ ] `makemigrations --check` in CI.
+- [x] `makemigrations --check` in CI.
 
 **Acceptance criteria**
 - One `IntegrityError` test per constraint: no owner, two owners, guest saving, load 0 and
@@ -2329,20 +2359,43 @@ core features, per PRD §5.
 - Migrations apply cleanly to an empty Postgres database.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip models (`planner/models.py`, migration `0001_trips`).
+  - `Trip`, `TripRoute`, `TripHeatmap` as RFC §3.1, with every check and unique constraint
+    and the two owner indexes (`trip_user_recent`, `trip_guest_recent`). Deleting a trip
+    deletes its routes and heatmap.
+  - **Admin:** the trip list shows the owner (email, or "guest" plus the id's start), the
+    route, created, saved, shared and demo. It searches by place, name or email and filters
+    by saved, shared, user or guest, and demo. Routes show inline, read-only. Only name and
+    shared can be edited. Saved stays read-only, because only users save (a constraint), and
+    admins can't add trips.
+- Decisions (RFC §3.1 shape kept; additions, each needed to give back the exact response):
+  - Trip adds `generated_at`, `forecast_as_of`, `reason_code`, `plan_settings` (wind basis,
+    tolerance and HOS as applied) and `bbox`. Time zones are nullable, as in the response.
+  - TripRoute adds `key` ("r1", the route's id in the response, unique per trip), `label`,
+    `eta_estimated` and `worst_at_mile`, and orders by rank.
+  - TripHeatmap adds `hours`, `stale`, `forecast_as_of` and `created_at`, matching the
+    heatmap response.
+  - `makemigrations --check` was already in backend CI (since SPOT-12).
+- Verified (19 tests):
+  - One `IntegrityError` test per constraint: no owner, two owners, guest saving, load 0 and
+    80,001, interval 20, duplicate rank, duplicate key, two recommended routes, rank 4,
+    recommended but not drivable, average risk 4.5, arrival before departure. Also a
+    repeated idempotency key and the cascade delete.
+  - Admin list, owner filter, search, and read-only routes on the trip page.
+  - Migrations apply to the empty Postgres test database on every run.
 
 ### SPOT-111 · Save plans as trips
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-110, SPOT-40 |
+| Backend · 2 | P0 | Done | SPOT-110, SPOT-40 |
 
 **Sub-tasks**
-- [ ] `repositories.py`: domain objects → models with versioned JSON serializers
+- [x] `repositories.py`: domain objects → models with versioned JSON serializers
   (`snapshot_version = 1`), and back.
-- [ ] Save trip and routes in one `transaction.atomic()`.
-- [ ] `Idempotency-Key` handling: same key returns the existing trip.
-- [ ] Add `trip_id` to the plan response (carried over from SPOT-41) and regenerate
+- [x] Save trip and routes in one `transaction.atomic()`.
+- [x] `Idempotency-Key` handling: same key returns the existing trip.
+- [x] Add `trip_id` to the plan response (carried over from SPOT-41) and regenerate
   `openapi.yaml`.
 
 **Acceptance criteria**
@@ -2353,20 +2406,59 @@ core features, per PRD §5.
 - `domain/` still imports nothing from Django (import-lint check).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: plans saved as trips (`planner/repositories.py`, `PlanView`).
+  - `POST /api/v1/plans` plans, then saves the trip for the caller: the signed-in user, or
+    the session's guest, made on their first successful plan. It returns the snapshot read
+    back from the saved trip, with `trip_id`. An invalid, throttled or failed request saves
+    nothing and makes no guest.
+  - `save_trip(snapshot, owner, key)` stores the plan response (snapshot version 1): inputs,
+    outcome, per-route figures and miles by level as columns, checkpoints and HOS stops as
+    JSON. Trip and routes go in one `transaction.atomic()`. `load_snapshot(trip)` gives the
+    same response back, refusing a snapshot version it can't read.
+  - **Idempotency-Key** (a UUID per form submission):
+    - The same key returns the trip it created without planning again.
+    - Two requests racing with one key end on the same trip, because the unique key is
+      caught on save.
+    - Another caller's key is a 409 `idempotency_conflict`, never their trip.
+    - A malformed key is a 400 naming the header.
+  - `openapi.yaml` regenerated: `trip_id` on `Plan`, the header, and the 409. The frontend's
+    `schema.ts` is regenerated with it (CI checks they agree), and its two recorded plan
+    fixtures gain the `trip_id` a saved trip now returns. RFC §3.1 "Writes" updated.
+- Decisions:
+  - **The stored shape is the API response, not the domain objects.** It is already
+    versioned and documented (openapi.yaml), round-trips exactly, and lets the domain change
+    without rebuilding old trips. RFC §3.1 asked for "domain objects → models … and back";
+    reading back gives the response, which is what every reader of a trip needs.
+  - `PlanSerializer` → `PlanSnapshotSerializer` (domain plan to response). `PlanSerializer`
+    now extends it with `trip_id` and describes the saved response in the schema, so the
+    component keeps its name and the frontend's `Plan` type just gains `trip_id`.
+  - 409 for a reused key: replaying another caller's trip would leak it, and planning again
+    would break the key's promise.
+- Verified (17 new tests, 614 total):
+  - **Round trip:** the demo plan, and a strong-storm plan with HOS stops and an undrivable
+    route, read back identical to what the API returned.
+  - **Atomicity:** a failure while saving routes leaves no trip row.
+  - **Idempotency:** the same key gives one trip and the same response, without
+    re-planning. Different keys give two trips. Another caller's key is 409. A non-UUID is
+    400. A race on one key gives one trip.
+  - **Owners:** a guest's first plan sets the session's guest id, and later plans share it.
+    A user's plan is theirs. Invalid and failed requests save nothing.
+  - **`domain/` imports nothing from Django:** an AST check over `planner/domain` allows
+    only the standard library and `planner.domain`.
+  - Existing plan API, OpenAPI drift and logging tests now run with the database.
 
 ### SPOT-112 · Guest identity and access layer
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-110 |
+| Backend · 2 | P0 | Done | SPOT-110 |
 
 **Sub-tasks**
-- [ ] Sessions on the `cached_db` backend; guest cookie lasts 30 days.
-- [ ] Create `guest_id` in the session on a guest's first plan.
-- [ ] `planner/access.py`: `Owner`, `current_owner(request)`, `get_visible_trip()`,
+- [x] Sessions on the `cached_db` backend; guest cookie lasts 30 days.
+- [x] Create `guest_id` in the session on a guest's first plan.
+- [x] `planner/access.py`: `Owner`, `current_owner(request)`, `get_visible_trip()`,
   `get_owned_trip()`; 404 for anything not visible.
-- [ ] Count the guest plan throttle by session `guest_id` as well as IP (carried over from
+- [x] Count the guest plan throttle by session `guest_id` as well as IP (carried over from
   SPOT-45, which counts by IP only).
 
 **Acceptance criteria**
@@ -2376,7 +2468,32 @@ core features, per PRD §5.
   checklist).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: guest identity and access (`planner/access.py`).
+  - **Sessions:** the `cached_db` backend (the cache serves them, Postgres keeps them). The
+    cookie lasts 30 days, matching guest trip retention; it was already httpOnly and Lax.
+  - **Guests:** `current_owner(request, create=True)` makes a guest on their first plan,
+    storing a random `guest_id` in the session. Without `create`, a visitor who hasn't
+    planned is None and owns nothing. A garbled session value is replaced, never trusted.
+  - **Access:** `Owner` is a user or a guest (exactly one). `get_visible_trip` returns the
+    caller's own trip or a shared one. `get_owned_trip` returns only the caller's own,
+    shared or not, for changes. Anything else, including a malformed id, is `Http404`.
+  - **Throttle:** guest plans are also counted by `guest_id`
+    (`PlanGuestSessionThrottle`, the same 10 a minute), so changing network doesn't reset a
+    guest's count. The IP count still covers anyone without a session.
+- Decisions:
+  - The session lasts 30 days for signed-in users too. Accounts arrive later (SPOT-114),
+    which can shorten it if needed.
+  - Plan saving (SPOT-111) is what calls `current_owner(create=True)`, so an invalid or
+    throttled request never creates a guest or writes a session.
+- Verified (47 new tests, 597 total):
+  - **Access matrix:** owner, other user, other guest and anonymous, against private and
+    shared trips owned by a user and by a guest, for `get_visible_trip` and
+    `get_owned_trip`. Missing and malformed ids are 404.
+  - `current_owner` for a user, a session guest, a first visit, guest creation, and a
+    garbled session value.
+  - A guest switching IP is still limited at 11 plans a minute.
+  - **No view queries trips directly:** a test fails if `planner/api/` mentions
+    `Trip.objects`, `TripRoute.objects` or `TripHeatmap.objects`.
 
 ### SPOT-113 · Trip read endpoints
 

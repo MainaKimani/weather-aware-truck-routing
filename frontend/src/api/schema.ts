@@ -30,8 +30,38 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Plan a trip: three routes rated for weather risk, and a recommendation. */
+        /**
+         * @description Plan a trip: three routes rated for weather risk, and a recommendation.
+         *
+         *     The plan is saved as a trip owned by the caller (a new guest on their
+         *     first plan) and the saved snapshot is returned. A repeat with the same
+         *     `Idempotency-Key` returns the trip that key created instead of planning
+         *     again.
+         */
         post: operations["create_plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The trip's corridor heatmap: risk around its routes for each of the next 48 hours.
+         *
+         *     Computed from the saved routes and load on the first request, then kept,
+         *     so a reopened trip shows the heatmap as it was. Visible to whoever can see
+         *     the trip.
+         */
+        get: operations["trip_heatmap"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -91,6 +121,27 @@ export interface components {
             /** Format: double */
             snow_in_hr: number | null;
             weather_code: number | null;
+        };
+        /**
+         * @description The corridor grid (RFC §7.3).
+         *
+         *     `risk[i][h]` is point i's level (0-4) at hour h; null is Unknown.
+         */
+        Heatmap: {
+            /**
+             * Format: date-time
+             * @description The forecast hour shown at slider hour 0.
+             */
+            start_hour: string;
+            hours: number;
+            /** Format: double */
+            cell_deg: number;
+            stale: boolean;
+            /** Format: date-time */
+            forecast_as_of: string | null;
+            /** @description [lon, lat] per grid point. */
+            readonly points: number[][];
+            readonly risk: (number | null)[][];
         };
         Hos: {
             readonly enabled: boolean;
@@ -204,6 +255,7 @@ export interface components {
             label: string;
             tz?: string | null;
         };
+        /** @description A planned trip, as saved: what was asked, the ranked routes and the recommendation. */
         Plan: {
             /** Format: date-time */
             generated_at: string;
@@ -220,6 +272,11 @@ export interface components {
             warnings: components["schemas"]["Warning"][];
             routes: components["schemas"]["Route"][];
             corridor: components["schemas"]["Corridor"];
+            /**
+             * Format: uuid
+             * @description The saved trip; its heatmap is under /trips/{id}.
+             */
+            trip_id: string;
         };
         PlanRequest: {
             origin: components["schemas"]["PlaceRequest"];
@@ -314,6 +371,7 @@ export type CycleEnum = components['schemas']['CycleEnum'];
 export type Error = components['schemas']['Error'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 export type Forecast = components['schemas']['Forecast'];
+export type Heatmap = components['schemas']['Heatmap'];
 export type Hos = components['schemas']['Hos'];
 export type HosRequest = components['schemas']['HosRequest'];
 export type HosStop = components['schemas']['HosStop'];
@@ -391,7 +449,10 @@ export interface operations {
     create_plan: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description A UUID per form submission; a repeat returns the same trip. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -420,6 +481,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description idempotency_conflict: the key belongs to another caller's trip */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description no_route: no truck route between the places */
             422: {
                 headers: {
@@ -439,6 +509,54 @@ export interface operations {
                 };
             };
             /** @description routing_unavailable or weather_unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    trip_heatmap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Heatmap"];
+                };
+            };
+            /** @description not_found: no such trip, or not yours and not shared */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description weather_unavailable */
             502: {
                 headers: {
                     [name: string]: unknown;

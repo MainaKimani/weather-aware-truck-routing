@@ -188,11 +188,13 @@ for brevity.)
 on their own. As rows they'd be ~600 inserts per trip with no query that needs them. If we later
 want cross-trip analysis ("where do Severe miles cluster?"), that's the time to normalise.
 
-**Writes.** `plan_trip()` returns domain objects; `planner/repositories.py` maps them to
-models and saves the trip and its routes inside one `transaction.atomic()`. JSON fields are
-produced by versioned serializers (`snapshot_version`), never by dumping dataclasses directly,
-so old trips stay readable after the shape changes. The domain package still imports nothing
-from Django.
+**Writes.** `plan_trip()` returns domain objects; the API serializes them into the plan
+response, and `planner/repositories.py` saves that response as the trip and its routes inside
+one `transaction.atomic()`: columns for what is filtered or summarised, JSON for checkpoints
+and HOS stops. The stored shape is the versioned response (`snapshot_version`), never dumped
+dataclasses, so old trips stay readable after the domain changes, and reading a trip back
+gives exactly the response it was saved from. The domain package still imports nothing from
+Django.
 
 **Reads.** The trip list defers the heavy columns (`checkpoints`, `hos_stops`, `geometry`) and
 prefetches routes in one query, so listing 20 trips is 2 queries regardless of size, which is

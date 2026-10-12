@@ -394,7 +394,9 @@ class CorridorSerializer(serializers.Serializer[Plan]):
         ]
 
 
-class PlanSerializer(serializers.Serializer[Plan]):
+class PlanSnapshotSerializer(serializers.Serializer[Plan]):
+    """A plan as the API returns it, before it is saved; the trip stores this."""
+
     generated_at = UtcDateTimeField()
     rules_version = serializers.CharField()
     stale = serializers.BooleanField()
@@ -408,6 +410,14 @@ class PlanSerializer(serializers.Serializer[Plan]):
     warnings = WarningSerializer(many=True)
     routes = RouteSerializer(many=True)
     corridor = CorridorSerializer(source="*")
+
+
+# Responses are read back from the saved trip (planner/repositories.py);
+# this class describes them for the OpenAPI schema, where its docstring shows.
+class PlanSerializer(PlanSnapshotSerializer):
+    """A planned trip, as saved: what was asked, the ranked routes and the recommendation."""
+
+    trip_id = serializers.UUIDField(help_text="The saved trip; its heatmap is under /trips/{id}.")
 
 
 # --- Heatmap -----------------------------------------------------------------

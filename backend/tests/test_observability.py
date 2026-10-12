@@ -87,6 +87,7 @@ def plan_body() -> dict[str, Any]:
     }
 
 
+@pytest.mark.django_db
 @respx.mock
 def test_a_plans_log_lines_share_its_request_id(
     client: Client, monkeypatch: pytest.MonkeyPatch, logs: LogLines
@@ -124,6 +125,7 @@ def test_a_plans_log_lines_share_its_request_id(
     ]
 
 
+@pytest.mark.django_db
 def test_second_plan_reports_cache_hits(client: Client, logs: LogLines) -> None:
     for _ in range(2):
         client.post("/api/v1/plans", plan_body(), content_type="application/json")
