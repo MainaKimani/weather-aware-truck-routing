@@ -59,24 +59,24 @@ link to their sections instead of repeating them.
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | Done        |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | Done        |
-| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | In progress |
+| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | Done        |
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | Done        |
 | SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | Done        |
 | SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | Done        |
-| SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | To do       |
-| SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | To do       |
-| SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | To do       |
-| SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | To do       |
-| SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | To do       |
-| SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | To do       |
-| SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | To do       |
-| SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | To do       |
-| SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | To do       |
-| SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | To do       |
-| SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | To do       |
-| SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | To do       |
+| SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | Done        |
+| SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | Done        |
+| SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | Done        |
+| SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | Done        |
+| SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | Done        |
+| SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | Done        |
+| SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | Done        |
+| SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | Done        |
+| SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | Done        |
+| SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | Done        |
+| SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | Done        |
+| SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | In progress |
 | SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | To do       |
 | SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do       |
 | SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do       |
@@ -117,9 +117,16 @@ here when that task closes it.
 - PRD Q3: paid routing tier (see Blocked).
 
 **Branch housekeeping**
-- `dev-frontend` is behind `main`; merge `main` into it before frontend work starts.
-- `dev-backend` is behind `main`. The trips branch starts from `main`, so its PR brings
-  `dev-backend` up to date.
+- Unpushed: `feat/spot-110-112-trips` (trips, heatmap endpoint and its per-condition
+  levels) and `feat/spot-80-92-heatmap`, which holds the map commits (70–74), the trips
+  branch merged in, and 80–92.
+- Merge order, so each PR shows only its own side:
+  1. `feat/spot-110-112-trips` → `dev-backend` → `main`. It starts from `main`, so it also
+     brings `dev-backend` up to date.
+  2. Merge `main` into `dev-frontend` (it is one merge behind).
+  3. `feat/spot-80-92-heatmap` → `dev-frontend` → `main`; the backend commits are then
+     already there, so its diff is frontend, docs and CI only.
+  4. Merge `main` back into both dev branches.
 
 **Carried over to a later task**
 
@@ -129,7 +136,10 @@ here when that task closes it.
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
-| SPOT-51 | Dependent heatmap query (starts after the plan resolves). The endpoint and its schema now exist. | SPOT-80, with the layer that draws it |
+| SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
+| SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
+| SPOT-90 | Second smoke flow: plan as a guest, sign up, see the trip in My trips, share it, open the link in a fresh context. Needs accounts and trip pages. | SPOT-125 |
+| SPOT-91 | Keyboard walkthrough and axe checks for PRD stories 8–11 (recent trips, sign-up, My trips, sharing). Those screens don't exist yet. | SPOT-125 |
 
 ## Epics
 
@@ -1513,11 +1523,11 @@ Spec: RFC §12, §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | In progress | SPOT-44 |
+| Frontend · 2 | P0 | Done | SPOT-44 |
 
 **Sub-tasks**
 - [x] Typed fetch client on generated types; error shape parsed into a typed error.
-- [ ] TanStack Query: plan mutation, dependent heatmap query (routing and session are SPOT-120).
+- [x] TanStack Query: plan mutation, dependent heatmap query (routing and session are SPOT-120).
 - [x] UI store (selected route, hovered/selected checkpoint, layer toggles); slider hour in
   its own context.
 
@@ -1591,6 +1601,8 @@ Spec: RFC §12, §18.3.
 - 2026-10-12: `GET /api/v1/trips/{id}/heatmap` and its `Heatmap` type now exist (SPOT-42).
   The query is built with the heatmap layer (SPOT-80), its first reader; this task
   closes with it.
+- 2026-10-12: Done. The dependent heatmap query landed with SPOT-80: it starts when the plan
+  resolves, routes render first, and a failed plan requests no heatmap (tested; see SPOT-80).
 
 ---
 
@@ -1880,32 +1892,62 @@ Spec: PRD §9, RFC §11.
 
 ### SPOT-70 · Map view, basemap and camera
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 2 | P0 | To do | SPOT-50 |
 
 **Sub-tasks**
-- [ ] `react-map-gl/maplibre` with OpenFreeMap positron (and a dark style for dark mode).
-- [ ] Fit to routes with padding for the left panel; origin/destination pins.
+- [x] `react-map-gl/maplibre` with OpenFreeMap positron (and a dark style for dark mode).
+- [x] Fit to routes with padding for the left panel; origin/destination pins.
 
 **Acceptance criteria**
 - Map loads without any token; camera fits all routes after each plan.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: map view (`features/map/MapView.tsx`).
+  - **Library:** `react-map-gl/maplibre` 8.1 on MapLibre 6.11. The map is lazy-loaded
+    (`React.lazy`), so MapLibre's ~285 KB gzipped chunk never delays the form; a pulsing
+    placeholder fills the pane meanwhile.
+  - **Basemap:** OpenFreeMap `positron` (light) and `dark`, picked from the theme. Both are
+    public, keyless styles.
+  - **Camera:** fits `corridor.bbox` each time a plan arrives (keyed on `generated_at`, so
+    hovering, theme changes or re-renders never refit). Padding scales down on small maps so
+    the fit can't fail. The top clears the destination pin. Fits jump instead of fly under
+    `prefers-reduced-motion`.
+  - **Pins:** origin (ring) and destination (pin), each with an accessible name ("Origin:
+    Dallas, TX").
+  - **No WebGL:** a map that can't start is replaced by a status message pointing to the
+    panel. A later error (a failed tile) leaves the map up.
+- Decisions:
+  - "Padding for the left panel": the panel sits beside the map rather than over it, so
+    equal padding is enough.
+  - MapLibre 6 looks for its worker beside its own module, which Vite's bundling moves. The
+    worker is now built by Vite (`?worker&url`, ES format) and passed as `workerUrl`, which
+    works in dev and in the build.
+  - Tests use a stand-in for `react-map-gl/maplibre` (`test/fakeMap.ts`), installed for every
+    test, because jsdom has no WebGL. It records sources, `setData` calls, layer props and
+    camera calls.
+- Verified (10 tests, 178 total):
+  - Light and dark basemaps; a hint before planning.
+  - One fit per plan with the corridor bbox and padding, a refit for a new plan and none
+    otherwise, and a jump under reduced motion.
+  - Pin positions, the no-WebGL fallback, and a tile error that keeps the map.
+  - **In Chrome** against the fake providers: the US view loads with no key. The demo trip
+    fits Dallas → Denver with both pins visible. The dark theme swaps the basemap with no
+    console errors.
 
 ### SPOT-71 · Routes layer with risk-coloured segments
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 3 | P0 | To do | SPOT-70 |
 
 **Sub-tasks**
-- [ ] One GeoJSON source per plan (memoised); decode polylines once.
-- [ ] Unselected routes grey; selected route split into segments coloured by checkpoint risk,
+- [x] One GeoJSON source per plan (memoised); decode polylines once.
+- [x] Unselected routes grey; selected route split into segments coloured by checkpoint risk,
   with casing.
-- [ ] Selection and hover via filters/paint expressions, not new data.
-- [ ] Read and write selection and hover through `state/ui.ts` (`selectedRouteId`,
+- [x] Selection and hover via filters/paint expressions, not new data.
+- [x] Read and write selection and hover through `state/ui.ts` (`selectedRouteId`,
   `hoveredRouteId`), the same store the route cards use, so card ↔ map sync needs no other
   wiring (carried over from SPOT-62).
 
@@ -1913,19 +1955,56 @@ Spec: PRD §9, RFC §11.
 - Changing selection doesn't call `setData` (asserted in a test with a mocked map).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: routes layer (`features/map/RoutesLayer.tsx`, `routeGeometry.ts`).
+  - **Data:** `buildRouteGeometry(routes)` runs once per plan (memoised on `plan.routes`). It
+    decodes each polyline once (`lib/polyline.ts`) and makes two sources:
+    - `routes`: one line per route.
+    - `route-segments`: every route split into stretches by checkpoint level. Each checkpoint
+      colours the miles it owns (halfway to each neighbour, as the backend counts owned
+      miles), and same-level neighbours merge. Distances along the polyline are scaled to the
+      reported miles, as the backend does when it places checkpoints.
+  - **Drawing:** other routes grey (4 px, darker and 5 px on hover). The selected route has a
+    10 px casing (dark on the light basemap, light on the dark one) under 6 px segments
+    coloured from `lib/risk.ts`, with Unknown in the neutral grey. A wide invisible hit line
+    makes thin routes easy to point at.
+  - **Selection and hover:** filters and paint expressions on `selectedRouteId` and
+    `hoveredRouteId` in `state/ui.ts`. The map writes the same store as the route cards
+    (`useMapPointer`), so card ↔ map sync needs no other wiring. The cursor turns to a pointer
+    over a route.
+- Decisions:
+  - Every route is split into segments, not only the selected one, so selecting another
+    route changes a filter rather than the data.
+  - A replan that returns identical routes keeps the same `routes` object (query results are
+    structurally shared), so its data isn't sent to the map again; the camera still refits.
+  - Route greys and the casing are theme tokens (`--map-route`, `--map-route-hover`,
+    `--map-casing` in `index.css`), read when the theme changes, because the map can't use
+    CSS variables. The palette guard (no hex colours outside `lib/risk.ts`) holds.
+  - `@types/geojson` added as a direct dev dependency instead of relying on MapLibre's.
+- Verified (19 new tests, 197 total):
+  - Polyline decoding against Google's reference example.
+  - Stretch bounds and merging, and a route with no checkpoints drawn Unknown.
+  - Each demo route covered end to end by unbroken segments in checkpoint-level order. Route
+    B's Severe stretch passes within a mile of every Severe checkpoint.
+  - **Acceptance:** selecting and hovering change filters and paint with no `setData` on
+    either source (mocked map). New routes cause exactly one `setData` per source; identical
+    routes cause none. A theme change swaps the line colours without new data.
+  - Map hover, click and leave update the shared store, and the pointer cursor shows only
+    over a route.
+  - **In Chrome:** selecting Route B's card draws its storm between Salina and Wichita.
+    Hovering Route C on the map brightens it and outlines its card; clicking it selects it,
+    and the checkpoint table follows.
 
 ### SPOT-72 · Checkpoints layer, tooltip and popup
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 3 | P0 | To do | SPOT-70 |
 
 **Sub-tasks**
-- [ ] Single `circle` layer, colour by level, zoom-scaled radius; hover via `feature-state`.
-- [ ] Tooltip (level, ETA) and popup (mile, ETA, gust, sustained "for info", rain, snow,
+- [x] Single `circle` layer, colour by level, zoom-scaled radius; hover via `feature-state`.
+- [x] Tooltip (level, ETA) and popup (mile, ETA, gust, sustained "for info", rain, snow,
   level, driver, load rule sentence).
-- [ ] Follow `selectedCheckpoint` / `hoveredCheckpoint` in `state/ui.ts`: fly to and open the
+- [x] Follow `selectedCheckpoint` / `hoveredCheckpoint` in `state/ui.ts`: fly to and open the
   popup for the selected checkpoint, highlight the hovered one. The checkpoint table already
   sets them (carried over from SPOT-63).
 
@@ -1935,38 +2014,119 @@ Spec: PRD §9, RFC §11.
   42,000 lb load (> 40,000 lb rule)".
 
 **Progress log**
-- _Not started._
+- 2026-10-12: checkpoints layer, tooltip and popup (`features/map/CheckpointsLayer.tsx`,
+  `CheckpointPopups.tsx`).
+  - **Layer:** one `checkpoints` source holding every route's checkpoints, built once per plan
+    with numeric feature ids. One `circle` layer filtered to the selected route, coloured by
+    level from `lib/risk.ts`, with radius scaled by zoom (3 → 8 px) and an outline from the
+    casing token.
+  - **Highlight:** `hoveredCheckpoint` and `selectedCheckpoint` from `state/ui.ts` become
+    `feature-state` (`hover`, `selected`), drawn larger with a heavier outline. They are
+    re-applied when a new basemap (theme change) re-adds the source.
+  - **Tooltip:** the hovered checkpoint's level chip and ETA ("Mon 11:48 CDT"), from the map
+    or from a table row.
+  - **Popup:** the selected checkpoint's mile and route, ETA, gust, sustained "(for info)",
+    rain, snow, and level with its driver. A load-rule checkpoint adds the sentence from
+    `lib/loadRule.ts`, e.g. "Raised High → Severe: gust 37 mph with a 42,000 lb load
+    (> 40,000 lb rule)". Closing it, or clicking empty map, clears the checkpoint and keeps
+    the route. Popups use the app's surface tokens in both themes.
+  - **Follows the table:** choosing a row opens its popup. If the checkpoint is off screen
+    the map eases to it (a jump under reduced motion); otherwise the camera stays put.
+  - **Pointer:** a checkpoint wins over the route beneath it. The hover changes only when the
+    pointer moves to a different checkpoint, so moving within one doesn't re-run the
+    highlight.
+- Verified (18 new tests, 215 total):
+  - Checkpoint ids are unique, and positions, route, index and level are kept (null as
+    Unknown).
+  - Route switching is a filter change with no `setData`.
+  - Hover and selection feature-state is set and cleared, and re-applied only on the source's
+    metadata event.
+  - Tooltip text; popup fields and the load-rule sentence from the real fixture; one popup
+    when a checkpoint is both hovered and selected; close button; easing only when off
+    screen.
+  - Map hover and click precedence; a steady hover; a click on empty map.
+  - **In Chrome:** choosing Route B's mile-325 row opened its popup on the map. Mile 350 read
+    "Raised High → Severe: gust 37 mph with a 42,000 lb load (> 40,000 lb rule)". Hovering
+    another row showed its tooltip. In the dark theme, MapLibre's stylesheet (loaded later
+    with the map) had overridden the popup colours, leaving light text on white. The
+    overrides are now scoped under `.maplibregl-map`, and popups use the dark surface.
+  - **Performance (acceptance):** a Los Angeles → New York plan every 10 mi gives 773
+    checkpoints. With the route filter lifted in the console so all 773 rendered, 120
+    pan/zoom steps took a median of 0.8 ms per synchronous redraw (p95 2.8 ms, max 8.7 ms),
+    against 16.7 ms for 60 fps. Chrome was throttling the occluded test window to one
+    frame a second, so this is MapLibre's render time per frame, not a frame-rate trace.
+    SPOT-92's pan/zoom trace measures the frame rate in a visible window, with 773
+    checkpoints among its cases.
 
 ### SPOT-73 · HOS stops layer
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 1 | P1 | To do | SPOT-72, SPOT-24 |
 
 **Sub-tasks**
-- [ ] Symbol layer with break, rest and restart icons; popup with start, duration, reason.
+- [x] Symbol layer with break, rest and restart icons; popup with start, duration, reason.
 
 **Acceptance criteria**
 - Shown only when HOS is on; stop positions match the API's coordinates.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: HOS stops on the map (`features/map/HosStopsLayer.tsx`).
+  - The selected route's stops, only when the plan has HOS on, at the API's `lat`/`lon`.
+    Each stop is a round icon button: pause bars for a break, a moon for a rest, a circular
+    arrow for a restart. The button's accessible name is "Break 30 min, Mon 13:00 CDT".
+  - A click opens a popup with the stop's length, start and end (on the origin's clock, like
+    the table), mile, and reason. It closes on its button or a second click, and with a
+    change of route.
+  - Stop names and reasons are shared with the route cards' HOS summary (`lib/hosStops.ts`),
+    so the two always read the same.
+- Decisions:
+  - **Markers, not a symbol layer.** A route has a handful of stops, so DOM markers cost
+    nothing. Each is a real button, reachable and openable from the keyboard, and no sprite
+    images need adding to (and re-adding after a basemap change on) the map. RFC §10.3
+    updated.
+  - A stop click stops propagating, so the map doesn't read it as a click on empty map and
+    close the checkpoint popup.
+- Verified (5 tests, 220 total, on the real HOS fixture):
+  - A marker per stop at the API's coordinates, with accessible names.
+  - Nothing when HOS is off.
+  - Popup start, end, length and reason; close.
+  - A stop click leaves the checkpoint selection alone.
+  - Switching routes moves the markers and closes the popup.
+  - **In Chrome:** with HOS on, the demo trip showed a break near Raton and a rest near
+    Colorado Springs on Route A. The rest's popup read "Rest 10 h, Starts Mon 18:30 CDT,
+    Ends Tue 04:30 CDT, 702 mi in, 11 h driving limit".
 
 ### SPOT-74 · Legend and layer toggles
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 1 | P0 | To do | SPOT-72 |
 
 **Sub-tasks**
-- [ ] Collapsible legend (six levels with labels); toggles for heatmap, checkpoints, other
+- [x] Collapsible legend (six levels with labels); toggles for heatmap, checkpoints, other
   routes.
 
 **Acceptance criteria**
 - Toggles change layer visibility only (no data reload).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: legend and layer switches (`features/map/Legend.tsx`).
+  - Collapsible legend at the map's bottom left, once a trip is planned. It has the six
+    buckets (Low → No travel, then Unknown), each as a swatch with its label, so colour is
+    never the only cue.
+  - Switches for **Checkpoints** and **Other routes**, kept in `state/ui.ts` `layers` (they
+    survive a new plan). Each changes `layout.visibility` only. Hiding the other routes also
+    narrows the hover target to the selected route, so a hidden route can't be pointed at.
+- Decisions:
+  - No heatmap switch yet: there's no heatmap layer to switch until SPOT-80. Added there as a
+    sub-task. The store already has the `heatmap` flag.
+- Verified (5 tests, 225 total):
+  - The legend appears only after planning, lists the six labels in order, and collapses.
+  - The switches flip `visibility` with no `setData` on any source. Hiding other routes
+    filters the hover target to the selected route.
+  - **In Chrome:** switching both off left only Route A and its HOS stops. The legend and
+    popups read correctly in both themes.
 
 ---
 
@@ -1976,16 +2136,18 @@ Spec: PRD §9, RFC §11.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P0 | To do | SPOT-42, SPOT-70 |
+| Frontend · 3 | P0 | Done | SPOT-42, SPOT-70 |
 
 Spec: RFC §10.4.
 
 **Sub-tasks**
-- [ ] Build GeoJSON with flat `h0`…`h48` properties once per heatmap response.
-- [ ] `heatmap` layer under routes: weight from `h<hour>`, zoom-scaled radius, risk colour ramp.
-- [ ] Visual check at zooms 4–10; switch to the fill-grid fallback if the blur misleads.
-- [ ] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
-- [ ] Dependent heatmap query on `trip_id`, starting after the plan resolves (carried over
+- [x] Build GeoJSON with flat `h0`…`h48` properties once per heatmap response.
+- [x] `heatmap` layer under routes: weight from `h<hour>`, zoom-scaled radius, risk colour ramp.
+- [x] Visual check at zooms 4–10; switch to the fill-grid fallback if the blur misleads.
+- [x] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
+- [x] Add a Heatmap switch to the map legend (`features/map/Legend.tsx`, `layers.heatmap` in
+  `state/ui.ts`) (carried over from SPOT-74).
+- [x] Dependent heatmap query on `trip_id`, starting after the plan resolves (carried over
   from SPOT-51, which closes with it).
 
 **Acceptance criteria**
@@ -1993,18 +2155,61 @@ Spec: RFC §10.4.
   the demo scenario, recorded in the log).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: heatmap layer (`features/map/HeatmapLayer.tsx`, `heatmapGeometry.ts`,
+  `api/heatmap.ts`).
+  - **Query:** `usePlanTrip` starts the heatmap request when the plan resolves
+    (`queryClient.query`, keyed `['trips', id, 'heatmap']`), so routes are drawn first. The map
+    reads the same query; it never refetches, since the server keeps each trip's heatmap.
+  - **Data:** one GeoJSON point per grid cell with flat `h0`…`h48` levels, built once per
+    heatmap. An hour with no forecast has no property.
+  - **Layer:** `heatmap` type, placed beneath the routes (`beforeId`, and mounted after
+    `RoutesLayer` so a theme change re-adds them in that order). The slider sets
+    `heatmap-weight` from outside React through a store subscription, at most once a frame;
+    nothing re-renders and no data is re-sent.
+  - **Fade-in:** added transparent, then 600 ms to 60% opacity on the next frame; instant with
+    reduced motion. A new trip's heatmap fades in again; a failed one leaves the routes alone.
+  - **Legend:** a Heatmap switch above Checkpoints and Other routes, visibility only (carried
+    over from SPOT-74).
+- Decisions (RFC §10.4 updated):
+  - **Weight `(level + 1) / 5`**, not the RFC's `level / 4`: Low is a level and shows pale
+    yellow as on the checkpoints; Unknown weighs 0 and is left uncoloured, never shown as Low.
+  - **Density equals weight.** Radius grows ×2 per zoom so the kernel stays 0.6 grid steps;
+    intensity is set from the shader's Gaussian so summed kernels add up to the weight, with
+    Mercator's taller rows at the grid's mean latitude. The colour steps at the midpoints
+    between levels, so each band is exactly one legend colour.
+  - **Kept the heatmap, no fill-grid fallback:** at zooms 4–10 the bands are smooth and match
+    the checkpoints; the blur only softens storm edges by about a cell.
+  - `@maplibre/maplibre-gl-style-spec` (already installed with MapLibre) is a pinned dev
+    dependency, so tests check the expressions with MapLibre's own evaluator.
+- Verified (27 new tests, 252 total):
+  - **Expressions** (style-spec evaluator): weights 0.2…1.0 and 0 for Unknown; each level's
+    density paints that level's checkpoint colour; the paint validates as a heatmap layer.
+  - **Kernel:** simulated on the grid at zooms 4–10 and latitudes 30–42°, density is within
+    0.05 of the weight on and between cells (bands are 0.1 wide either side).
+  - **Layer:** nothing requested before a plan; routes on the map before the heatmap; under
+    the routes; fades in (instant with reduced motion); starts at the slider's hour; three
+    hour changes in a frame make one paint update, no re-render, no `setData`; the switch
+    changes visibility only; a new trip is requested; a failure leaves the routes.
+  - **Query order:** plan requested, plan answered, then the heatmap for its `trip_id`; a failed
+    plan requests none.
+  - Mutation checks: dropping the fade, the per-frame throttle or `beforeId` each fails a test.
+  - **In Chrome against the real backend** (fake providers, demo trip, 649 points at 0.25°):
+    dark and light themes, zooms about 5 to 8. At +5 h, Route B's Severe stretch near Wichita
+    runs through the heatmap's Severe core with High and Moderate fringes, as its checkpoints
+    say; scrubbing moves the storms with no reload; no console errors. A few single cells
+    between diverging routes are uncoloured: they are outside every route's 40 mi buffer, so
+    not in the grid.
 
 ### SPOT-81 · 48-hour slider and playback
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P0 | To do | SPOT-80 |
+| Frontend · 3 | P0 | Done | SPOT-80 |
 
 **Sub-tasks**
-- [ ] Native range input 0–48, 6 h ticks, label "+14 h · Sat 20:00 CDT", arrow keys.
-- [ ] `setPaintProperty` on change, throttled with `requestAnimationFrame`.
-- [ ] Play/pause at 250 ms per hour, looping; note when the window ends before departure.
+- [x] Native range input 0–48, 6 h ticks, label "+14 h · Sat 20:00 CDT", arrow keys.
+- [x] `setPaintProperty` on change, throttled with `requestAnimationFrame`.
+- [x] Play/pause at 250 ms per hour, looping; note when the window ends before departure.
 
 **Acceptance criteria**
 - Chrome performance trace while dragging: no long tasks > 50 ms, frames ≤ 16 ms, zero
@@ -2012,39 +2217,144 @@ Spec: RFC §10.4.
 - `aria-valuetext` reads "+14 hours, Saturday 20:00".
 
 **Progress log**
-- _Not started._
+- 2026-10-12: timeline bar (`features/timeline/HourSlider.tsx`, `clock.ts`).
+  - Native range 0–48 with a datalist tick every 6 h and `+0`…`+48` tick labels. The label
+    reads "+14 h · Sat 20:00 CDT" on the origin's clock, and `aria-valuetext` reads "+14 hours,
+    Saturday 20:00".
+  - Hour 0 is the heatmap's `start_hour` (the forecast hour in progress). Until the heatmap
+    arrives, the next whole hour after the plan stands in; before any plan, the label is the
+    offset alone ("+3 hours from now").
+  - The map's paint update, at most once a frame, came with SPOT-80.
+  - **Play/pause:** one hour every 250 ms, looping from +48 back to +0. Moving the slider by
+    hand stops playback. The button's name says what it will do ("Play forecast", "Pause
+    forecast").
+  - A note appears when the 48 hours end before the trip departs (departures can be 7 days
+    out): "The forecast runs to Wed 04:00 CDT, before this trip departs…".
+- Decisions:
+  - Times are the forecast hour's record time (the end of the hour, as checkpoints read it),
+    on the origin's clock like the rest of the plan.
+  - The label has a fixed minimum width, so the slider doesn't shift as "+5 h" becomes "+48 h".
+- Verified (18 new tests, 270 total):
+  - **Clock:** start from the heatmap, or the next whole hour after the plan; labels across
+    the end of daylight saving (01:00 CDT → 01:00 CST); singular "hour"; window end before a
+    departure, and none when the trip leaves within it.
+  - **Slider:** 0–48 with nine ticks; clock times from the heatmap, and from the plan before
+    it; the note shows only when the window ends first.
+  - **Playback** (fake timers): three steps in 750 ms, paused stays put, 47 → 48 → 0, and
+    dragging stops it.
+  - The render-isolation test still holds: moving the hour re-renders the slider and not the
+    routes panel.
+  - **In Chrome** (dev build, real backend): arrow keys step one hour (19 × Left from +24 to
+    +5). Two scripted sweeps of all 49 hours took 4.3 ms of main thread per step (median; max
+    5.5 ms), with no long tasks and no network requests. Play loops 48 → 0 at about 250 ms an
+    hour and pause holds the hour.
+  - jsdom doesn't step range inputs on arrow keys, so that is checked in Chrome only.
+- Left: frame times (≤ 16 ms) while dragging. Chrome throttled the hidden window to about one
+  frame a second, so only the per-step cost above was measured. Moved to SPOT-92.
 
 ### SPOT-82 · Truck position while scrubbing
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P1 | To do | SPOT-81 |
+| Frontend · 2 | P1 | Done | SPOT-81 |
 
 **Sub-tasks**
-- [ ] For each route, position at the slider time from checkpoint ETAs (and HOS stops).
-- [ ] Hidden before departure and after arrival; stationary during HOS stops.
+- [x] For each route, position at the slider time from checkpoint ETAs (and HOS stops).
+- [x] Hidden before departure and after arrival; stationary during HOS stops.
 
 **Acceptance criteria**
 - Truck marker sits on the checkpoint whose ETA equals the slider time.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: truck markers (`features/map/TruckMarkers.tsx`, `truckTrack.ts`).
+  - Each route's truck at the slider's hour: the mile is interpolated by time between
+    waypoints (departure, every checkpoint's ETA, arrival, and each HOS stop as its start and
+    end at one mile), then placed on the line the way the backend places checkpoints (line
+    length scaled to the reported miles).
+  - Hidden before departure and after arrival; stationary, and labelled "stopped at", through
+    an HOS stop.
+  - The selected route's truck is full size; the others are small and follow the "Other
+    routes" switch. Each is labelled ("Route B truck, at 338 mi").
+  - Slider hours mean the same instant here as on the slider: `useTimelineStart`, shared by both.
+- Decisions (RFC §10.4 updated; it had no section on this):
+  - DOM markers, not a symbol layer: three of them, moved by props, with no data upload while
+    scrubbing.
+  - Positions come from the plan's own schedule rather than a constant speed, so a slow
+    stretch or a stop shows where it happens.
+- Verified (20 new tests, 290 total):
+  - **On the checkpoint at its ETA:** every checkpoint of every route in both recorded plans,
+    to within 0.01 mi (the worst is 0.002 mi, from 5-decimal rounding).
+  - Hidden a minute before departure and after arrival; at mile 0 and the full distance at
+    each end.
+  - Through every HOS stop of the strong-storm plan: on the stop, "stopped", from its start
+    to a minute before its end, then moving again. Without the stop waypoints, this test fails.
+  - The mile never goes backwards, checked every 5 minutes of every route.
+  - **Markers:** at the computed position for each route; selected full size, others small;
+    move with the slider; none before departure or after every truck arrives; the switch
+    keeps only the selected route's truck.
+  - **In Chrome** (real backend): at +5 h (Mon 15:00 CDT) the trucks are at 326, 338 and
+    325 mi. Route B's sits on its line south of Wichita, in the Severe zone, between its
+    checkpoints at mile 325 (14:48) and 350 (15:10).
 
 ### SPOT-83 · Heatmap metric switcher
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 2 | P1 | To do | SPOT-81 |
+| Full stack · 2 | P1 | Done | SPOT-81 |
 
 **Sub-tasks**
-- [ ] Backend: `?include=metrics` returns gust, rain and snow grids.
-- [ ] Frontend: switch between composite risk, gust, rain, snow with matching legends.
+- [x] Backend: `?include=metrics` returns gust, rain and snow grids. _(as levels; see Decisions)_
+- [x] Frontend: switch between composite risk, gust, rain, snow with matching legends.
 
 **Acceptance criteria**
 - Switching metric doesn't refetch once metrics are loaded.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: backend half (`services/corridor.py`, `HeatmapSerializer`, `TripHeatmapView`,
+  migration `0002_heatmap_metrics`).
+  - The grid keeps each condition's level per point and hour from the same `classify` call
+    as the overall rating: wind (gusts after the load rules), rain, snow.
+  - `GET …/heatmap?include=metrics` adds `metrics: {wind, rain, snow}`, indexed like `risk`.
+    Without it the response is unchanged. Any other `include` is a 400 naming the field.
+  - Metrics are computed and kept with the grid on the first request, asked for or not, so a
+    later `?include=metrics` reads the same kept copy. A heatmap kept before this change has
+    `metrics: null`.
+  - For the demo trip: 3.2 KB gzipped without metrics, 5.7 KB with.
+- 2026-10-12: frontend half (`HeatmapLayer`, `Legend`, `api/heatmap.ts`).
+  - The legend's "Heatmap shows" choice: Risk (default), Wind, Rain, Snow, with a line saying
+    what each one shows. It is off while the heatmap is hidden, and the choice survives a new
+    plan.
+  - Choosing a condition the first time fetches `?include=metrics` once (its own cache key),
+    and the data with every condition's levels (`w`, `r`, `s` properties beside `h`) replaces
+    the plain data once. Until it arrives the overall rating stays on show; the trip doesn't
+    fade in again.
+  - After that, switching is only a weight expression on another property, like the slider.
+    The slider follows the chosen condition.
+- Decisions (RFC §7.3 updated):
+  - **Levels, not raw values.** The RFC sketched raw gust, rain and snow grids, but colouring
+    those would mean the thresholds in the browser too, which RFC §19 rules out (one set of
+    rules, on the server). The levels are the ones a checkpoint shows for each condition, so
+    every view keeps the one colour scale and legend and agrees with the checkpoint table.
+  - **Wind is after the load rules**, as on the checkpoints: what the gusts mean for this
+    truck.
+  - The legend names the levels, not each condition's thresholds: those live in the backend's
+    rules and the PRD table, and copying them into the UI would let them drift.
+- Verified:
+  - **Backend** (7 new tests, 633 total): the grid's wind, rain and snow levels equal
+    `classify`'s for every point-hour sampled. Metrics only when asked for, and the rest of
+    the response is unchanged. Asked first or second, both come from one kept copy with no
+    recompute. Null for a heatmap kept without them. An unknown `include` is a 400. Under
+    20 KB gzipped. The backend half stands alone on the trips branch: ruff, mypy, the
+    migration check and all 633 tests pass there.
+  - **Frontend** (10 new tests, 300 total): properties per condition; the weight reads the
+    chosen condition; one request for conditions and one `setData`, then rain, snow, risk and
+    wind switch by paint with no further request; the rating stays on show while the
+    conditions load, with no second fade; the slider follows the condition; with conditions
+    unavailable the rating stays. Legend: four choices starting on Risk, the note per choice,
+    off while the heatmap is hidden.
+  - **In Chrome** (real backend, demo trip at +5 h): choosing Wind made one request
+    (`?include=metrics`), and Rain, Snow, Risk and Wind after it made none. Wind shows only
+    the storm cores (Severe near Wichita, High near Lubbock) over a Low corridor.
 
 ---
 
@@ -2054,54 +2364,134 @@ Spec: RFC §10.4.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 2 | P0 | To do | SPOT-81 |
+| Full stack · 2 | P0 | Done | SPOT-81 |
 
 **Sub-tasks**
-- [ ] Playwright against the backend in fake mode: plan the demo trip, check 3 cards and the
+- [x] Playwright against the backend in fake mode: plan the demo trip, check 3 cards and the
   recommendation, open a checkpoint popup, scrub the slider.
-- [ ] Second flow (once P1 accounts exist): plan as guest, sign up, see the trip in My trips,
+- [ ] Second flow (once P1 accounts exist) _(moved to SPOT-125, which finishes what it needs)_: plan as guest, sign up, see the trip in My trips,
   share it, open the link in a fresh browser context.
-- [ ] Run in CI.
+- [x] Run in CI.
 
 **Acceptance criteria**
 - Smoke test passes in CI on every PR.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: smoke test (`frontend/e2e/smoke.spec.ts`, `playwright.config.ts`,
+  `.github/workflows/e2e.yml`).
+  - **What it does:** plans the demo trip from the form; checks three ranked routes, Route A
+    recommended with "Fewest severe miles", and the Demo data badge. It then picks a
+    checkpoint row and sees its popup on the map, and checks the heatmap is requested once,
+    after the plan. Finally it scrubs to +5 h by keyboard (label, `aria-valuetext`, Route A's
+    truck), presses End for +48 h, and checks there were no API calls while scrubbing.
+  - **Servers:** `playwright.config.ts` starts the backend (`migrate`, then `runserver` on
+    8001, fake providers) and the production build (`vite preview` on 4173, proxying `/api`
+    as in production), on ports clear of `make dev`. Locally it reuses servers already
+    running there. `npm run test:e2e`.
+  - **CI:** `e2e.yml` (Postgres service, uv, Node, Chromium) runs from `ci.yml` whenever
+    either side changes, and `ci-ok` requires it. On failure the report and traces are
+    uploaded for 7 days.
+  - `@playwright/test` 1.63.0 (pinned; released 2026-09-04). Vitest skips `e2e/`;
+    `tsconfig.node.json` type-checks the specs and config, so lint and `tsc -b` cover them.
+- Decisions:
+  - Against the production build, not the dev server: it is what ships, and it catches
+    build-only breakage (the MapLibre worker).
+  - A real backend and database rather than mocked responses, so the contract and the
+    session cookies are exercised too.
+- Verified:
+  - Locally: passes in 3.3 s (15 s with server start-up), with WebGL in headless Chromium
+    (the legend only appears when the map starts). The servers stop afterwards.
+  - The workflows pass actionlint. The first CI run will be on the PR.
+- Left: the second flow needs accounts, My trips and sharing; moved to SPOT-125.
 
 ### SPOT-91 · Accessibility pass
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-64, SPOT-81 |
+| Frontend · 2 | P0 | Done | SPOT-64, SPOT-81 |
 
 **Sub-tasks**
-- [ ] axe check on every state; keyboard-only walkthrough; contrast in both themes.
+- [x] axe check on every state; keyboard-only walkthrough; contrast in both themes.
 
 **Acceptance criteria**
 - No serious or critical axe violations; every task in the PRD stories can be done by keyboard.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: axe and keyboard specs (`frontend/e2e/a11y.spec.ts`, `keyboard.spec.ts`,
+  `support.ts`), run with the smoke test in CI.
+  - **axe** (`@axe-core/playwright` 4.13.0, WCAG 2.2 A/AA and best practices, failing on
+    serious or critical) on every state in both themes: empty form, validation errors,
+    loading, results, checkpoint popup, a condition on the heatmap, heatmap hidden, HOS fields,
+    HOS stop popup, a not-drivable route and a failed plan (12 tests). Contrast is axe's
+    `color-contrast` rule in each theme.
+  - **Keyboard only** (Tab to reach, then Enter, Space, the arrows, Home and End; nothing
+    clicks): stories 1–7. Fill the form with autosuggest; read the pick and its reason; open
+    a checkpoint; choose Route B and open a checkpoint whose level the load raised; scrub,
+    play and pause; switch the heatmap to Wind and hide checkpoints. Then see a route marked
+    Not drivable, and turn HOS on and open a stop (3 tests).
+  - **Fixed:**
+    - The legend's radios and switches were 13 px targets 4 px apart (axe `target-size`,
+      serious, WCAG 2.2); rows are now at least 24 px.
+    - The page lost its only `h1` once a plan was shown; the app name in the header is now
+      the `h1` on every screen, and the empty state's title an `h2`.
+  - `tsconfig.e2e.json` (bundler resolution, as Playwright loads them) type-checks the specs,
+    which share the app's recorded plans.
+- Decisions:
+  - Checked in a real browser rather than jsdom: axe's contrast and target-size checks need
+    layout and computed colours.
+  - The not-drivable and failed-plan states use recorded responses through `page.route`; the
+    rest run against the fake-provider backend.
+- Verified: 16 end-to-end tests pass locally in 1.3 min with 3 workers. Removing the 24 px
+  rows again makes the heatmap-condition test fail with `target-size` on the three switches.
+  300 unit tests still pass.
+- Left: stories 8–11 (recent trips, sign-up, My trips, sharing) wait for those screens; moved
+  to SPOT-125 with the second smoke flow.
+- 2026-10-12: the keyboard walkthrough failed on CI, and it had found a real bug. The
+  checkpoint table renders only rows near its scroll position, and Tab reaches only rendered
+  rows. Switching route kept the old scroll position, so a new route's first rows could be
+  out of the keyboard's reach. The table now starts each route at its first row (unit test
+  added). The test helper also hung for 23 s asking an unrendered row whether it had focus;
+  it now checks the row exists first. Backing up to the route cards uses Shift+Tab, as a
+  user would, and the five-story walk has a 60 s limit (13–15 s locally). Passes 5 runs in a
+  row, and all 16 end-to-end tests with 2 workers as on CI.
 
 ### SPOT-92 · Performance check against budgets
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 2 | P0 | To do | SPOT-100, SPOT-101 |
+| Full stack · 2 | P0 | In progress | SPOT-100, SPOT-101 |
 
 Spec: PRD §8.
 
 **Sub-tasks**
 - [ ] Measure cold and warm plan latency on the hosted app (1,500 mi trip, 10 mi interval).
-- [ ] Chrome trace for pan/zoom and slider scrubbing; bundle size report.
+- [ ] Chrome trace for pan/zoom and slider scrubbing; bundle size report. Include pan/zoom
+  with all 773 checkpoints of a Los Angeles → New York plan every 10 mi showing (SPOT-72
+  measured render time only, in a throttled window).
+- [ ] Frame times while dragging the slider, ≤ 16 ms (carried over from SPOT-81, which measured
+  the 4.3 ms per-step main-thread cost only, in a throttled window).
 - [ ] Record numbers here; fix anything over budget.
 
 **Acceptance criteria**
 - p95 plan < 6 s cold, < 1.5 s warm; slider and map at 60 fps; numbers logged below.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: local numbers (fake providers; the hosted app doesn't exist yet).
+  - **Frames** (Playwright Chromium on this laptop's Intel Arc GPU, LA → NY every 10 mi,
+    heatmap on): scrubbing one hour per frame for 147 frames, median 16.7 ms, p95 16.8 ms, one
+    frame at 33 ms, no long tasks. Pan and zoom, 320 frames all ≤ 16.8 ms, no long tasks.
+    With the heatmap hidden, pan/zoom had one 132 ms long task (likely basemap tiles at a new
+    zoom). In software WebGL (SwiftShader) the heatmap dominates pan/zoom (66.7 ms median
+    with it, 16.7 ms without), so a machine without a GPU will feel it.
+  - **Plan latency** (local API, LA → Kansas City, ~1,400 mi at 10 mi, 141–145 checkpoints a
+    route): 1.29 s cold, 0.43 s and 0.51 s warm. LA → NY at 10 mi: 1.95 s for the plan
+    (286 KB JSON), 1.55 s for the heatmap. Real providers will add network time.
+  - **Bundle** (gzipped): main 131.6 KB, map chunk 13.9 KB plus MapLibre 285.6 KB (lazy),
+    CSS 5.4 KB + 10.7 KB. The main chunk is mostly the trip form's libraries: zod 30% of its
+    source, downshift 14%, react-hook-form 12%. There is no PRD budget for it; `zod/mini` is
+    the obvious saving if one is set.
+- Left: plan latency on the hosted app with real providers (SPOT-100/101); frame times in a
+  visible desktop Chrome rather than headless.
 
 ---
 
@@ -2573,6 +2963,12 @@ because it shows the result the user actually saw.
   link), Delete.
 - [ ] Guests clicking Save get a "Create an account to save trips" dialog.
 - [ ] Shared trip opened by someone else: read-only, only "Re-plan" available.
+- [ ] Add the second Playwright flow to `frontend/e2e/`: plan as a guest, sign up, see the
+  trip in My trips, share it, open the link in a fresh browser context (carried over from
+  SPOT-90, which runs the first flow in CI).
+- [ ] Extend `frontend/e2e/keyboard.spec.ts` and `a11y.spec.ts` to PRD stories 8–11: recent
+  trips, sign-up, My trips, saving, sharing, by keyboard and with no serious or critical axe
+  violations in either theme (carried over from SPOT-91, which covers stories 1–7).
 
 **Acceptance criteria**
 - Each action updates the page and lists without a reload; share-off revokes the copied link.
