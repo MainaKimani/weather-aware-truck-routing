@@ -129,4 +129,5 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
+    "EXCEPTION_HANDLER": "planner.api.errors.exception_handler",
 }

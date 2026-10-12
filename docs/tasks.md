@@ -52,7 +52,7 @@ link to their sections instead of repeating them.
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done      |
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done      |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | In review |
-| SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | To do     |
+| SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | In review |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | To do     |
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | To do     |
 | SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | To do     |
@@ -1078,13 +1078,13 @@ Spec: RFC §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-40 |
+| Backend · 2 | P0 | In review | SPOT-40 |
 
 Spec: RFC §7.2, §11.
 
 **Sub-tasks**
-- [ ] Request/response serializers including HOS block and its cross-field rules.
-- [ ] Single error shape `{"error": {"code", "message", "fields"?}}` via a DRF exception handler.
+- [x] Request/response serializers including HOS block and its cross-field rules.
+- [x] Single error shape `{"error": {"code", "message", "fields"?}}` via a DRF exception handler.
 
 **Acceptance criteria**
 - Invalid interval, weight, departure window, identical origin/destination and each HOS rule
@@ -1092,7 +1092,43 @@ Spec: RFC §7.2, §11.
 - `no_route` → 422; provider failures → 502 with the right code.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: `POST /api/v1/plans` (`planner/api/views.py`, `serializers.py`, `errors.py`).
+  - **Request:** `PlanRequestSerializer` validates origin and destination (lat/lon ranges,
+    label, optional IANA `tz`), departure, load, interval and the HOS block, then builds a
+    domain `PlanRequest`.
+    - Departure must carry a UTC offset and fall within [now − 15 min, now + 7 days].
+    - Origin and destination must be more than a mile apart.
+    - HOS clocks arrive as hours with at most two decimals and become whole seconds. With HOS
+      on, every clock is required, each within its limit, the cycle limit follows the chosen
+      cycle (70 or 60 h), and drive ≤ min(window, cycle).
+  - **Response:** output serializers read the domain `Plan` directly, in the RFC §7.2 shape:
+    UTC times to the second, geometry re-encoded as a precision-5 polyline, rounded numbers,
+    and the corridor bbox. They add `demo`, `forecast_as_of`, `reason_code`, `inputs` and,
+    per route, `name`, `label` and `eta_estimated` (RFC §7.2 updated).
+  - **Errors:** a DRF exception handler gives every failure the
+    `{"error": {code, message, fields?}}` shape.
+    - Nested validation errors get dotted names (`hos.drive_left_h`, `origin.lat`).
+    - `NoRoute` → 422 `no_route`; other provider errors → 502 with their code, and the user
+      message never echoes the provider's text.
+    - Throttling → 429 `rate_limited`, keeping `Retry-After`. 404, 405 and the other DRF
+      errors get codes too.
+- Decisions:
+  - A departure without an offset is rejected rather than read as UTC: a trip crossing zones
+    makes a bare local time ambiguous.
+  - With `hos.enabled: false`, the clocks are ignored rather than validated, so a form that
+    keeps its last values still submits.
+  - No `trip_id` yet: the plan isn't saved until SPOT-111, which adds the id and the
+    `Idempotency-Key` handling.
+- Verified (72 API tests):
+  - Invalid interval (0, 5, 20, 30, 100, "25.5", null), weight (0, −1, 80,001, 1.5, text),
+    departure (past, 7 days + 1 h, no offset, unparseable, empty), identical and
+    < 1 mile apart places, out-of-range lat/lon, an unknown time zone, missing fields and
+    malformed JSON all give 400 `invalid_input` with the field named.
+  - Each HOS rule (each missing clock, each limit, 60 h cycle, drive > window, drive >
+    cycle, 3 decimals, bad cycle, non-boolean `enabled`) names its `hos.*` field.
+  - `no_route` → 422, `routing_unavailable` and `weather_unavailable` → 502.
+  - The demo response's shape and geometry round trip.
+  - The demo plan is 44 KB of JSON, 6.6 KB gzipped.
 
 ### SPOT-42 · Corridor grid and heatmap endpoint
 

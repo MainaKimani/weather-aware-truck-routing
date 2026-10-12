@@ -666,7 +666,16 @@ Response (abridged):
   `origin.tz` from the geocoder, or derived client-side).
 - Errors use one shape: `{"error": {"code": "routing_unavailable", "message": "…"}}` with
   codes `invalid_input`, `no_route`, `routing_unavailable`, `weather_unavailable`,
-  `rate_limited`.
+  `rate_limited`. Validation errors add `"fields": {"hos.drive_left_h": ["…"]}`, with nested
+  fields named by dotted path. Provider messages go to the logs, not the client.
+- Also in the response: `demo` (fake providers), `forecast_as_of` (when
+  the oldest forecast used was fetched, for the stale banner), `reason_code` (the ranking
+  criterion that decided, for the UI to key on), `inputs` (the request as understood, so a
+  trip page can show the form), and per route `name` ("Route A"), `label` ("via Amarillo"),
+  `eta_estimated` and warnings' `route_id`. Route ids and letters follow provider order
+  (fastest first), so they don't change when the ranking does.
+- Departure must carry a UTC offset; a bare local time is rejected as ambiguous. With
+  `hos.enabled` false, any clock values sent are ignored rather than validated.
 
 ### 7.3 `GET /api/v1/trips/{trip_id}/heatmap`
 
