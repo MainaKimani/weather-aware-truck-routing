@@ -74,7 +74,7 @@ link to their sections instead of repeating them.
 | SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | Done        |
 | SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | Done        |
 | SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | Done        |
-| SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | To do       |
+| SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | Done        |
 | SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | To do       |
 | SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | To do       |
 | SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | To do       |
@@ -131,6 +131,7 @@ here when that task closes it.
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
+| SPOT-90 | Second smoke flow: plan as a guest, sign up, see the trip in My trips, share it, open the link in a fresh context. Needs accounts and trip pages. | SPOT-125 |
 
 ## Epics
 
@@ -2351,20 +2352,45 @@ Spec: RFC §10.4.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 2 | P0 | To do | SPOT-81 |
+| Full stack · 2 | P0 | Done | SPOT-81 |
 
 **Sub-tasks**
-- [ ] Playwright against the backend in fake mode: plan the demo trip, check 3 cards and the
+- [x] Playwright against the backend in fake mode: plan the demo trip, check 3 cards and the
   recommendation, open a checkpoint popup, scrub the slider.
-- [ ] Second flow (once P1 accounts exist): plan as guest, sign up, see the trip in My trips,
+- [ ] Second flow (once P1 accounts exist) _(moved to SPOT-125, which finishes what it needs)_: plan as guest, sign up, see the trip in My trips,
   share it, open the link in a fresh browser context.
-- [ ] Run in CI.
+- [x] Run in CI.
 
 **Acceptance criteria**
 - Smoke test passes in CI on every PR.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: smoke test (`frontend/e2e/smoke.spec.ts`, `playwright.config.ts`,
+  `.github/workflows/e2e.yml`).
+  - **What it does:** plans the demo trip from the form; checks three ranked routes, Route A
+    recommended with "Fewest severe miles", and the Demo data badge. It then picks a
+    checkpoint row and sees its popup on the map, and checks the heatmap is requested once,
+    after the plan. Finally it scrubs to +5 h by keyboard (label, `aria-valuetext`, Route A's
+    truck), presses End for +48 h, and checks there were no API calls while scrubbing.
+  - **Servers:** `playwright.config.ts` starts the backend (`migrate`, then `runserver` on
+    8001, fake providers) and the production build (`vite preview` on 4173, proxying `/api`
+    as in production), on ports clear of `make dev`. Locally it reuses servers already
+    running there. `npm run test:e2e`.
+  - **CI:** `e2e.yml` (Postgres service, uv, Node, Chromium) runs from `ci.yml` whenever
+    either side changes, and `ci-ok` requires it. On failure the report and traces are
+    uploaded for 7 days.
+  - `@playwright/test` 1.63.0 (pinned; released 2026-09-04). Vitest skips `e2e/`;
+    `tsconfig.node.json` type-checks the specs and config, so lint and `tsc -b` cover them.
+- Decisions:
+  - Against the production build, not the dev server: it is what ships, and it catches
+    build-only breakage (the MapLibre worker).
+  - A real backend and database rather than mocked responses, so the contract and the
+    session cookies are exercised too.
+- Verified:
+  - Locally: passes in 3.3 s (15 s with server start-up), with WebGL in headless Chromium
+    (the legend only appears when the map starts). The servers stop afterwards.
+  - The workflows pass actionlint. The first CI run will be on the PR.
+- Left: the second flow needs accounts, My trips and sharing; moved to SPOT-125.
 
 ### SPOT-91 · Accessibility pass
 
@@ -2874,6 +2900,9 @@ because it shows the result the user actually saw.
   link), Delete.
 - [ ] Guests clicking Save get a "Create an account to save trips" dialog.
 - [ ] Shared trip opened by someone else: read-only, only "Re-plan" available.
+- [ ] Add the second Playwright flow to `frontend/e2e/`: plan as a guest, sign up, see the
+  trip in My trips, share it, open the link in a fresh browser context (carried over from
+  SPOT-90, which runs the first flow in CI).
 
 **Acceptance criteria**
 - Each action updates the page and lists without a reload; share-off revokes the copied link.

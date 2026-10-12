@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "gen:api": "openapi-typescript ../backend/openapi.yaml --output src/api/schema.ts --enum-values --root-types --root-types-no-schema-prefix",
     "gen:api:check": "npm run gen:api && git ls-files --error-unmatch src/api/schema.ts && git diff --exit-code -- src/api/schema.ts"
   },
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@maplibre/maplibre-gl-style-spec": "26.4.4",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/eslint-plugin-query": "^5.104.2",
     "@tanstack/react-query-devtools": "^5.104.2",

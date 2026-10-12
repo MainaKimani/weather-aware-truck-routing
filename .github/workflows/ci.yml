@@ -90,6 +90,12 @@ jobs:
     if: needs.changes.outputs.frontend == 'true'
     uses: ./.github/workflows/frontend.yml
 
+  # The whole app in a browser: runs when either side changes.
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/e2e.yml
+
   commits:
     name: conventional commits
     if: github.event_name == 'pull_request'
@@ -113,7 +119,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [branch-policy, changes, backend, frontend, commits]
+    needs: [branch-policy, changes, backend, frontend, e2e, commits]
     runs-on: ubuntu-latest
     steps:
       - name: All required jobs passed or were skipped
