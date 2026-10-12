@@ -81,7 +81,7 @@ link to their sections instead of repeating them.
 | SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do       |
 | SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do       |
-| SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | To do       |
+| SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
 | SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
 | SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | To do       |
 | SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
@@ -118,6 +118,8 @@ here when that task closes it.
 
 **Branch housekeeping**
 - `dev-frontend` is behind `main`; merge `main` into it before frontend work starts.
+- `dev-backend` is behind `main`. The trips branch starts from `main`, so its PR brings
+  `dev-backend` up to date.
 
 **Carried over to a later task**
 
@@ -2160,14 +2162,14 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-14 |
+| Backend · 3 | P0 | Done | SPOT-14 |
 
 **Sub-tasks**
-- [ ] `Trip`, `TripRoute`, `TripHeatmap` as RFC §3.1, including `idempotency_key`.
-- [ ] All check and unique constraints and the two owner indexes.
-- [ ] Django admin: trip list (owner, route, created, saved, shared), routes inline read-only,
+- [x] `Trip`, `TripRoute`, `TripHeatmap` as RFC §3.1, including `idempotency_key`.
+- [x] All check and unique constraints and the two owner indexes.
+- [x] Django admin: trip list (owner, route, created, saved, shared), routes inline read-only,
   search by place, filter by saved/guest.
-- [ ] `makemigrations --check` in CI.
+- [x] `makemigrations --check` in CI.
 
 **Acceptance criteria**
 - One `IntegrityError` test per constraint: no owner, two owners, guest saving, load 0 and
@@ -2176,7 +2178,30 @@ core features, per PRD §5.
 - Migrations apply cleanly to an empty Postgres database.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip models (`planner/models.py`, migration `0001_trips`).
+  - `Trip`, `TripRoute`, `TripHeatmap` as RFC §3.1, with every check and unique constraint
+    and the two owner indexes (`trip_user_recent`, `trip_guest_recent`). Deleting a trip
+    deletes its routes and heatmap.
+  - **Admin:** the trip list shows the owner (email, or "guest" plus the id's start), the
+    route, created, saved, shared and demo. It searches by place, name or email and filters
+    by saved, shared, user or guest, and demo. Routes show inline, read-only. Only name and
+    shared can be edited. Saved stays read-only, because only users save (a constraint), and
+    admins can't add trips.
+- Decisions (RFC §3.1 shape kept; additions, each needed to give back the exact response):
+  - Trip adds `generated_at`, `forecast_as_of`, `reason_code`, `plan_settings` (wind basis,
+    tolerance and HOS as applied) and `bbox`. Time zones are nullable, as in the response.
+  - TripRoute adds `key` ("r1", the route's id in the response, unique per trip), `label`,
+    `eta_estimated` and `worst_at_mile`, and orders by rank.
+  - TripHeatmap adds `hours`, `stale`, `forecast_as_of` and `created_at`, matching the
+    heatmap response.
+  - `makemigrations --check` was already in backend CI (since SPOT-12).
+- Verified (19 tests):
+  - One `IntegrityError` test per constraint: no owner, two owners, guest saving, load 0 and
+    80,001, interval 20, duplicate rank, duplicate key, two recommended routes, rank 4,
+    recommended but not drivable, average risk 4.5, arrival before departure. Also a
+    repeated idempotency key and the cascade delete.
+  - Admin list, owner filter, search, and read-only routes on the trip page.
+  - Migrations apply to the empty Postgres test database on every run.
 
 ### SPOT-111 · Save plans as trips
 
