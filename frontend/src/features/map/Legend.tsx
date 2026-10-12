@@ -1,8 +1,8 @@
 /**
  * The map legend and layer switches (RFC §10.6): the six risk levels, each
  * with its label so colour is never the only cue, and switches for the
- * checkpoints and the other routes. Switching changes layer visibility only;
- * nothing is reloaded.
+ * heatmap, the checkpoints and the other routes. Switching changes layer
+ * visibility only; nothing is reloaded.
  */
 import { useId, useState } from 'react'
 
@@ -12,6 +12,7 @@ import { useUiStore, type Layer } from '../../state/ui'
 const BUCKETS: readonly RiskBucket[] = [...RISK_LEVELS, 'UNKNOWN']
 
 const SWITCHES: readonly { layer: Layer; label: string }[] = [
+  { layer: 'heatmap', label: 'Heatmap' },
   { layer: 'checkpoints', label: 'Checkpoints' },
   { layer: 'alternatives', label: 'Other routes' },
 ]

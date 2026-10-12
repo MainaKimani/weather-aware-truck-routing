@@ -5,8 +5,8 @@
  * helpers tests use to read it.
  *
  * Recorded: the Map's props (to fire its event handlers), each Source's data
- * and every `setData` call, each Layer's props, and spies for the camera and
- * feature-state methods.
+ * and every `setData` call, each Layer's props, and spies for the camera,
+ * feature-state and paint methods.
  */
 import type { ReactNode } from 'react'
 import { vi, type Mock } from 'vitest'
@@ -22,6 +22,8 @@ function createFakeMap() {
     fitBounds: vi.fn(),
     easeTo: vi.fn(),
     setFeatureState: vi.fn(),
+    setPaintProperty: vi.fn(),
+    getLayer: (id: string) => (fake.layers.has(id) ? {} : undefined),
     removeFeatureState: vi.fn(),
     getContainer: () => ({ clientWidth: 800, clientHeight: 600 }),
     getCanvas: () => canvas,

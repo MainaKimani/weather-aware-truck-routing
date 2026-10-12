@@ -40,6 +40,20 @@ describe('map legend', () => {
 })
 
 describe('layer switches', () => {
+  it('switch the heatmap, the checkpoints and the other routes, all on to start', () => {
+    renderMap(demoPlan)
+
+    const switches = within(legend()).getAllByRole('checkbox')
+    expect(switches.map((s) => s.closest('label')?.textContent)).toEqual([
+      'Heatmap',
+      'Checkpoints',
+      'Other routes',
+    ])
+    switches.forEach((s) => {
+      expect(s).toBeChecked()
+    })
+  })
+
   it('hide and show the checkpoints by visibility alone', async () => {
     renderMap(demoPlan)
     expect(layer(LAYER.checkpoints).layout).toEqual({ visibility: 'visible' })

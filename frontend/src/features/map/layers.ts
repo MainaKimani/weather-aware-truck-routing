@@ -8,12 +8,14 @@ import type { ExpressionSpecification } from 'maplibre-gl'
 import { RISK } from '../../lib/risk'
 
 export const SOURCE = {
+  heatmap: 'heatmap',
   routes: 'routes',
   segments: 'route-segments',
   checkpoints: 'checkpoints',
 } as const
 
 export const LAYER = {
+  heatmap: 'corridor-heat',
   otherRoutes: 'routes-other',
   routeCasing: 'route-casing',
   routeSegments: 'route-segments',
@@ -89,6 +91,65 @@ export function readRouteInk(root: HTMLElement = document.documentElement): Rout
     casing: token('--map-casing'),
   }
 }
+
+// --- Heatmap (RFC §10.4) ----------------------------------------------------
+//
+// The grid is uniform, so with the right kernel the heatmap's density at a
+// cell equals that cell's weight, and the colour can be read straight from
+// it. Each level gets a fifth of the density scale, Low included (it is a
+// level, and shows pale yellow as on the checkpoints); Unknown weighs
+// nothing, so missing data is left uncoloured rather than shown as Low.
+
+/** Density of each level: Low 0.2 … No travel 1.0; Unknown 0. */
+export function heatmapWeight(hour: number): ExpressionSpecification {
+  return ['/', ['+', ['coalesce', ['get', `h${String(hour)}`], -1], 1], 5]
+}
+
+/** Density back to the level's colour, in steps, so each band is one legend colour. */
+export const heatmapColor: ExpressionSpecification = [
+  'step',
+  ['heatmap-density'],
+  'rgba(0, 0, 0, 0)',
+  0.1,
+  RISK.LOW.color,
+  0.3,
+  RISK.MODERATE.color,
+  0.5,
+  RISK.HIGH.color,
+  0.7,
+  RISK.SEVERE.color,
+  0.9,
+  RISK.NO_TRAVEL.color,
+]
+
+/** MapLibre's kernel is a Gaussian whose sigma is a third of `heatmap-radius`. */
+const SIGMA_PER_RADIUS = 1 / 3
+/** Sigma in grid steps: wide enough that neighbouring cells merge with no ripple or gaps. */
+const SIGMA_CELLS = 0.6
+/** Pixels per degree of longitude at zoom 0 (512 px tiles); doubles with each zoom level. */
+const PX_PER_DEGREE_Z0 = 512 / 360
+/** The kernel's peak, 1/sqrt(2π), from MapLibre's heatmap shader. */
+const GAUSS_PEAK = 1 / Math.sqrt(2 * Math.PI)
+
+/** The radius that keeps the kernel at SIGMA_CELLS grid steps at every zoom. */
+export function heatmapRadius(cellDeg: number): ExpressionSpecification {
+  const atZoom0 = (SIGMA_CELLS * cellDeg * PX_PER_DEGREE_Z0) / SIGMA_PER_RADIUS
+  return ['interpolate', ['exponential', 2], ['zoom'], 0, atZoom0, 24, atZoom0 * 2 ** 24]
+}
+
+/**
+ * The intensity that makes density equal weight. Summed over a lattice with
+ * steps a × b pixels, kernels of sigma σ add up to 2πσ²/(ab) times their
+ * peak. Rows are drawn 1/cos(latitude) further apart than columns
+ * (Mercator), and σ = SIGMA_CELLS·a, so the zoom cancels out.
+ */
+export function heatmapIntensity(latitude: number): number {
+  const rowStretch = 1 / Math.cos((latitude * Math.PI) / 180)
+  return rowStretch / (GAUSS_PEAK * 2 * Math.PI * SIGMA_CELLS ** 2)
+}
+
+/** Opacity once shown: the basemap's roads and towns stay readable underneath. */
+export const HEATMAP_OPACITY = 0.6
 
 export const visibility = (on: boolean) => (on ? 'visible' : 'none')
 

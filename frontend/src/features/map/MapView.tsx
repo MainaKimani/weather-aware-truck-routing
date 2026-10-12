@@ -22,6 +22,7 @@ import { BASEMAP, INITIAL_VIEW } from './basemap'
 import { Camera } from './Camera'
 import { CheckpointPopups } from './CheckpointPopups'
 import { CheckpointsLayer } from './CheckpointsLayer'
+import { HeatmapLayer } from './HeatmapLayer'
 import { HosStopsLayer } from './HosStopsLayer'
 import { INTERACTIVE_LAYERS } from './layers'
 import { Legend } from './Legend'
@@ -67,6 +68,9 @@ export default function MapView() {
         <NavigationControl position="top-right" showCompass={false} />
         <Camera />
         <RoutesLayer theme={theme} />
+        {/* After the routes: it is placed beneath them, so they must be on the map first,
+            including when a theme change rebuilds the style. */}
+        <HeatmapLayer />
         <CheckpointsLayer theme={theme} />
         <PlaceMarkers />
         <HosStopsLayer />

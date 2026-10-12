@@ -59,7 +59,7 @@ link to their sections instead of repeating them.
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | Done        |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | Done        |
-| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | In progress |
+| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | Done        |
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | Done        |
 | SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | Done        |
@@ -70,7 +70,7 @@ link to their sections instead of repeating them.
 | SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | Done        |
 | SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | Done        |
 | SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | Done        |
-| SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | To do       |
+| SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | Done        |
 | SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | To do       |
 | SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | To do       |
 | SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | To do       |
@@ -129,8 +129,6 @@ here when that task closes it.
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
-| SPOT-51 | Dependent heatmap query (starts after the plan resolves). The endpoint and its schema now exist. | SPOT-80, with the layer that draws it |
-| SPOT-74 | Heatmap switch in the map legend; the heatmap layer doesn't exist yet. | SPOT-80 |
 
 ## Epics
 
@@ -1510,11 +1508,11 @@ Spec: RFC §12, §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | In progress | SPOT-44 |
+| Frontend · 2 | P0 | Done | SPOT-44 |
 
 **Sub-tasks**
 - [x] Typed fetch client on generated types; error shape parsed into a typed error.
-- [ ] TanStack Query: plan mutation, dependent heatmap query (routing and session are SPOT-120).
+- [x] TanStack Query: plan mutation, dependent heatmap query (routing and session are SPOT-120).
 - [x] UI store (selected route, hovered/selected checkpoint, layer toggles); slider hour in
   its own context.
 
@@ -1588,6 +1586,8 @@ Spec: RFC §12, §18.3.
 - 2026-10-12: `GET /api/v1/trips/{id}/heatmap` and its `Heatmap` type now exist (SPOT-42).
   The query is built with the heatmap layer (SPOT-80), its first reader; this task
   closes with it.
+- 2026-10-12: Done. The dependent heatmap query landed with SPOT-80: it starts when the plan
+  resolves, routes render first, and a failed plan requests no heatmap (tested; see SPOT-80).
 
 ---
 
@@ -2121,18 +2121,18 @@ Spec: PRD §9, RFC §11.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P0 | To do | SPOT-42, SPOT-70 |
+| Frontend · 3 | P0 | Done | SPOT-42, SPOT-70 |
 
 Spec: RFC §10.4.
 
 **Sub-tasks**
-- [ ] Build GeoJSON with flat `h0`…`h48` properties once per heatmap response.
-- [ ] `heatmap` layer under routes: weight from `h<hour>`, zoom-scaled radius, risk colour ramp.
-- [ ] Visual check at zooms 4–10; switch to the fill-grid fallback if the blur misleads.
-- [ ] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
-- [ ] Add a Heatmap switch to the map legend (`features/map/Legend.tsx`, `layers.heatmap` in
+- [x] Build GeoJSON with flat `h0`…`h48` properties once per heatmap response.
+- [x] `heatmap` layer under routes: weight from `h<hour>`, zoom-scaled radius, risk colour ramp.
+- [x] Visual check at zooms 4–10; switch to the fill-grid fallback if the blur misleads.
+- [x] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
+- [x] Add a Heatmap switch to the map legend (`features/map/Legend.tsx`, `layers.heatmap` in
   `state/ui.ts`) (carried over from SPOT-74).
-- [ ] Dependent heatmap query on `trip_id`, starting after the plan resolves (carried over
+- [x] Dependent heatmap query on `trip_id`, starting after the plan resolves (carried over
   from SPOT-51, which closes with it).
 
 **Acceptance criteria**
@@ -2140,7 +2140,50 @@ Spec: RFC §10.4.
   the demo scenario, recorded in the log).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: heatmap layer (`features/map/HeatmapLayer.tsx`, `heatmapGeometry.ts`,
+  `api/heatmap.ts`).
+  - **Query:** `usePlanTrip` starts the heatmap request when the plan resolves
+    (`queryClient.query`, keyed `['trips', id, 'heatmap']`), so routes are drawn first. The map
+    reads the same query; it never refetches, since the server keeps each trip's heatmap.
+  - **Data:** one GeoJSON point per grid cell with flat `h0`…`h48` levels, built once per
+    heatmap. An hour with no forecast has no property.
+  - **Layer:** `heatmap` type, placed beneath the routes (`beforeId`, and mounted after
+    `RoutesLayer` so a theme change re-adds them in that order). The slider sets
+    `heatmap-weight` from outside React through a store subscription, at most once a frame;
+    nothing re-renders and no data is re-sent.
+  - **Fade-in:** added transparent, then 600 ms to 60% opacity on the next frame; instant with
+    reduced motion. A new trip's heatmap fades in again; a failed one leaves the routes alone.
+  - **Legend:** a Heatmap switch above Checkpoints and Other routes, visibility only (carried
+    over from SPOT-74).
+- Decisions (RFC §10.4 updated):
+  - **Weight `(level + 1) / 5`**, not the RFC's `level / 4`: Low is a level and shows pale
+    yellow as on the checkpoints; Unknown weighs 0 and is left uncoloured, never shown as Low.
+  - **Density equals weight.** Radius grows ×2 per zoom so the kernel stays 0.6 grid steps;
+    intensity is set from the shader's Gaussian so summed kernels add up to the weight, with
+    Mercator's taller rows at the grid's mean latitude. The colour steps at the midpoints
+    between levels, so each band is exactly one legend colour.
+  - **Kept the heatmap, no fill-grid fallback:** at zooms 4–10 the bands are smooth and match
+    the checkpoints; the blur only softens storm edges by about a cell.
+  - `@maplibre/maplibre-gl-style-spec` (already installed with MapLibre) is a pinned dev
+    dependency, so tests check the expressions with MapLibre's own evaluator.
+- Verified (27 new tests, 252 total):
+  - **Expressions** (style-spec evaluator): weights 0.2…1.0 and 0 for Unknown; each level's
+    density paints that level's checkpoint colour; the paint validates as a heatmap layer.
+  - **Kernel:** simulated on the grid at zooms 4–10 and latitudes 30–42°, density is within
+    0.05 of the weight on and between cells (bands are 0.1 wide either side).
+  - **Layer:** nothing requested before a plan; routes on the map before the heatmap; under
+    the routes; fades in (instant with reduced motion); starts at the slider's hour; three
+    hour changes in a frame make one paint update, no re-render, no `setData`; the switch
+    changes visibility only; a new trip is requested; a failure leaves the routes.
+  - **Query order:** plan requested, plan answered, then the heatmap for its `trip_id`; a failed
+    plan requests none.
+  - Mutation checks: dropping the fade, the per-frame throttle or `beforeId` each fails a test.
+  - **In Chrome against the real backend** (fake providers, demo trip, 649 points at 0.25°):
+    dark and light themes, zooms about 5 to 8. At +5 h, Route B's Severe stretch near Wichita
+    runs through the heatmap's Severe core with High and Moderate fringes, as its checkpoints
+    say; scrubbing moves the storms with no reload; no console errors. A few single cells
+    between diverging routes are uncoloured: they are outside every route's 40 mi buffer, so
+    not in the grid.
 
 ### SPOT-81 · 48-hour slider and playback
 
