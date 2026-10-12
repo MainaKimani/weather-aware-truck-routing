@@ -8,9 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Controller, useForm, useWatch, type Control, type Resolver } from 'react-hook-form'
 
-import { usePlanTrip } from '../../api/plans'
+import { useLatestPlanAttempt, usePlanTrip } from '../../api/plans'
 import { DEMO_DESTINATION, DEMO_LOAD_LB, DEMO_ORIGIN } from '../plan/demoTrip'
-import { PlanError } from '../plan/PlanError'
 import { nextWholeHourInput, zoneAbbreviation, zonedToUtc } from '../../lib/time'
 import { Chip, FieldError, inputClass } from './fields'
 import { HosFields } from './HosFields'
@@ -42,7 +41,9 @@ export function TripForm({ now = () => new Date() }: TripFormProps) {
       ),
       reValidateMode: 'onChange',
     })
-  const { plan, isPending, error } = usePlanTrip()
+  const { plan, error } = usePlanTrip()
+  // Pending for any plan request, including a retry from the results area.
+  const isPending = useLatestPlanAttempt().status === 'pending'
   const [collapsed, setCollapsed] = useState(false)
   const ids = { departure: useId(), load: useId(), root: useId() }
 
@@ -194,10 +195,6 @@ export function TripForm({ now = () => new Date() }: TripFormProps) {
       />
 
       <HosFields control={control} setValue={setValue} />
-
-      {error && error.code !== 'invalid_input' && (
-        <PlanError error={error} onRetry={() => void submit()} />
-      )}
 
       {formState.errors.root?.server && (
         <p role="alert" className="text-sm text-danger">

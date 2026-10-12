@@ -15,7 +15,7 @@ export function RoutesPanel() {
         Routes <span className="font-normal text-muted">· best first</span>
       </h2>
       <PlanNotices />
-      <ol className="space-y-2">
+      <ol aria-label="Ranked routes" className="space-y-2">
         {routes.map((route) => (
           <RouteCard key={route.id} route={route} context={context} />
         ))}

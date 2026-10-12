@@ -168,14 +168,4 @@ describe('TripForm', () => {
     await user.click(screen.getByRole('button', { name: 'Edit trip' }))
     expect(screen.getByRole('combobox', { name: 'Origin' })).toHaveValue('Dallas, TX')
   })
-
-  it('shows non-field failures with a retry', async () => {
-    server.use(http.post(PLANS, () => apiError(422, 'no_route', 'No truck route was found.')))
-    const user = renderForm()
-    await user.click(screen.getByRole('button', { name: 'Use the demo trip' }))
-
-    await user.click(screen.getByRole('button', { name: 'Plan trip' }))
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('No truck route was found.')
-  })
 })

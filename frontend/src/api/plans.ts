@@ -7,6 +7,7 @@
 import {
   skipToken,
   useMutation,
+  useMutationState,
   useQuery,
   useQueryClient,
   type UseMutationResult,
@@ -22,6 +23,7 @@ export const planKeys = {
   all: ['plan'] as const,
   /** The plan on screen. Becomes `['trips', id]` once plans are saved as trips. */
   current: () => [...planKeys.all, 'current'] as const,
+  create: () => [...planKeys.all, 'create'] as const,
 }
 
 interface PlanVariables {
@@ -52,7 +54,7 @@ export function usePlanTrip(): PlanMutation {
   const queryClient = useQueryClient()
   const showPlan = useUiStore((s) => s.showPlan)
   const { mutate, ...mutation } = useMutation<Plan, ApiError, PlanVariables>({
-    mutationKey: [...planKeys.all, 'create'],
+    mutationKey: planKeys.create(),
     mutationFn: (variables) => planTrip(variables),
     onSuccess: (plan) => {
       queryClient.setQueryData(planKeys.current(), plan)
@@ -82,4 +84,28 @@ export function usePlan<T = Plan>(select?: (plan: Plan) => T): T | undefined {
     select,
   })
   return data
+}
+
+export interface PlanAttempt {
+  status: 'idle' | 'pending' | 'success' | 'error'
+  error: ApiError | null
+  request: PlanRequest | null
+}
+
+const IDLE: PlanAttempt = { status: 'idle', error: null, request: null }
+
+/**
+ * The most recent plan request, wherever it was made: lets the results area
+ * show loading and failure without being wired to the form.
+ */
+export function useLatestPlanAttempt(): PlanAttempt {
+  const attempts = useMutationState<PlanAttempt>({
+    filters: { mutationKey: planKeys.create() },
+    select: (m) => ({
+      status: m.state.status,
+      error: (m.state.error as ApiError | null) ?? null,
+      request: (m.state.variables as PlanVariables | undefined)?.request ?? null,
+    }),
+  })
+  return attempts.at(-1) ?? IDLE
 }

@@ -36,7 +36,9 @@ describe('route cards', () => {
   it('list the routes best first, with the badge and reason on the recommended one', () => {
     renderPanel(demoPlan)
 
-    const cards = within(screen.getByRole('list')).getAllByRole('listitem')
+    const cards = within(screen.getByRole('list', { name: 'Ranked routes' })).getAllByRole(
+      'listitem',
+    )
     expect(cards.map((c) => c.getAttribute('aria-labelledby'))).toEqual(
       demoPlan.routes.map((r) => `route-${r.id}-title`),
     )

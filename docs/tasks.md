@@ -64,7 +64,7 @@ link to their sections instead of repeating them.
 | SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | Done        |
 | SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | Done        |
-| SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | To do       |
+| SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | Done        |
 | SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | To do       |
 | SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | To do       |
 | SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | To do       |
@@ -1790,21 +1790,57 @@ Spec: PRD §7.3.1.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-62 |
+| Frontend · 2 | P0 | Done | SPOT-62 |
 
 Spec: PRD §9, RFC §11.
 
 **Sub-tasks**
-- [ ] Empty state with explainer; skeletons for routes; heatmap fade-in.
-- [ ] Partial results (< 3 routes, Unknown checkpoints), not drivable, no safe route.
-- [ ] Error state per error code with retry; 429 message.
+- [x] Empty state with explainer; skeletons for routes; heatmap fade-in. _(fade-in moved to
+  SPOT-80, with the layer it fades)_
+- [x] Partial results (< 3 routes, Unknown checkpoints), not drivable, no safe route.
+- [x] Error state per error code with retry; 429 message.
 
 **Acceptance criteria**
 - Each state reachable through the fake providers and covered by a component test.
 - No state shows missing data as Low or as blank.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: planner states (`features/plan/ResultsArea.tsx`).
+  - **Results area:** below the form, driven by `useLatestPlanAttempt()` (TanStack's
+    `useMutationState` on the plan mutation key), so it reflects any plan request without
+    being wired to the form.
+  - **Empty:** the explainer, until the first request.
+  - **Loading:** three skeleton cards with an `aria-busy` region and one status line
+    ("Evaluating weather along each route…"). The form's button reads "Evaluating weather
+    corridors…" and is disabled for any pending request, including a retry.
+  - **Errors** (`failureCopy.ts`, `PlanFailure.tsx`): a title and guidance per code, naming
+    the service (HERE for routing, Open-Meteo for weather, never "NOAA", design review fix
+    5), plus Try again. The request id is offered only when the server sent one. A rate limit
+    holds the retry for `Retry-After` seconds with a countdown. Field errors stay on the form.
+  - **Failure after an earlier plan:** the earlier plan stays visible, dimmed and labelled
+    "Showing your previous plan, not the trip that just failed." (design review fix 5).
+  - **Partial, not drivable, no safe route:** covered by the route cards' notices and the
+    Unknown handling in cards and table. The routes list now has an accessible name ("Ranked
+    routes"), separating it from the warnings list.
+- Decisions:
+  - "Each state reachable through the fake providers": not drivable comes from the strong
+    storm fixture. Fewer than three routes, all-Unknown data and no safe route can't be
+    produced by the fakes, so those tests adjust the real demo response.
+  - Heatmap fade-in waits for the heatmap layer (SPOT-80), which has no data source until the
+    heatmap endpoint exists.
+- Verified (16 tests through the whole app with MSW, 168 total):
+  - Empty, then loading (skeleton, disabled button) and results. Four error codes each show
+    their title, request id and an enabled retry; routing names HERE and weather names
+    Open-Meteo. A network failure, the 429 countdown (disabled then enabled), and a field
+    error staying on the form are covered.
+  - A failure after a plan keeps it dimmed and labelled. Two-route partial results show the
+    warning. All-Unknown shows "No data" and Unknown with no Low anywhere. Not drivable and
+    no safe route are covered, and no request id is mentioned without one.
+  - **In Chrome** against the backend's fake providers: a keyboard-picked Dallas → Denver
+    with HOS on gave three cards with HOS summaries and the Severe stretches on B and C.
+    Route B's table scrolled to the storm ("Severe · gusts · load" at 41 mph). Stopping the
+    backend gave the failure card above the dimmed previous plan.
+- Left: heatmap fade-in, now a SPOT-80 sub-task.
 
 ---
 
@@ -1916,6 +1952,7 @@ Spec: RFC §10.4.
 - [ ] Build GeoJSON with flat `h0`…`h48` properties once per heatmap response.
 - [ ] `heatmap` layer under routes: weight from `h<hour>`, zoom-scaled radius, risk colour ramp.
 - [ ] Visual check at zooms 4–10; switch to the fill-grid fallback if the blur misleads.
+- [ ] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
 
 **Acceptance criteria**
 - Heatmap colours agree with checkpoint colours at the same place and hour (visual check on

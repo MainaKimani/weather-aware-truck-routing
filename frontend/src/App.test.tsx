@@ -56,7 +56,7 @@ describe('planning the demo trip', () => {
 
     await planDemoTrip()
 
-    const routes = await screen.findByRole('list')
+    const routes = await screen.findByRole('list', { name: 'Ranked routes' })
     const items = within(routes).getAllByRole('button')
     expect(items).toHaveLength(3)
     expect(items[0]).toHaveTextContent('Route A')
@@ -70,7 +70,7 @@ describe('planning the demo trip', () => {
   it('selects a route on click', async () => {
     renderApp()
     await planDemoTrip()
-    await screen.findByRole('list')
+    await screen.findByRole('list', { name: 'Ranked routes' })
     const routeA = screen.getByRole('button', { name: /Route A/ })
     const routeB = screen.getByRole('button', { name: /Route B/ })
 
@@ -83,7 +83,7 @@ describe('planning the demo trip', () => {
     )
   })
 
-  it('shows the error with its request id, and retries on request', async () => {
+  it('shows the failure with its request id, and retries on request', async () => {
     server.use(
       http.post(PLANS, () => apiError(422, 'no_route', 'No truck route was found.'), {
         once: true,
@@ -94,12 +94,12 @@ describe('planning the demo trip', () => {
     await planDemoTrip()
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('No truck route was found.')
+    expect(alert).toHaveTextContent('No truck route between these places')
     expect(alert).toHaveTextContent('req-err-0001')
 
     await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
 
-    expect(await screen.findByRole('list')).toBeInTheDocument()
+    expect(await screen.findByRole('list', { name: 'Ranked routes' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })

@@ -1,11 +1,10 @@
 import type { QueryClient } from '@tanstack/react-query'
 
 import { AppProviders } from './app/AppProviders'
-import { usePlan } from './api/plans'
+import { useLatestPlanAttempt, usePlan } from './api/plans'
 import type { Plan } from './api/schema'
-import { CheckpointTable } from './features/checkpoints/CheckpointTable'
 import { DemoBadge } from './features/plan/DemoBadge'
-import { RoutesPanel } from './features/routes-panel/RoutesPanel'
+import { ResultsArea } from './features/plan/ResultsArea'
 import { TripForm } from './features/trip-form/TripForm'
 import { AppShell } from './features/shell/AppShell'
 import { HourSlider } from './features/timeline/HourSlider'
@@ -31,9 +30,10 @@ const hasPlan = (plan: Plan) => plan.routes.length > 0
 
 function Panel() {
   const planned = usePlan(hasPlan)
+  const attempt = useLatestPlanAttempt()
   return (
     <div className="space-y-5 p-5">
-      {!planned && (
+      {!planned && attempt.status === 'idle' && (
         <section aria-labelledby="empty-title">
           <h1 id="empty-title" className="text-lg font-semibold">
             Plan a weather-aware trip
@@ -46,8 +46,7 @@ function Panel() {
         </section>
       )}
       <TripForm />
-      <RoutesPanel />
-      <CheckpointTable />
+      <ResultsArea />
     </div>
   )
 }
