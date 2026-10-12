@@ -15,6 +15,8 @@ progress: like a checkpoint whose ETA falls in it, it reads the forecast
 record stamped at the end of that hour (RFC §6.3).
 """
 
+import logging
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -31,6 +33,8 @@ SIMPLIFY_MI: Final = 0.62  # about 1 km
 POINT_CAP: Final = 700
 STEPS_DEG: Final = (0.25, 0.5, 1.0)
 HOURS: Final = 49  # 0..48
+
+logger = logging.getLogger("planner.corridor")
 
 
 @dataclass(frozen=True)
@@ -62,14 +66,31 @@ def corridor_grid(
     store: ForecastStore,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> HeatmapGrid:
+    started = time.perf_counter()
     step, points = corridor_points(lines)
     start = ceil_to_hour(clock())
+    weather_started = time.perf_counter()
     lookup = store.get(points, step)
+    weather_ms = round((time.perf_counter() - weather_started) * 1000)
     hours = [start + timedelta(hours=h) for h in range(HOURS)]
     risk = []
     for p in points:
         series = lookup.for_point(p)
         risk.append(tuple(classify(series.at(t) if series else None, load_lb).level for t in hours))
+    logger.info(
+        "heatmap %d points at %g deg",
+        len(points),
+        step,
+        extra={
+            "event": "heatmap",
+            "grid_points": len(points),
+            "cell_deg": step,
+            "cache_hit_ratio": round(lookup.cache_hits / len(points), 3) if points else None,
+            "weather_ms": weather_ms,
+            "total_ms": round((time.perf_counter() - started) * 1000),
+            "stale": lookup.stale,
+        },
+    )
     return HeatmapGrid(
         start_hour=start,
         hours=HOURS,

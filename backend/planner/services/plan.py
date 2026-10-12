@@ -13,6 +13,8 @@ The result is domain objects. The API layer turns them into JSON; nothing
 is saved here.
 """
 
+import logging
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -33,6 +35,8 @@ from planner.services.forecasts import CHECKPOINT_STEP_DEG, ForecastStore
 from planner.services.routing import RouteWarning, find_routes
 
 ROUTE_LETTERS: Final = "ABC"
+
+logger = logging.getLogger("planner.plan")
 
 WarningCode = Literal["only_n_routes_found", "high_unknown", "partial_forecast", "eta_estimated"]
 
@@ -135,16 +139,20 @@ def plan_trip(
     generated_at = clock()
     store = forecasts or ForecastStore(providers.weather, clock=clock)
 
+    started = time.perf_counter()
     options = find_routes(
         providers.routing,
         RouteRequest(
             request.origin.position, request.destination.position, departure, request.load_lb
         ),
     )
+    routed = time.perf_counter()
     prepared = [_prepare(i, r, request) for i, r in enumerate(options.routes)]
 
     # One batch for every checkpoint of every route.
+    weather_started = time.perf_counter()
     lookup = store.get([pt.position for p in prepared for pt in p.points], CHECKPOINT_STEP_DEG)
+    weather_ms = _ms_since(weather_started)
 
     candidates: list[Candidate] = []
     built: dict[str, tuple[_Prepared, tuple[Checkpoint, ...], RouteMetrics, float]] = {}
@@ -188,7 +196,7 @@ def plan_trip(
             )
         )
 
-    return Plan(
+    plan = Plan(
         request=request,
         routes=tuple(routes),
         recommended_id=ranking.recommended_id,
@@ -201,6 +209,34 @@ def plan_trip(
         forecast_as_of=lookup.oldest_fetch,
         demo=providers.demo,
     )
+    points = len(lookup.series)
+    logger.info(
+        "plan %s",
+        plan.reason_code,
+        extra={
+            "event": "plan",
+            "routes": len(routes),
+            "checkpoints": sum(len(r.checkpoints) for r in routes),
+            "forecast_points": points,
+            "cache_hit_ratio": round(lookup.cache_hits / points, 3) if points else None,
+            "routing_ms": round((routed - started) * 1000),
+            "weather_ms": weather_ms,
+            "total_ms": _ms_since(started),
+            "stale": plan.stale,
+            "recommended": plan.recommended_id,
+            "reason_code": plan.reason_code,
+            "warnings": [w.code for w in plan.warnings],
+            "via_fallback": options.via_fallback_used,
+            "hos": request.hos is not None,
+            "interval_mi": request.interval_mi,
+            "demo": plan.demo,
+        },
+    )
+    return plan
+
+
+def _ms_since(started: float) -> int:
+    return round((time.perf_counter() - started) * 1000)
 
 
 def _warnings(

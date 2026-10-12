@@ -37,6 +37,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # First, so every later log line (including errors) carries the request id.
+    "config.observability.RequestIdMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -181,5 +183,36 @@ SPECTACULAR_SETTINGS = {
         "WarningCodeEnum": "planner.api.serializers.WARNING_CODES",
         "HosStopKindEnum": ["break", "rest", "restart"],
         "HosStopReasonEnum": "planner.api.serializers.STOP_REASONS",
+    },
+}
+
+# One JSON object per line on stdout (RFC §14), each with the request id.
+# LOG_FORMAT=plain gives readable lines for local development.
+LOG_FORMAT = env.str("LOG_FORMAT", default="json")
+LOGGING: dict[str, Any] = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {"request_id": {"()": "config.observability.RequestIdFilter"}},
+    "formatters": {
+        "json": {"()": "config.observability.JsonFormatter"},
+        "plain": {"format": "%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "filters": ["request_id"],
+            "formatter": LOG_FORMAT,
+        },
+    },
+    "root": {"handlers": ["console"], "level": env.str("LOG_LEVEL", default="INFO")},
+    "loggers": {
+        # Django's own console handler would print these a second time.
+        "django": {"handlers": [], "level": "INFO", "propagate": True},
+        # httpx logs every request URL at INFO, query string included, and
+        # HERE's key travels in the query string. planner.providers logs each
+        # call without the URL instead.
+        "httpx": {"level": "WARNING"},
+        "httpcore": {"level": "WARNING"},
     },
 }

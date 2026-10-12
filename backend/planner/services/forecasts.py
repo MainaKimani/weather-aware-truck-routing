@@ -72,6 +72,7 @@ class ForecastLookup:
     series: dict[LatLon, ForecastSeries | None]  # by snapped point
     stale: bool  # some data came from an older fetch because the provider failed
     oldest_fetch: datetime | None
+    cache_hits: int = 0  # lattice points served fresh from the cache, of len(series)
 
     def for_point(self, p: LatLon) -> ForecastSeries | None:
         return self.series.get(snap(p, self.step_deg))
@@ -94,6 +95,7 @@ class ForecastStore:
         hour = _hour(self._clock())
         wanted = list(dict.fromkeys(snap(p, step_deg) for p in points))
         found: dict[LatLon, tuple[ForecastSeries, datetime]] = self._read(wanted, hour)
+        hits = len(found)
 
         missing = [p for p in wanted if p not in found]
         mine: list[LatLon] = []
@@ -137,6 +139,7 @@ class ForecastStore:
             series={p: found[p][0] if p in found else None for p in wanted},
             stale=stale,
             oldest_fetch=min(fetches) if fetches else None,
+            cache_hits=hits,
         )
 
     # -- cache -----------------------------------------------------------

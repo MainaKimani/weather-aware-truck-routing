@@ -57,7 +57,7 @@ link to their sections instead of repeating them.
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | In review |
 | SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | In progress|
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | In review |
-| SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | To do     |
+| SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | In review |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | To do     |
 | SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | To do     |
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | To do     |
@@ -1315,18 +1315,49 @@ Spec: RFC §12, §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-40 |
+| Backend · 1 | P0 | In review | SPOT-40 |
 
 **Sub-tasks**
-- [ ] JSON logs; request id middleware; `X-Request-ID` response header.
-- [ ] One summary line per plan: provider latencies, cache hit ratio, checkpoint and grid
+- [x] JSON logs; request id middleware; `X-Request-ID` response header.
+- [x] One summary line per plan: provider latencies, cache hit ratio, checkpoint and grid
   counts, stale flag.
 
 **Acceptance criteria**
 - A plan's log lines (including provider calls) can be found by request id.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: `config/observability.py` and logging settings.
+  - **Request ids:** `RequestIdMiddleware` (first in the stack) keeps an incoming
+    `X-Request-ID` if it looks like an id (8–64 of `[A-Za-z0-9._-]`), otherwise makes a uuid4,
+    and echoes it in the response header. It sits in a context variable for the request, and
+    the middleware logs one access line (method, path, status, duration).
+  - **JSON logs:** `RequestIdFilter` stamps the id on every record, and `JsonFormatter`
+    writes one object per line with time, level, logger, message, request id, any
+    `extra={...}` fields and the traceback. `LOG_FORMAT=plain` (the local default) gives
+    readable lines with the id in brackets. `LOG_LEVEL` sets the level.
+  - **Provider calls:** `HttpClient.get_json` logs one line per call (provider, outcome,
+    attempts, duration, status, error) and never the URL. Open-Meteo's worker threads run in
+    a copy of the caller's context, so their lines carry the request id.
+  - **Summaries:** `plan_trip` logs one line per plan: routes, checkpoints, forecast points,
+    cache hit ratio, routing/weather/total ms, stale, recommendation, reason, warnings, via
+    fallback, HOS, interval, demo. `corridor_grid` logs its own line with the grid point
+    count, cell size, hit ratio, weather ms and stale. The grid is a separate request (RFC
+    §7.3), so its count is on that line rather than the plan's. `ForecastLookup` now reports
+    `cache_hits`.
+- **Fixed in passing:** httpx logs every request URL at INFO, query string included, and
+  HERE's API key is in the query string. With the root logger at INFO, the key would have
+  reached the production logs. The `httpx` and `httpcore` loggers are now at WARNING, and a
+  test guards it.
+- Verified (13 tests in `tests/test_observability.py`):
+  - **End to end:** a Dallas → Denver plan in real-weather mode (Open-Meteo mocked with respx,
+    about 250 points in three parallel batches). Every provider call, from every worker
+    thread, the plan summary and the access line carry the response's `X-Request-ID`, and no
+    planner line is missing it.
+  - A second identical plan logs a cache hit ratio of 1.0 (the first, 0.0).
+  - Incoming ids are kept; empty, short, spaced, overlong or newline-containing ones are
+    replaced. Ids are unique per request, and the context resets afterwards.
+  - A failed provider call logs WARNING with status 503, 2 attempts and no query string.
+  - JSON lines carry extras and tracebacks.
 
 ---
 
