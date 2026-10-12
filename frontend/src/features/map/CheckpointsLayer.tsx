@@ -20,6 +20,7 @@ import {
   readRouteInk,
   riskColor,
   routeIs,
+  visibility,
 } from './layers'
 
 const selectRoutes = (plan: Plan) => plan.routes
@@ -28,6 +29,7 @@ export function CheckpointsLayer({ theme }: { theme: Theme }) {
   const routes = usePlan(selectRoutes)
   const geometry = useMemo(() => (routes ? buildCheckpoints(routes) : null), [routes])
   const selected = useUiStore((s) => s.selectedRouteId) ?? ''
+  const shown = useUiStore((s) => s.layers.checkpoints)
   // Read only when the theme changes, as in RoutesLayer.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const ink = useMemo(() => readRouteInk(), [theme])
@@ -40,6 +42,7 @@ export function CheckpointsLayer({ theme }: { theme: Theme }) {
           id={LAYER.checkpoints}
           type="circle"
           filter={routeIs(selected)}
+          layout={{ visibility: visibility(shown) }}
           paint={{
             'circle-color': riskColor,
             'circle-radius': checkpointRadius,

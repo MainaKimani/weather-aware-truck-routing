@@ -69,7 +69,7 @@ link to their sections instead of repeating them.
 | SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | Done        |
 | SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | Done        |
 | SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | Done        |
-| SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | To do       |
+| SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | Done        |
 | SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | To do       |
 | SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | To do       |
 | SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | To do       |
@@ -131,6 +131,7 @@ here when that task closes it.
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
 | SPOT-51 | Dependent heatmap query (starts after the plan resolves); the endpoint and its schema don't exist yet. | SPOT-51, once SPOT-42's endpoint lands |
+| SPOT-74 | Heatmap switch in the map legend; the heatmap layer doesn't exist yet. | SPOT-80 |
 | SPOT-50 | Nothing calls `/api/v1/healthz` any more (hosts use `/healthz`); remove the route and its test. | Next backend change |
 
 ## Epics
@@ -2055,19 +2056,34 @@ Spec: PRD §9, RFC §11.
 
 ### SPOT-74 · Legend and layer toggles
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 1 | P0 | To do | SPOT-72 |
 
 **Sub-tasks**
-- [ ] Collapsible legend (six levels with labels); toggles for heatmap, checkpoints, other
+- [x] Collapsible legend (six levels with labels); toggles for heatmap, checkpoints, other
   routes.
 
 **Acceptance criteria**
 - Toggles change layer visibility only (no data reload).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: legend and layer switches (`features/map/Legend.tsx`).
+  - Collapsible legend at the map's bottom left, once a trip is planned. It has the six
+    buckets (Low → No travel, then Unknown), each as a swatch with its label, so colour is
+    never the only cue.
+  - Switches for **Checkpoints** and **Other routes**, kept in `state/ui.ts` `layers` (they
+    survive a new plan). Each changes `layout.visibility` only. Hiding the other routes also
+    narrows the hover target to the selected route, so a hidden route can't be pointed at.
+- Decisions:
+  - No heatmap switch yet: there's no heatmap layer to switch until SPOT-80. Added there as a
+    sub-task. The store already has the `heatmap` flag.
+- Verified (5 tests, 225 total):
+  - The legend appears only after planning, lists the six labels in order, and collapses.
+  - The switches flip `visibility` with no `setData` on any source. Hiding other routes
+    filters the hover target to the selected route.
+  - **In Chrome:** switching both off left only Route A and its HOS stops. The legend and
+    popups read correctly in both themes.
 
 ---
 
@@ -2086,6 +2102,8 @@ Spec: RFC §10.4.
 - [ ] `heatmap` layer under routes: weight from `h<hour>`, zoom-scaled radius, risk colour ramp.
 - [ ] Visual check at zooms 4–10; switch to the fill-grid fallback if the blur misleads.
 - [ ] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
+- [ ] Add a Heatmap switch to the map legend (`features/map/Legend.tsx`, `layers.heatmap` in
+  `state/ui.ts`) (carried over from SPOT-74).
 
 **Acceptance criteria**
 - Heatmap colours agree with checkpoint colours at the same place and hour (visual check on

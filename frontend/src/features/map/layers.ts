@@ -90,4 +90,6 @@ export function readRouteInk(root: HTMLElement = document.documentElement): Rout
   }
 }
 
+export const visibility = (on: boolean) => (on ? 'visible' : 'none')
+
 export const ROUND_LINE = { 'line-cap': 'round', 'line-join': 'round' } as const

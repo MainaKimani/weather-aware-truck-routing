@@ -13,7 +13,7 @@ import { usePlan } from '../../api/plans'
 import type { Plan } from '../../api/schema'
 import type { Theme } from '../../lib/theme'
 import { useUiStore } from '../../state/ui'
-import { LAYER, ROUND_LINE, SOURCE, readRouteInk, riskColor, routeIs } from './layers'
+import { LAYER, ROUND_LINE, SOURCE, readRouteInk, riskColor, routeIs, visibility } from './layers'
 import { buildRouteGeometry } from './routeGeometry'
 
 const selectRoutes = (plan: Plan) => plan.routes
@@ -24,6 +24,7 @@ export function RoutesLayer({ theme }: { theme: Theme }) {
   // '' matches no route, so nothing is drawn as selected or hovered.
   const selected = useUiStore((s) => s.selectedRouteId) ?? ''
   const hovered = useUiStore((s) => s.hoveredRouteId) ?? ''
+  const showOthers = useUiStore((s) => s.layers.alternatives)
   // The tokens are read only when the theme changes (it is applied to <html>
   // before React re-renders), not on every hover.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -40,7 +41,7 @@ export function RoutesLayer({ theme }: { theme: Theme }) {
           id={LAYER.otherRoutes}
           type="line"
           filter={['!', isSelected]}
-          layout={ROUND_LINE}
+          layout={{ ...ROUND_LINE, visibility: visibility(showOthers) }}
           paint={{
             'line-color': ['case', isHovered, ink.otherHover, ink.other],
             'line-width': ['case', isHovered, 5, 4],
@@ -65,6 +66,8 @@ export function RoutesLayer({ theme }: { theme: Theme }) {
         <Layer
           id={LAYER.routeHit}
           type="line"
+          // Hidden routes can't be pointed at either.
+          filter={showOthers ? true : isSelected}
           layout={ROUND_LINE}
           paint={{ 'line-color': 'black', 'line-opacity': 0, 'line-width': 16 }}
         />

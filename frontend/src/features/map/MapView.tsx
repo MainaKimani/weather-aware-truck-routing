@@ -24,6 +24,7 @@ import { CheckpointPopups } from './CheckpointPopups'
 import { CheckpointsLayer } from './CheckpointsLayer'
 import { HosStopsLayer } from './HosStopsLayer'
 import { INTERACTIVE_LAYERS } from './layers'
+import { Legend } from './Legend'
 import { PlaceMarkers } from './PlaceMarkers'
 import { RoutesLayer } from './RoutesLayer'
 import { useMapPointer } from './useMapPointer'
@@ -71,6 +72,7 @@ export default function MapView() {
         <HosStopsLayer />
         <CheckpointPopups />
       </Map>
+      {planned && <Legend />}
       {!planned && (
         <p className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-surface/90 px-3 py-1 text-xs text-muted shadow-overlay">
           Routes appear here once a trip is planned.
