@@ -39,6 +39,9 @@ def _hour(t: datetime) -> datetime:
     return t.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
 
 
+_HOUR: Final = timedelta(hours=1)
+
+
 def cache_key(p: LatLon, hour: datetime) -> str:
     # + 0.0 turns -0.0 into 0.0, so the same lattice point has one key.
     return (
@@ -59,10 +62,14 @@ def _encode(series: ForecastSeries, fetched_at: datetime) -> dict[str, Any]:
 
 def _decode(value: dict[str, Any]) -> tuple[ForecastSeries, datetime]:
     start = datetime.fromtimestamp(value["start"], UTC)
-    hours = tuple(
-        Forecast(start + timedelta(hours=i), gust, rain, snow, wind, code)
-        for i, (gust, rain, snow, wind, code) in enumerate(value["rows"])
-    )
+    rows = value["rows"]
+    hours: tuple[Forecast, ...] = ()
+    if rows:
+        # map keeps the loop in C: a coast-to-coast heatmap decodes about
+        # 140,000 hours from the cache. Each row is (gust, rain, snow, wind,
+        # code), the fields after valid_hour in Forecast's order.
+        stamps = map(start.__add__, map(_HOUR.__mul__, range(len(rows))))
+        hours = tuple(map(Forecast, stamps, *zip(*rows, strict=True)))
     return ForecastSeries(start, hours), datetime.fromtimestamp(value["fetched_at"], UTC)
 
 

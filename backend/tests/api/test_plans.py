@@ -19,6 +19,9 @@ from planner.providers.base import (
 from planner.providers.fakes import FakeGeocoder, FakeRouting, FakeWeather
 from planner.providers.registry import Providers
 
+# Every successful plan is saved as a trip.
+pytestmark = pytest.mark.django_db
+
 URL = "/api/v1/plans"
 
 

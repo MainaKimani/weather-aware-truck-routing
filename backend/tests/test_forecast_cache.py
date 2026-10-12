@@ -190,6 +190,27 @@ def test_waiter_fetches_itself_when_the_lock_holder_never_delivers() -> None:
     assert len(weather.calls) == 1
 
 
+def test_waiter_whose_own_fetch_fails_serves_stale_or_raises() -> None:
+    weather, clock = CountingWeather(), Clock()
+    point = LatLon(32.8, -96.8)
+    stocked = ForecastStore(weather, clock=clock, lock_wait_s=0.1)
+    fresh = stocked.get([point], 0.1)
+
+    # Past freshness; someone else holds the lock and never delivers; the provider is down.
+    clock.t = NOW + timedelta(hours=2)
+    cache.add(f"lock:{cache_key(point, clock.t.replace(minute=0))}", 1, 30)
+    weather.down = True
+    lookup = stocked.get([point], 0.1)
+
+    assert lookup.stale
+    assert lookup.series == fresh.series
+
+    other = LatLon(35.2, -101.8)  # never cached: nothing stale to fall back on
+    cache.add(f"lock:{cache_key(other, clock.t.replace(minute=0))}", 1, 30)
+    with pytest.raises(WeatherUnavailable, match="503"):
+        stocked.get([other], 0.1)
+
+
 def test_gaps_are_not_cached() -> None:
     class Gappy(CountingWeather):
         def hourly(
@@ -229,3 +250,16 @@ def test_unreachable_cache_does_not_wait_for_locks() -> None:
     assert time.monotonic() - started < 1.0
     assert all(v is not None for v in lookup.series.values())
     assert len(weather.calls) == 1
+
+
+@pytest.mark.parametrize("hours", [FORECAST_HOURS, 1, 0])
+def test_a_cached_series_reads_back_exactly(hours: int) -> None:
+    start = NOW.replace(minute=0)
+    full = FakeWeather(anchor=start).hourly([POINTS[0]], start, max(hours, 1))[0]
+    assert full is not None
+    series = ForecastSeries(start, full.hours[:hours])
+
+    decoded, fetched_at = forecasts._decode(forecasts._encode(series, NOW))
+
+    assert decoded == series
+    assert fetched_at == NOW

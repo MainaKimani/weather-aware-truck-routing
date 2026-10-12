@@ -6,6 +6,7 @@
 import type { Plan } from '../../api/schema'
 
 export const demoPlan = {
+  trip_id: '0d6c3a52-2f4e-4b8a-9c1d-5e7f8a9b0c1d',
   generated_at: '2026-10-12T08:25:05Z',
   rules_version: '1.0.0',
   stale: false,
