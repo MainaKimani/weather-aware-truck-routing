@@ -66,7 +66,7 @@ link to their sections instead of repeating them.
 | SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | Done        |
 | SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | Done        |
 | SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | Done        |
-| SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | To do       |
+| SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | Done        |
 | SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | To do       |
 | SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | To do       |
 | SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | To do       |
@@ -1894,16 +1894,16 @@ Spec: PRD §9, RFC §11.
 
 ### SPOT-71 · Routes layer with risk-coloured segments
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 3 | P0 | To do | SPOT-70 |
 
 **Sub-tasks**
-- [ ] One GeoJSON source per plan (memoised); decode polylines once.
-- [ ] Unselected routes grey; selected route split into segments coloured by checkpoint risk,
+- [x] One GeoJSON source per plan (memoised); decode polylines once.
+- [x] Unselected routes grey; selected route split into segments coloured by checkpoint risk,
   with casing.
-- [ ] Selection and hover via filters/paint expressions, not new data.
-- [ ] Read and write selection and hover through `state/ui.ts` (`selectedRouteId`,
+- [x] Selection and hover via filters/paint expressions, not new data.
+- [x] Read and write selection and hover through `state/ui.ts` (`selectedRouteId`,
   `hoveredRouteId`), the same store the route cards use, so card ↔ map sync needs no other
   wiring (carried over from SPOT-62).
 
@@ -1911,7 +1911,44 @@ Spec: PRD §9, RFC §11.
 - Changing selection doesn't call `setData` (asserted in a test with a mocked map).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: routes layer (`features/map/RoutesLayer.tsx`, `routeGeometry.ts`).
+  - **Data:** `buildRouteGeometry(routes)` runs once per plan (memoised on `plan.routes`). It
+    decodes each polyline once (`lib/polyline.ts`) and makes two sources:
+    - `routes`: one line per route.
+    - `route-segments`: every route split into stretches by checkpoint level. Each checkpoint
+      colours the miles it owns (halfway to each neighbour, as the backend counts owned
+      miles), and same-level neighbours merge. Distances along the polyline are scaled to the
+      reported miles, as the backend does when it places checkpoints.
+  - **Drawing:** other routes grey (4 px, darker and 5 px on hover). The selected route has a
+    10 px casing (dark on the light basemap, light on the dark one) under 6 px segments
+    coloured from `lib/risk.ts`, with Unknown in the neutral grey. A wide invisible hit line
+    makes thin routes easy to point at.
+  - **Selection and hover:** filters and paint expressions on `selectedRouteId` and
+    `hoveredRouteId` in `state/ui.ts`. The map writes the same store as the route cards
+    (`useMapPointer`), so card ↔ map sync needs no other wiring. The cursor turns to a pointer
+    over a route.
+- Decisions:
+  - Every route is split into segments, not only the selected one, so selecting another
+    route changes a filter rather than the data.
+  - A replan that returns identical routes keeps the same `routes` object (query results are
+    structurally shared), so its data isn't sent to the map again; the camera still refits.
+  - Route greys and the casing are theme tokens (`--map-route`, `--map-route-hover`,
+    `--map-casing` in `index.css`), read when the theme changes, because the map can't use
+    CSS variables. The palette guard (no hex colours outside `lib/risk.ts`) holds.
+  - `@types/geojson` added as a direct dev dependency instead of relying on MapLibre's.
+- Verified (19 new tests, 197 total):
+  - Polyline decoding against Google's reference example.
+  - Stretch bounds and merging, and a route with no checkpoints drawn Unknown.
+  - Each demo route covered end to end by unbroken segments in checkpoint-level order. Route
+    B's Severe stretch passes within a mile of every Severe checkpoint.
+  - **Acceptance:** selecting and hovering change filters and paint with no `setData` on
+    either source (mocked map). New routes cause exactly one `setData` per source; identical
+    routes cause none. A theme change swaps the line colours without new data.
+  - Map hover, click and leave update the shared store, and the pointer cursor shows only
+    over a route.
+  - **In Chrome:** selecting Route B's card draws its storm between Salina and Wichita.
+    Hovering Route C on the map brightens it and outlines its card; clicking it selects it,
+    and the checkpoint table follows.
 
 ### SPOT-72 · Checkpoints layer, tooltip and popup
 

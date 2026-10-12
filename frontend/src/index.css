@@ -46,6 +46,11 @@
   --accent-ink: #ffffff;
   --focus: #2563eb;
   --danger: #b91c1c;
+
+  /* Map lines, read by the map at runtime (features/map/layers.ts). */
+  --map-route: #8a94a3;
+  --map-route-hover: #4b5563;
+  --map-casing: #1f2937;
 }
 
 [data-theme='dark'] {
@@ -59,6 +64,10 @@
   --accent-ink: #0b0f14;
   --focus: #93c5fd;
   --danger: #f87171;
+
+  --map-route: #5b6472;
+  --map-route-hover: #98a2b3;
+  --map-casing: #e6eaf0;
 }
 
 @layer base {

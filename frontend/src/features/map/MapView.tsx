@@ -20,7 +20,10 @@ import type { Plan } from '../../api/schema'
 import { useTheme } from '../../lib/theme'
 import { BASEMAP, INITIAL_VIEW } from './basemap'
 import { Camera } from './Camera'
+import { INTERACTIVE_LAYERS } from './layers'
 import { PlaceMarkers } from './PlaceMarkers'
+import { RoutesLayer } from './RoutesLayer'
+import { useMapPointer } from './useMapPointer'
 
 // react-map-gl reports a map that couldn't start (no WebGL, say) as an error
 // with no target; later errors, such as a tile that didn't load, have one.
@@ -34,6 +37,7 @@ export default function MapView() {
   const { theme } = useTheme()
   const planned = usePlan(hasPlan) ?? false
   const [unavailable, setUnavailable] = useState(false)
+  const pointer = useMapPointer()
 
   if (unavailable) return <MapUnavailable />
 
@@ -47,12 +51,18 @@ export default function MapView() {
         touchPitch={false}
         pitchWithRotate={false}
         attributionControl={{ compact: true }}
+        interactiveLayerIds={INTERACTIVE_LAYERS}
+        cursor={pointer.cursor}
+        onMouseMove={pointer.onMouseMove}
+        onMouseOut={pointer.onMouseOut}
+        onClick={pointer.onClick}
         onError={(event) => {
           if (failedToStart(event)) setUnavailable(true)
         }}
       >
         <NavigationControl position="top-right" showCompass={false} />
         <Camera />
+        <RoutesLayer theme={theme} />
         <PlaceMarkers />
       </Map>
       {!planned && (
