@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { AppProviders } from './app/AppProviders'
 import { usePlan } from './api/plans'
 import type { Plan } from './api/schema'
+import { CheckpointTable } from './features/checkpoints/CheckpointTable'
 import { DemoBadge } from './features/plan/DemoBadge'
 import { RoutesPanel } from './features/routes-panel/RoutesPanel'
 import { TripForm } from './features/trip-form/TripForm'
@@ -46,6 +47,7 @@ function Panel() {
       )}
       <TripForm />
       <RoutesPanel />
+      <CheckpointTable />
     </div>
   )
 }

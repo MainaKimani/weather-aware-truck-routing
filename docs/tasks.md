@@ -63,7 +63,7 @@ link to their sections instead of repeating them.
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | Done        |
 | SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | Done        |
-| SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | To do       |
+| SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | Done        |
 | SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | To do       |
 | SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | To do       |
 | SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | To do       |
@@ -1742,17 +1742,49 @@ Spec: PRD §7.3.1.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-62 |
+| Frontend · 2 | P0 | Done | SPOT-62 |
 
 **Sub-tasks**
-- [ ] Table for the selected route: mile, ETA, gust, rain, snow, level.
-- [ ] Row click flies the map to the checkpoint and opens its popup.
+- [x] Table for the selected route: mile, ETA, gust, rain, snow, level.
+- [x] Row click flies the map to the checkpoint and opens its popup.
 
 **Acceptance criteria**
 - Long routes (200+ rows) scroll smoothly (virtualised if needed).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: checkpoint table (`features/checkpoints/CheckpointTable.tsx`), below the cards.
+  - **Content:** the selected route's checkpoints with mile, ETA on the origin's clock
+    ("Mon 07:04 CDT"), wind as sustained / gust in mph (sustained for information, design
+    review fix 10), rain and snow per hour, and the level chip with the condition that set
+    it ("Severe gusts"). A "· load" mark explains a level raised by the load rule.
+  - **Missing data:** a missing forecast reads "No data" in every column and Unknown in grey,
+    never Low or blank.
+  - **Selection:** a row click, or Enter/Space on a focused row, sets `selectedCheckpoint` in
+    the UI store (and `aria-selected`). Hover sets `hoveredCheckpoint`. The map will follow
+    both.
+  - **Virtualisation:** `@tanstack/react-virtual` with fixed 36 px rows in a 360 px viewport.
+    Spacer rows above and below the rendered window keep it a native `<table>`, and
+    `aria-rowcount` / `aria-rowindex` tell assistive technology where each row sits.
+- Decisions:
+  - It's always virtualised rather than above a threshold: one code path, and at 10 mi
+    spacing a cross-country route has 300+ rows.
+  - It sits below the cards, not inside the selected card, so the cards stay comparable at a
+    glance.
+- Found in Chrome and fixed: at the panel's 400 px the table needed sideways scrolling. The
+  zone moved into the ETA heading (a row shows its own zone only where it differs, such as
+  across a DST change), and the deciding condition sits under the level chip. Both tested.
+- Verified (7 tests, 152 total):
+  - Nothing renders until a route is selected. Row cells equal the fixture's values
+    (mile, ETA, sustained / gust, rain, snow, level and driver), and the table follows the
+    selection.
+  - A null forecast gives "No data" ×3 and Unknown. The load-rule mark shows.
+  - Click and Enter select, moving `aria-selected`.
+  - A 300-checkpoint route renders fewer than 40 rows with `aria-rowcount` 301. After
+    scrolling to row 200, row 200 is rendered and row 1 isn't.
+  - jsdom does no layout, so `test/layout.ts` gives scroll containers their inline height in
+    these tests. Real scrolling is checked in Chrome with the batch.
+- Left: flying the map to the selected checkpoint is SPOT-72's, which now has a sub-task to
+  follow the same store.
 
 ### SPOT-64 · Empty, loading, partial and error states
 
@@ -1825,6 +1857,9 @@ Spec: PRD §9, RFC §11.
 - [ ] Single `circle` layer, colour by level, zoom-scaled radius; hover via `feature-state`.
 - [ ] Tooltip (level, ETA) and popup (mile, ETA, gust, sustained "for info", rain, snow,
   level, driver, load rule sentence).
+- [ ] Follow `selectedCheckpoint` / `hoveredCheckpoint` in `state/ui.ts`: fly to and open the
+  popup for the selected checkpoint, highlight the hovered one. The checkpoint table already
+  sets them (carried over from SPOT-63).
 
 **Acceptance criteria**
 - 600+ checkpoints pan and zoom at 60 fps.

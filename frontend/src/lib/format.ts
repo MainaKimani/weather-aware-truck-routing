@@ -28,8 +28,11 @@ export function formatStopLength(seconds: number): string {
   return formatDuration(seconds)
 }
 
-/** "Mon 07:04 CDT": weekday, 24-hour time and zone, on the clock of `timeZone`. */
-export function formatClockTime(iso: string, timeZone: string): string {
+/**
+ * "Mon 07:04 CDT": weekday, 24-hour time and zone, on the clock of `timeZone`.
+ * Without the zone ("Mon 07:04") where a heading already names it.
+ */
+export function formatClockTime(iso: string, timeZone: string, withZone = true): string {
   const date = new Date(iso)
   const time = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -38,7 +41,7 @@ export function formatClockTime(iso: string, timeZone: string): string {
     minute: '2-digit',
     hourCycle: 'h23',
   }).format(date)
-  return `${time} ${zoneAbbreviation(date, timeZone)}`
+  return withZone ? `${time} ${zoneAbbreviation(date, timeZone)}` : time
 }
 
 /** "0.25 / 4.0", or "No data" when every checkpoint is Unknown. */
@@ -54,7 +57,13 @@ export function formatAge(iso: string, now: Date = new Date()): string {
   return `${String(Math.round(minutes / 60))} h ago`
 }
 
-/** Weather values with units, or "No data" (never blank, never zero). */
+/** A weather value, or "No data" (never blank, never zero). */
+export function formatNumber(value: number | null | undefined, digits = 0): string {
+  return value === null || value === undefined ? 'No data' : value.toFixed(digits)
+}
+
+/** A weather value with its unit, or "No data". */
 export function formatValue(value: number | null | undefined, unit: string, digits = 0): string {
-  return value === null || value === undefined ? 'No data' : `${value.toFixed(digits)} ${unit}`
+  const n = formatNumber(value, digits)
+  return n === 'No data' ? n : `${n} ${unit}`
 }
