@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "accounts",
     "planner",
 ]
@@ -137,4 +138,25 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "EXCEPTION_HANDLER": "planner.api.errors.exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# The OpenAPI schema is generated from the serializers and committed as
+# backend/openapi.yaml; the frontend's types are generated from that file.
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Weather-Aware Truck Routing API",
+    "DESCRIPTION": "Plans truck routes rated for weather risk along the way.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # Separate request and response components, so read-only and write-only
+    # shapes don't merge into one type in the generated client.
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": "/api/v1",
+    "ENUM_NAME_OVERRIDES": {
+        "RiskLevelEnum": ["LOW", "MODERATE", "HIGH", "SEVERE", "NO_TRAVEL"],
+        "RiskDriverEnum": "planner.domain.risk.CONDITION_ORDER",
+        "WarningCodeEnum": "planner.api.serializers.WARNING_CODES",
+        "HosStopKindEnum": ["break", "rest", "restart"],
+        "HosStopReasonEnum": "planner.api.serializers.STOP_REASONS",
+    },
 }

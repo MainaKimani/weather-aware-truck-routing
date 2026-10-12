@@ -7,22 +7,24 @@ and the OpenAPI schema is generated from it.
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any, ClassVar, Final
+from typing import Any, ClassVar, Final, get_args
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from planner.domain.geo import haversine_mi
-from planner.domain.hos import DEFAULT_RULES, Cycle, HosClocks, PlacedStop
+from planner.domain.hos import DEFAULT_RULES, Cycle, HosClocks, PlacedStop, StopKind, StopReason
 from planner.domain.polyline import encode
-from planner.domain.ranking import RISK_AVG_TOLERANCE
+from planner.domain.ranking import RISK_AVG_TOLERANCE, ReasonCode
+from planner.domain.risk import Condition, Level, LoadRule
 from planner.domain.sampling import ALLOWED_INTERVALS_MI
 from planner.domain.types import LatLon
 from planner.providers.base import Place
 from planner.services.corridor import HeatmapGrid
-from planner.services.plan import Plan, PlanRequest
+from planner.services.plan import Plan, PlanRequest, WarningCode
 
 MAX_LOAD_LB: Final = 80_000
 DEPARTURE_PAST: Final = timedelta(minutes=15)
@@ -54,6 +56,9 @@ class AwareDateTimeField(serializers.DateTimeField):
 
 
 class PlaceInSerializer(serializers.Serializer[Place]):
+    class Meta:
+        ref_name = "Place"
+
     lat = serializers.FloatField(min_value=-90, max_value=90)
     lon = serializers.FloatField(min_value=-180, max_value=180)
     label = serializers.CharField(max_length=200)  # type: ignore[assignment]  # Field.label
@@ -81,6 +86,9 @@ def _hours(max_h: int) -> serializers.DecimalField:
 
 class HosInSerializer(serializers.Serializer[dict[str, Any]]):
     """The driver's ELD clocks, in hours remaining (PRD §7.3.1)."""
+
+    class Meta:
+        ref_name = "Hos"
 
     enabled = serializers.BooleanField(default=False)
     cycle = serializers.ChoiceField(choices=list(CYCLES), required=False)
@@ -125,6 +133,9 @@ class HosInSerializer(serializers.Serializer[dict[str, Any]]):
 
 
 class PlanRequestSerializer(serializers.Serializer[PlanRequest]):
+    class Meta:
+        ref_name = "Plan"
+
     origin = PlaceInSerializer()
     destination = PlaceInSerializer()
     departure = AwareDateTimeField()
@@ -173,6 +184,9 @@ def _place(data: dict[str, Any]) -> Place:
 
 # --- Output ------------------------------------------------------------------
 
+WARNING_CODES: Final = list(get_args(WarningCode))
+STOP_REASONS: Final = list(get_args(StopReason))
+
 
 class UtcDateTimeField(serializers.DateTimeField):
     """UTC, whole seconds: 2026-10-12T11:23:26Z."""
@@ -196,6 +210,17 @@ class Seconds(serializers.IntegerField):
         return round(value)
 
 
+def _choices(literal: Any) -> list[str]:
+    """The values of a Literal type, as a list of choices."""
+    return list(get_args(literal))
+
+
+def _output_choice(literal: Any, **kwargs: Any) -> serializers.ChoiceField:
+    """A string from a fixed set, typed as an enum in the schema."""
+    return serializers.ChoiceField(choices=_choices(literal), **kwargs)
+
+
+@extend_schema_field({"type": "string", "enum": [level.name for level in Level]})
 class LevelField(serializers.CharField):
     """A risk level by name: "LOW", "MODERATE", "HIGH", "SEVERE" or "NO_TRAVEL"; null is Unknown."""
 
@@ -203,12 +228,16 @@ class LevelField(serializers.CharField):
         return str(value.name)
 
 
-class EnumValueField(serializers.CharField):
+@extend_schema_field({"type": "string", "enum": [kind.value for kind in StopKind]})
+class StopKindField(serializers.CharField):
     def to_representation(self, value: Any) -> str:
         return str(value.value)
 
 
 class PlaceOutSerializer(serializers.Serializer[Place]):
+    class Meta:
+        ref_name = "Place"
+
     label = serializers.CharField()  # type: ignore[assignment]  # Field.label
     lat = Rounded(5, source="position.lat")
     lon = Rounded(5, source="position.lon")
@@ -216,6 +245,9 @@ class PlaceOutSerializer(serializers.Serializer[Place]):
 
 
 class HosOutSerializer(serializers.Serializer[HosClocks]):
+    class Meta:
+        ref_name = "Hos"
+
     enabled = serializers.SerializerMethodField()
     cycle = serializers.SerializerMethodField()
     drive_left_h = serializers.SerializerMethodField()
@@ -226,6 +258,7 @@ class HosOutSerializer(serializers.Serializer[HosClocks]):
     def get_enabled(self, clocks: HosClocks) -> bool:
         return True
 
+    @extend_schema_field(serializers.ChoiceField(choices=list(CYCLES)))
     def get_cycle(self, clocks: HosClocks) -> str:
         return next(k for k, v in CYCLES.items() if v is clocks.cycle)
 
@@ -262,12 +295,12 @@ class ForecastSerializer(serializers.Serializer[Any]):
 
 class RiskSerializer(serializers.Serializer[Any]):
     level = LevelField(allow_null=True)
-    driver = serializers.CharField(allow_null=True)
+    driver = _output_choice(Condition, allow_null=True)
     wind = LevelField(allow_null=True)
     wind_adjusted = LevelField(allow_null=True)
     rain = LevelField(allow_null=True)
     snow = LevelField(allow_null=True)
-    load_rule = serializers.CharField(allow_null=True)
+    load_rule = _output_choice(LoadRule, allow_null=True)
 
 
 class CheckpointSerializer(serializers.Serializer[Any]):
@@ -281,8 +314,8 @@ class CheckpointSerializer(serializers.Serializer[Any]):
 
 
 class HosStopSerializer(serializers.Serializer[PlacedStop]):
-    kind = EnumValueField(source="stop.kind")
-    reason = serializers.CharField(source="stop.reason")
+    kind = StopKindField(source="stop.kind")
+    reason = _output_choice(StopReason, source="stop.reason")
     mile = Rounded(2)
     lat = Rounded(5, source="position.lat")
     lon = Rounded(5, source="position.lon")
@@ -328,7 +361,7 @@ class RouteSerializer(serializers.Serializer[Any]):
 
 
 class WarningSerializer(serializers.Serializer[Any]):
-    code = serializers.CharField()
+    code = _output_choice(WarningCode)
     message = serializers.CharField()
     route_id = serializers.CharField(allow_null=True)
 
@@ -370,7 +403,7 @@ class PlanSerializer(serializers.Serializer[Plan]):
     inputs = InputsSerializer(source="request")
     settings = SettingsSerializer(source="*")
     recommended_route_id = serializers.CharField(source="recommended_id", allow_null=True)
-    reason_code = serializers.CharField()
+    reason_code = _output_choice(ReasonCode)
     recommendation_reason = serializers.CharField(source="reason")
     warnings = WarningSerializer(many=True)
     routes = RouteSerializer(many=True)
@@ -410,5 +443,18 @@ class SuggestQuerySerializer(serializers.Serializer[dict[str, str]]):
     q = serializers.CharField(max_length=MAX_QUERY, allow_blank=True, trim_whitespace=True)
 
 
-class SuggestionSerializer(PlaceOutSerializer):
-    """A place to plan from or to: label, position and IANA time zone (null if unknown)."""
+# --- Errors ------------------------------------------------------------------
+
+
+class ErrorDetailSerializer(serializers.Serializer[dict[str, Any]]):
+    code = serializers.CharField(help_text="Stable machine-readable code, e.g. invalid_input.")
+    message = serializers.CharField(help_text="A sentence for the user.")
+    fields = serializers.DictField(  # type: ignore[assignment]  # Serializer.fields
+        child=serializers.ListField(child=serializers.CharField()),
+        required=False,
+        help_text='Validation messages by field, nested fields dotted: {"hos.drive_left_h": [...]}',
+    )
+
+
+class ErrorSerializer(serializers.Serializer[dict[str, Any]]):
+    error = ErrorDetailSerializer()

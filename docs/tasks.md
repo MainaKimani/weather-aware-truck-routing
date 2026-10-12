@@ -55,7 +55,7 @@ link to their sections instead of repeating them.
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | In review |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress|
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | In review |
-| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | To do     |
+| SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | In progress|
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | To do     |
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | To do     |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | To do     |
@@ -1214,10 +1214,10 @@ Spec: RFC §7.3, §8.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 1 | P0 | To do | SPOT-41 |
+| Full stack · 1 | P0 | In progress | SPOT-41 |
 
 **Sub-tasks**
-- [ ] drf-spectacular schema at `/api/v1/schema`; committed `openapi.yaml`.
+- [x] drf-spectacular schema at `/api/v1/schema`; committed `openapi.yaml`.
 - [ ] `openapi-typescript` generates `frontend/src/api/schema.d.ts`.
 - [ ] CI fails if the committed schema or generated types are out of date.
 
@@ -1225,7 +1225,30 @@ Spec: RFC §7.3, §8.
 - Renaming a response field without regenerating fails CI.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: backend half done. The frontend half lands on `dev-frontend` after it's synced
+  with `main` (full-stack tasks land their backend half first).
+  - drf-spectacular 0.30 serves the schema at `GET /api/v1/schema`. The schema is committed as
+    `backend/openapi.yaml`, and `make schema` regenerates it with `--validate --fail-on-warn`.
+  - Request and response components are split, so the generated client gets separate input
+    and output types. Their names read as types: `PlanRequest` / `Plan`, `Place`, `Hos`,
+    `Route`, `Checkpoint`, `Error`.
+  - Every fixed set of values is an enum: `RiskLevelEnum`, `RiskDriverEnum`, `LoadRuleEnum`,
+    `ReasonCodeEnum`, `WarningCodeEnum`, `HosStopKindEnum`, `HosStopReasonEnum`, `CycleEnum`,
+    `IntervalMiEnum`. They come from the domain's `Literal` types, so adding a value updates
+    the schema.
+  - Both operations document their error responses with the shared `Error` shape (400, 422,
+    429, 502). Health checks are left out of the schema.
+  - The suggest endpoint now returns the same `Place` shape as the plan's inputs; its own
+    duplicate serializer is gone.
+- Verified: `tests/api/test_openapi.py` regenerates the schema and compares it with the
+  committed file. Renaming `eta_estimated` without regenerating fails it with "run
+  `make schema`", and restoring the name passes. Since CI runs pytest, CI fails on drift too.
+  The served schema lists exactly the two endpoints. Pre-commit's `check-yaml` passes on the
+  file.
+- Left (frontend, on `dev-frontend`): add `openapi-typescript`, generate
+  `frontend/src/api/schema.d.ts` from `backend/openapi.yaml`, and fail CI when it's stale.
+  Also add `backend/openapi.yaml` to the frontend's change filter in `ci.yml`, so a schema
+  change runs the frontend job.
 
 ### SPOT-45 · Security settings, throttling, health checks
 
