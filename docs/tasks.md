@@ -51,7 +51,7 @@ link to their sections instead of repeating them.
 | SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | Done      |
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done      |
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done      |
-| SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | To do     |
+| SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | In review |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | To do     |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | To do     |
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | To do     |
@@ -1025,13 +1025,13 @@ Spec: RFC §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-21–26, SPOT-32, SPOT-35 |
+| Backend · 3 | P0 | In review | SPOT-21–26, SPOT-32, SPOT-35 |
 
 **Sub-tasks**
-- [ ] `plan_trip(request)`: routes → checkpoints → ETAs (+ HOS) → forecasts (one batched call
+- [x] `plan_trip(request)`: routes → checkpoints → ETAs (+ HOS) → forecasts (one batched call
   across all routes) → risk → metrics → ranking.
-- [ ] Return domain objects; saving as a trip is SPOT-111.
-- [ ] Add `rules_version`, `generated_at`, `stale`, warnings.
+- [x] Return domain objects; saving as a trip is SPOT-111.
+- [x] Add `rules_version`, `generated_at`, `stale`, warnings.
 
 **Acceptance criteria**
 - End-to-end test with fakes reproduces the demo scenario exactly (golden JSON file).
@@ -1039,7 +1039,40 @@ Spec: RFC §18.3.
 - Cold plan with fakes plus 300 ms simulated latency per provider call finishes in < 2 s.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: `planner/services/plan.py` holds `plan_trip(request, providers, forecasts, clock)`.
+  - **Pipeline:** `find_routes` → per route a `RouteGeometry`, checkpoints, a `DriveProfile`
+    and, with HOS on, `plan_hos` → ETAs through `HosPlan.clock_offset` → one `ForecastStore.get`
+    for every checkpoint of every route → `classify` → `route_metrics` → `rank_routes`, with
+    HOS trip time as the duration → `place_stops`.
+  - **Output** is domain objects: `Plan` with `PlannedRoute`s in rank order, each with its
+    `Checkpoint`s (mile, owned miles, position, ETA, forecast, `RiskResult`), placed HOS
+    stops, metrics, departure and arrival. It also carries `rules_version`, `generated_at`,
+    `stale`, `forecast_as_of` (oldest fetch used) and `demo`.
+  - **Ids and names** follow provider order, fastest first: `r1`–`r3` and Route A–C. They
+    stay stable when ranking reorders the routes, so Dallas → Denver gives
+    "Route A · via Amarillo", as in the design.
+  - **Warnings:** `only_n_routes_found` (SPOT-32), `high_unknown` (> 20% Unknown, SPOT-26),
+    `partial_forecast` for any smaller Unknown share (RFC §11 asks for a warning whenever some
+    checkpoints have no data), and `eta_estimated` when a route has no speed spans.
+- Decision: with HOS on, trip time is the exact drive time plus the planner's stops. The
+  planner works in whole seconds, and using its rounded total left arrival half a second off
+  the last checkpoint's ETA.
+- Verified (16 tests, `tests/test_plan_service.py`):
+  - **Golden file** `tests/golden/plan_demo.json`: the full demo plan (Dallas → Denver, 06:00
+    CDT, 42,000 lb, every 25 mi) minus geometry. Route A is recommended, "Fewest severe miles
+    (0 vs 100)". `tests/golden.py` compares it, and `UPDATE_GOLDEN=1` rewrites it.
+  - **Batching:** one routing call and one weather call per plan for all three routes.
+  - **Latency:** with 300 ms added to every provider call, a cold plan takes 0.8 s
+    (limit 2 s).
+  - **Stale:** with the provider down and an hour-old cache, the plan succeeds with
+    `stale: true`, `forecast_as_of` set and the same recommendation. This closes SPOT-35's
+    open criterion. With nothing cached, `WeatherUnavailable`; routing down,
+    `RoutingUnavailable`.
+  - **HOS on** gives a break and a rest on each route, shifts every later ETA by 10.5 h, and
+    makes arrival equal the last ETA.
+  - Missing forecasts are Unknown with a warning; ETAs read the hour being driven through;
+    the strong scenario ranks Route B last as not drivable.
+- `tests/conftest.py` now clears the cache around every test (it was local to the cache tests).
 
 ### SPOT-41 · `POST /api/v1/plans` endpoint
 
