@@ -726,11 +726,11 @@ probed.
 
 | Method and path | Who | Does |
 |---|---|---|
-| `GET /api/v1/trips?saved=&q=&cursor=` | owner | Trip summaries, newest first, cursor-paginated (20). Guests get at most their last 20. |
+| `GET /api/v1/trips?saved=&q=&cursor=` | owner | Trip summaries (name, places, departure, load, the recommended route and its worst level), newest first, cursor-paginated (20). `q` matches name, origin or destination. Guests get their last 20 and no further pages. |
 | `GET /api/v1/trips/{id}` | owner, or anyone if shared | Full snapshot in the same shape as the plan response, plus `name`, `saved`, `shared`, `created_at`, `is_owner`, `replanned_from` |
-| `PATCH /api/v1/trips/{id}` | owner | Update `name`, `saved` (users only; guests get 403 `account_required`), `shared` |
-| `DELETE /api/v1/trips/{id}` | owner | Delete trip, routes and heatmap |
-| `POST /api/v1/trips/{id}/replan` | owner, or anyone if shared | New trip with the same inputs and current weather; departure moved to now if in the past. Owned by the caller. |
+| `PATCH /api/v1/trips/{id}` | owner | Update any of `name`, `saved` (users only; guests get 403 `account_required`), `shared`; returns the trip |
+| `DELETE /api/v1/trips/{id}` | owner | Delete trip, routes and heatmap; 204 |
+| `POST /api/v1/trips/{id}/replan` | owner, or anyone if shared | New trip with the same inputs and current weather; departure moved to now if in the past. Owned by the caller, with `replanned_from` set; returns it like `GET`. Takes `Idempotency-Key` and the plan throttles, as `POST /plans` does. |
 
 ### 7.5 Accounts
 
@@ -738,10 +738,17 @@ probed.
 |---|---|
 | `/api/auth/browser/v1/auth/signup`, `…/login`, `…/session` (GET, DELETE) | allauth headless: sign up, log in, current session, log out |
 | `GET /api/v1/me` | `{ "user": {"email": …} | null, "guest": bool, "recent_trip_count": n }` for the header |
-| `DELETE /api/v1/me` | Delete account and all its trips; requires `{"password": …}`; ends the session |
+| `DELETE /api/v1/me` | Delete account and all its trips; requires `{"password": …}` (wrong: 400, nothing deleted); ends the session; 204 |
 
 The client gets the CSRF token from the `csrftoken` cookie and sends it as `X-CSRFToken` on
-every unsafe request. DRF's `SessionAuthentication` enforces it.
+every unsafe request. DRF's `SessionAuthentication` enforces it. `GET /api/v1/me` sets the
+cookie (the app calls it first), and a request Django refuses for CSRF gets the API's JSON
+error with code `csrf_failed` rather than Django's HTML page.
+
+allauth's endpoints answer in allauth's own shape (`{status, data, meta}`, or `{status,
+errors: [{code, message, param}]}`), which the client reads separately from the API's
+`{error}` shape. Codes the UI uses: `email_taken`, `email_password_mismatch`,
+`too_many_login_attempts` and the password validators' (`password_too_short`, …).
 
 ## 8. Corridor grid
 
@@ -905,7 +912,7 @@ Rule: **never show a missing value as safe.**
 
 - HERE key only in backend env vars; Open-Meteo needs no key.
 - DRF throttling: `plans` 10/min per guest session and IP, 30/min per signed-in user;
-  `geocode` 60/min; `heatmap` 20/min; login attempts limited by allauth. Until guest sessions
+  `geocode` 60/min; `heatmap` 20/min; `trips` (reading lists and trips) 120/min; `delete_account` 5/min per user (it checks a password); login attempts limited by allauth. Until guest sessions
   exist, guests are counted by IP. The client IP comes from `X-Forwarded-For` only
   as far as `NUM_PROXIES` trusted proxies allow (default 0), so a client can't choose its own
   throttle key.
