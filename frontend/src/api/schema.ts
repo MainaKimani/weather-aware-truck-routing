@@ -30,7 +30,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Plan a trip: three routes rated for weather risk, and a recommendation. */
+        /**
+         * @description Plan a trip: three routes rated for weather risk, and a recommendation.
+         *
+         *     The plan is saved as a trip owned by the caller (a new guest on their
+         *     first plan) and the saved snapshot is returned. A repeat with the same
+         *     `Idempotency-Key` returns the trip that key created instead of planning
+         *     again.
+         */
         post: operations["create_plan"];
         delete?: never;
         options?: never;
@@ -204,6 +211,7 @@ export interface components {
             label: string;
             tz?: string | null;
         };
+        /** @description A planned trip, as saved: what was asked, the ranked routes and the recommendation. */
         Plan: {
             /** Format: date-time */
             generated_at: string;
@@ -220,6 +228,11 @@ export interface components {
             warnings: components["schemas"]["Warning"][];
             routes: components["schemas"]["Route"][];
             corridor: components["schemas"]["Corridor"];
+            /**
+             * Format: uuid
+             * @description The saved trip; its heatmap is under /trips/{id}.
+             */
+            trip_id: string;
         };
         PlanRequest: {
             origin: components["schemas"]["PlaceRequest"];
@@ -391,7 +404,10 @@ export interface operations {
     create_plan: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description A UUID per form submission; a repeat returns the same trip. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -413,6 +429,15 @@ export interface operations {
             };
             /** @description invalid_input: a field is missing or out of range */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description idempotency_conflict: the key belongs to another caller's trip */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

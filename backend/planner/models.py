@@ -72,8 +72,6 @@ class Trip(models.Model):
     plan_settings = models.JSONField(default=dict)  # wind basis, tolerance, HOS on, as applied
     bbox = models.JSONField()  # [west, south, east, north] of all routes
 
-    routes: "models.Manager[TripRoute]"
-
     class Meta:
         constraints: ClassVar = [
             CheckConstraint(

@@ -82,7 +82,7 @@ link to their sections instead of repeating them.
 | SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
-| SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
+| SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
 | SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | To do       |
@@ -125,7 +125,6 @@ here when that task closes it.
 
 | From | What's left | Picked up in |
 |---|---|---|
-| SPOT-41 | Plan response has no `trip_id`; plans aren't saved. Add it (and `Idempotency-Key`), then `make schema`. | SPOT-111 |
 | SPOT-42 | `GET /api/v1/trips/{id}/heatmap`: store the grid as `TripHeatmap`, same access as the trip, `heatmap` throttle scope. | SPOT-42, once trips exist (SPOT-111) |
 | SPOT-45 | Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite + host); point host checks at `/healthz` and `/readyz`. | SPOT-100 |
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
@@ -1166,6 +1165,8 @@ Spec: RFC §7.2, §11.
   - The demo response's shape and geometry round trip.
   - The demo plan is 44 KB of JSON, 6.6 KB gzipped.
 - 2026-10-12: Done; lands with the API PR into `dev-backend`.
+- 2026-10-12: plans are now saved, and the response carries `trip_id` with
+  `Idempotency-Key` handling (SPOT-111).
 
 ### SPOT-42 · Corridor grid and heatmap endpoint
 
@@ -2208,14 +2209,14 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-110, SPOT-40 |
+| Backend · 2 | P0 | Done | SPOT-110, SPOT-40 |
 
 **Sub-tasks**
-- [ ] `repositories.py`: domain objects → models with versioned JSON serializers
+- [x] `repositories.py`: domain objects → models with versioned JSON serializers
   (`snapshot_version = 1`), and back.
-- [ ] Save trip and routes in one `transaction.atomic()`.
-- [ ] `Idempotency-Key` handling: same key returns the existing trip.
-- [ ] Add `trip_id` to the plan response (carried over from SPOT-41) and regenerate
+- [x] Save trip and routes in one `transaction.atomic()`.
+- [x] `Idempotency-Key` handling: same key returns the existing trip.
+- [x] Add `trip_id` to the plan response (carried over from SPOT-41) and regenerate
   `openapi.yaml`.
 
 **Acceptance criteria**
@@ -2226,7 +2227,46 @@ core features, per PRD §5.
 - `domain/` still imports nothing from Django (import-lint check).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: plans saved as trips (`planner/repositories.py`, `PlanView`).
+  - `POST /api/v1/plans` plans, then saves the trip for the caller: the signed-in user, or
+    the session's guest, made on their first successful plan. It returns the snapshot read
+    back from the saved trip, with `trip_id`. An invalid, throttled or failed request saves
+    nothing and makes no guest.
+  - `save_trip(snapshot, owner, key)` stores the plan response (snapshot version 1): inputs,
+    outcome, per-route figures and miles by level as columns, checkpoints and HOS stops as
+    JSON. Trip and routes go in one `transaction.atomic()`. `load_snapshot(trip)` gives the
+    same response back, refusing a snapshot version it can't read.
+  - **Idempotency-Key** (a UUID per form submission):
+    - The same key returns the trip it created without planning again.
+    - Two requests racing with one key end on the same trip, because the unique key is
+      caught on save.
+    - Another caller's key is a 409 `idempotency_conflict`, never their trip.
+    - A malformed key is a 400 naming the header.
+  - `openapi.yaml` regenerated: `trip_id` on `Plan`, the header, and the 409. The frontend's
+    `schema.ts` is regenerated with it (CI checks they agree), and its two recorded plan
+    fixtures gain the `trip_id` a saved trip now returns. RFC §3.1 "Writes" updated.
+- Decisions:
+  - **The stored shape is the API response, not the domain objects.** It is already
+    versioned and documented (openapi.yaml), round-trips exactly, and lets the domain change
+    without rebuilding old trips. RFC §3.1 asked for "domain objects → models … and back";
+    reading back gives the response, which is what every reader of a trip needs.
+  - `PlanSerializer` → `PlanSnapshotSerializer` (domain plan to response). `PlanSerializer`
+    now extends it with `trip_id` and describes the saved response in the schema, so the
+    component keeps its name and the frontend's `Plan` type just gains `trip_id`.
+  - 409 for a reused key: replaying another caller's trip would leak it, and planning again
+    would break the key's promise.
+- Verified (17 new tests, 614 total):
+  - **Round trip:** the demo plan, and a strong-storm plan with HOS stops and an undrivable
+    route, read back identical to what the API returned.
+  - **Atomicity:** a failure while saving routes leaves no trip row.
+  - **Idempotency:** the same key gives one trip and the same response, without
+    re-planning. Different keys give two trips. Another caller's key is 409. A non-UUID is
+    400. A race on one key gives one trip.
+  - **Owners:** a guest's first plan sets the session's guest id, and later plans share it.
+    A user's plan is theirs. Invalid and failed requests save nothing.
+  - **`domain/` imports nothing from Django:** an AST check over `planner/domain` allows
+    only the standard library and `planner.domain`.
+  - Existing plan API, OpenAPI drift and logging tests now run with the database.
 
 ### SPOT-112 · Guest identity and access layer
 

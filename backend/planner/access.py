@@ -8,7 +8,7 @@ trip ids can't be probed.
 
 import uuid
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, Literal, overload
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q, QuerySet
@@ -41,11 +41,20 @@ class Owner:
             return Q(user_id=self.user_id)
         return Q(guest_id=self.guest_id, user__isnull=True)
 
+    def owns(self, trip: Trip) -> bool:
+        if self.user_id is not None:
+            return trip.user_id == self.user_id
+        return trip.user_id is None and trip.guest_id == self.guest_id
+
     def as_fields(self) -> dict[str, Any]:
         """The Trip fields that record this owner."""
         return {"user_id": self.user_id, "guest_id": self.guest_id}
 
 
+@overload
+def current_owner(request: HttpRequest | Request, *, create: Literal[True]) -> Owner: ...
+@overload
+def current_owner(request: HttpRequest | Request, *, create: bool = False) -> Owner | None: ...
 def current_owner(request: HttpRequest | Request, *, create: bool = False) -> Owner | None:
     """The caller as an owner: the signed-in user, else the session's guest.
 

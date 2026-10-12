@@ -7,6 +7,7 @@
 import type { Plan } from '../../api/schema'
 
 export const strongHosPlan = {
+  trip_id: '6f1c2a4e-8b3d-4e5f-a6b7-c8d9e0f1a2b3',
   generated_at: '2026-10-12T09:18:55Z',
   rules_version: '1.0.0',
   stale: false,
