@@ -22,15 +22,29 @@ export async function expectAccessible(page: Page, state: string): Promise<void>
 }
 
 /**
- * Presses Tab until `target` has focus, the way a keyboard user gets there,
- * and fails if it isn't reached within `limit` presses.
+ * Presses Tab (or Shift+Tab) until `target` has focus, the way a keyboard
+ * user gets there, and fails if it isn't reached within `limit` presses.
+ *
+ * The target may not be on the page yet: the checkpoint table renders only
+ * the rows near what's in view, so a row further down appears as focus moves
+ * towards it. It is counted first, which doesn't wait, because asking an
+ * absent element whether it has focus waits for it to appear.
  */
-export async function tabTo(page: Page, target: Locator, limit = 80): Promise<void> {
+export async function tabTo(
+  page: Page,
+  target: Locator,
+  { limit = 80, backwards = false }: { limit?: number; backwards?: boolean } = {},
+): Promise<void> {
+  const key = backwards ? 'Shift+Tab' : 'Tab'
   for (let i = 0; i < limit; i++) {
-    if (await target.evaluate((el) => el === document.activeElement).catch(() => false)) return
-    await page.keyboard.press('Tab')
+    if ((await target.count()) > 0 && (await target.evaluate(isFocused))) return
+    await page.keyboard.press(key)
   }
-  throw new Error(`Tab never reached ${target.toString()} in ${String(limit)} presses`)
+  throw new Error(`${key} never reached ${target.toString()} in ${String(limit)} presses`)
+}
+
+function isFocused(element: Element): boolean {
+  return element === document.activeElement
 }
 
 /** Answers the next plan request with `plan`, as the backend would. */

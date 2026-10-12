@@ -40,6 +40,8 @@ async function choosePlace(page: Page, field: string, typed: string, place: stri
 test('stories 1-5: plan, read the pick, open checkpoints, see the load rule, scrub', async ({
   page,
 }) => {
+  // Five stories in one walk, a key at a time; about 15 s locally, twice that on CI runners.
+  test.setTimeout(60_000)
   await planByKeyboard(page)
 
   // 2: the recommendation and its reason.
@@ -55,11 +57,12 @@ test('stories 1-5: plan, read the pick, open checkpoints, see the load rule, scr
   await expect(popup).toContainText(/gust/i)
 
   // 4: Route B, chosen with the keyboard, has checkpoints a heavy load made worse.
-  await tabTo(page, page.getByRole('button', { name: /^Route B/ }))
+  // Back up from the table to the route cards above it.
+  await tabTo(page, page.getByRole('button', { name: /^Route B/ }), { backwards: true })
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Checkpoints · Route B' })).toBeVisible()
   const loadRow = page.getByRole('row').filter({ hasText: /load/ }).first()
-  await tabTo(page, loadRow, 200)
+  await tabTo(page, loadRow, { limit: 200 })
   await page.keyboard.press('Enter')
   await expect(
     page.getByText(/^Raised \w+ → \w+: gust \d+ mph with a 42,000 lb load/),
@@ -100,7 +103,7 @@ test('story 7: Hours of Service on, and a stop opened', async ({ page }) => {
   await planByKeyboard(page, { hos: true })
 
   const stop = page.getByRole('button', { name: /^(Break|Rest|Restart) / }).first()
-  await tabTo(page, stop, 200)
+  await tabTo(page, stop, { limit: 200 })
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: /stop$/ })).toBeVisible()
 })

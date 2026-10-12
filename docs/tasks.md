@@ -2446,6 +2446,14 @@ Spec: RFC §10.4.
   300 unit tests still pass.
 - Left: stories 8–11 (recent trips, sign-up, My trips, sharing) wait for those screens; moved
   to SPOT-125 with the second smoke flow.
+- 2026-10-12: the keyboard walkthrough failed on CI, and it had found a real bug. The
+  checkpoint table renders only rows near its scroll position, and Tab reaches only rendered
+  rows. Switching route kept the old scroll position, so a new route's first rows could be
+  out of the keyboard's reach. The table now starts each route at its first row (unit test
+  added). The test helper also hung for 23 s asking an unrendered row whether it had focus;
+  it now checks the row exists first. Backing up to the route cards uses Shift+Tab, as a
+  user would, and the five-story walk has a 60 s limit (13–15 s locally). Passes 5 runs in a
+  row, and all 16 end-to-end tests with 2 workers as on CI.
 
 ### SPOT-92 · Performance check against budgets
 
