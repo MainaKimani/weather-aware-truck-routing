@@ -39,6 +39,7 @@ def test_schema_is_served() -> None:
         "/api/v1/trips",
         "/api/v1/trips/{trip_id}",
         "/api/v1/trips/{trip_id}/heatmap",
+        "/api/v1/trips/{trip_id}/replan",
     }
 
 

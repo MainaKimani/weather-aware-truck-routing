@@ -10,6 +10,7 @@ urlpatterns = [
     # access check rather than Django's HTML one.
     path("trips/<str:trip_id>", views.TripDetailView.as_view(), name="trip"),
     path("trips/<str:trip_id>/heatmap", views.TripHeatmapView.as_view(), name="trip-heatmap"),
+    path("trips/<str:trip_id>/replan", views.TripReplanView.as_view(), name="trip-replan"),
     path("schema", SpectacularAPIView.as_view(), name="schema"),
     path("geocode/suggest", views.GeocodeSuggestView.as_view(), name="geocode-suggest"),
 ]

@@ -229,6 +229,96 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: rate_limited
+    patch:
+      operationId: update_trip
+      description: 'A saved trip: the plan as it was made, for its owner or, if shared,
+        anyone.'
+      parameters:
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTripUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTripUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTripUpdateRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: invalid_input
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'account_required: only signed-in users save trips'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours (sharing doesn''t let
+            others edit)'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+    delete:
+      operationId: delete_trip
+      description: 'A saved trip: the plan as it was made, for its owner or, if shared,
+        anyone.'
+      parameters:
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
   /api/v1/trips/{trip_id}/heatmap:
     get:
       operationId: trip_heatmap
@@ -286,6 +376,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: weather_unavailable
+  /api/v1/trips/{trip_id}/replan:
+    post:
+      operationId: replan_trip
+      description: |-
+        Plan the trip again with current weather: the same places, load, interval
+        and HOS clocks, leaving now if the original departure has passed.
+
+        The new trip belongs to the caller, so anyone who can open a shared trip
+        can re-plan it into their own. It records which trip it came from.
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+          format: uuid
+        description: A UUID per click; a repeat returns the same new trip.
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'invalid_input: the trip''s inputs no longer make a valid plan'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours and not shared'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'idempotency_conflict: the key belongs to another caller''s
+            trip'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'no_route: no truck route between the places'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: routing_unavailable or weather_unavailable
 components:
   schemas:
     Checkpoint:
@@ -721,6 +882,19 @@ components:
     NullEnum:
       enum:
       - null
+    PatchedTripUpdateRequest:
+      type: object
+      description: What the owner can change; send only the fields to change.
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        saved:
+          type: boolean
+          description: Signed-in users only.
+        shared:
+          type: boolean
+          description: Anyone with the link can open it, read-only.
     Place:
       type: object
       properties:

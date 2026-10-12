@@ -485,6 +485,14 @@ class TripListQuerySerializer(serializers.Serializer[dict[str, Any]]):
     cursor = serializers.CharField(required=False, help_text="From a previous page's `next`.")
 
 
+class TripUpdateSerializer(serializers.Serializer[dict[str, Any]]):
+    """What the owner can change; send only the fields to change."""
+
+    name = serializers.CharField(max_length=120, allow_blank=True, trim_whitespace=True)
+    saved = serializers.BooleanField(help_text="Signed-in users only.")
+    shared = serializers.BooleanField(help_text="Anyone with the link can open it, read-only.")
+
+
 class TripSerializer(PlanSerializer):
     """A saved trip: its plan response, what the owner has set, and who is asking."""
 

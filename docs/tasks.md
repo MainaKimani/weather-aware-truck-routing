@@ -87,7 +87,7 @@ link to their sections instead of repeating them.
 | SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | Done        |
 | SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | Done        |
-| SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | To do       |
+| SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | Done        |
 | SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | To do       |
 | SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | To do       |
 | SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | To do       |
@@ -143,20 +143,20 @@ here when that task closes it.
 
 ## Epics
 
-| Epic | Goal | Graded under |
-|---|---|---|
-| E0 Planning | Agree what we're building and how | Docs 5% |
-| E1 Foundation | Repo, tooling and CI so everything after is checked automatically | Code quality 10% |
-| E2 Domain | The rules: sampling, ETAs, risk, HOS, metrics, ranking, all pure and tested | Logic 40% |
-| E3 Providers | Routing, geocoding and weather behind adapters, cached and resilient | Logic 40% |
-| E4 API | HTTP layer, contract, security and operability | Logic 40%, code quality 10% |
-| E5 Frontend base | Shell, theme, typed client, state | UI 35% |
-| E6 Planning UI | Form, results, states | UI 35% |
-| E7 Map | Routes, checkpoints, stops on a fast map | UI 35% |
-| E8 Heatmap | Corridor heatmap and a smooth 48 h slider | UI 35% |
-| E9 Hardening | Prove it works, is accessible and meets the budgets | All |
-| E10 Delivery | Hosted app, README, video | Docs 5% |
-| E11 Trips & accounts | Save every plan as a trip; guests and signed-in users; My trips, sharing | Code quality 10%, UI 35% |
+| Epic                 | Goal                                                                        |
+| -------------------- | --------------------------------------------------------------------------- |
+| E0 Planning          | Agree what we're building and how                                           |
+| E1 Foundation        | Repo, tooling and CI so everything after is checked automatically           |
+| E2 Domain            | The rules: sampling, ETAs, risk, HOS, metrics, ranking, all pure and tested |
+| E3 Providers         | Routing, geocoding and weather behind adapters, cached and resilient        |
+| E4 API               | HTTP layer, contract, security and operability                              |
+| E5 Frontend base     | Shell, theme, typed client, state                                           |
+| E6 Planning UI       | Form, results, states                                                       |
+| E7 Map               | Routes, checkpoints, stops on a fast map                                    |
+| E8 Heatmap           | Corridor heatmap and a smooth 48 h slider                                   |
+| E9 Hardening         | Prove it works, is accessible and meets the budgets                         |
+| E10 Delivery         | Hosted app, README, video                                                   |
+| E11 Trips & accounts | Save every plan as a trip; guests and signed-in users; My trips, sharing    |
 
 **Suggested order:** E1 → E2 → E3 → E4 → E11 (P0 tasks) on the backend while SPOT-4 settles the
 design; then E5 → E6/E7 → E8 → E11 (P0 frontend) → E9 → E10. P1 tasks, including accounts, only
@@ -2883,13 +2883,13 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P1 | To do | SPOT-113, SPOT-114 |
+| Backend · 2 | P1 | Done | SPOT-113, SPOT-114 |
 
 **Sub-tasks**
-- [ ] `PATCH /api/v1/trips/{id}`: name, saved (users only → else 403 `account_required`),
+- [x] `PATCH /api/v1/trips/{id}`: name, saved (users only → else 403 `account_required`),
   shared.
-- [ ] `DELETE /api/v1/trips/{id}`.
-- [ ] `POST /api/v1/trips/{id}/replan`: new trip, same inputs, current weather, departure
+- [x] `DELETE /api/v1/trips/{id}`.
+- [x] `POST /api/v1/trips/{id}/replan`: new trip, same inputs, current weather, departure
   moved to now if past, `replanned_from` set, owned by the caller.
 
 **Acceptance criteria**
@@ -2898,7 +2898,34 @@ core features, per PRD §5.
 - Turning sharing off makes the link 404 for others immediately.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip actions (`TripDetailView.patch/delete`, `TripReplanView`,
+  `repositories.replan_request`).
+  - `PATCH /api/v1/trips/{id}`: any of `name` (trimmed, up to 120), `saved` and `shared`;
+    returns the trip. A guest setting `saved` is a 403 `account_required` and nothing
+    changes. Through `get_owned_trip`, so anyone else gets 404, shared or not.
+  - `DELETE /api/v1/trips/{id}`: 204; routes and heatmap go with the trip.
+  - `POST /api/v1/trips/{id}/replan`: from any trip the caller can see. It plans again with
+    the same places, load, interval and HOS clocks, leaving now if the departure has passed.
+    The new trip is the caller's (a guest is made if needed), with `replanned_from` set, and
+    is returned like `GET`.
+  - Planning and re-planning share one path (`_plan_and_save`): validation, the plan,
+    `Idempotency-Key` replay and the race on a key, the guest made only on success, and the
+    plan throttles. RFC §7.4 updated.
+- Decisions:
+  - Re-plan sends the saved inputs back through the plan request's own validation, so a
+    re-plan can't skip a rule a new plan would meet.
+  - Guests can still rename and share their trips; only saving needs an account (saving is
+    what keeps a trip past guest retention).
+- Verified (17 tests, 695 total):
+  - **Access matrix:** another user, another guest and a visitor get 404 for PATCH, DELETE
+    and re-plan, including on a shared trip for PATCH and DELETE; nothing changes.
+  - Rename, save and share by a user, only the fields sent changing; a guest renames and
+    shares but saving is 403 with nothing changed; bad values are 400s.
+  - Turning sharing off makes the trip and its heatmap 404 for a reader straight away.
+  - Delete removes the trip, routes and heatmap.
+  - Re-plan: same inputs (with HOS), new id, `replanned_from`, same owner; a departure two
+    days past moves to now; a shared trip re-planned by a stranger becomes theirs; the same
+    `Idempotency-Key` gives one new trip.
 
 ### SPOT-117 · Delete account
 

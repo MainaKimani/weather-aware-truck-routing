@@ -43,7 +43,10 @@ WIRE_TIME: Final = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def save_trip(
-    snapshot: Mapping[str, Any], owner: Owner, idempotency_key: uuid.UUID | None = None
+    snapshot: Mapping[str, Any],
+    owner: Owner,
+    idempotency_key: uuid.UUID | None = None,
+    replanned_from: Trip | None = None,
 ) -> Trip:
     """Save a plan response as the owner's trip, with its routes, all or nothing."""
     inputs = snapshot["inputs"]
@@ -53,6 +56,7 @@ def save_trip(
         trip = Trip.objects.create(
             **owner.as_fields(),
             idempotency_key=idempotency_key,
+            replanned_from=replanned_from,
             rules_version=snapshot["rules_version"],
             snapshot_version=SNAPSHOT_VERSION,
             origin_label=origin["label"],
@@ -232,6 +236,21 @@ def load_trip(trip: Trip, owner: Owner | None) -> Snapshot:
         "created_at": _wire(trip.created_at),
         "is_owner": owner is not None and owner.owns(trip),
         "replanned_from": None if trip.replanned_from_id is None else str(trip.replanned_from_id),
+    }
+
+
+def replan_request(trip: Trip, now: datetime) -> dict[str, Any]:
+    """The trip's inputs as a new plan request: the same places, load, interval
+    and HOS clocks, leaving now if the original departure has passed."""
+    return {
+        "origin": _place(trip.origin_label, trip.origin_lat, trip.origin_lon, trip.origin_tz),
+        "destination": _place(
+            trip.destination_label, trip.destination_lat, trip.destination_lon, trip.destination_tz
+        ),
+        "departure": _wire(max(trip.departure, now)),
+        "load_lb": trip.load_lb,
+        "interval_mi": trip.interval_mi,
+        "hos": trip.hos or {"enabled": False},
     }
 
 

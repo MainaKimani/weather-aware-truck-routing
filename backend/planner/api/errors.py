@@ -25,10 +25,18 @@ class IdempotencyConflict(exceptions.APIException):
     default_detail = "This request was already used to plan a trip. Plan the trip again."
 
 
+class AccountRequired(exceptions.APIException):
+    """Something only a signed-in user can do, such as saving a trip."""
+
+    status_code = status.HTTP_403_FORBIDDEN
+    default_detail = "Create an account or log in to save trips."
+
+
 PROVIDER_STATUS: dict[type[ProviderError], int] = {NoRoute: status.HTTP_422_UNPROCESSABLE_ENTITY}
 
 _CODES: Mapping[type[exceptions.APIException], str] = {
     IdempotencyConflict: "idempotency_conflict",
+    AccountRequired: "account_required",
     exceptions.ValidationError: "invalid_input",
     exceptions.ParseError: "invalid_input",
     exceptions.Throttled: "rate_limited",

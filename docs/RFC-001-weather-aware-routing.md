@@ -728,9 +728,9 @@ probed.
 |---|---|---|
 | `GET /api/v1/trips?saved=&q=&cursor=` | owner | Trip summaries (name, places, departure, load, the recommended route and its worst level), newest first, cursor-paginated (20). `q` matches name, origin or destination. Guests get their last 20 and no further pages. |
 | `GET /api/v1/trips/{id}` | owner, or anyone if shared | Full snapshot in the same shape as the plan response, plus `name`, `saved`, `shared`, `created_at`, `is_owner`, `replanned_from` |
-| `PATCH /api/v1/trips/{id}` | owner | Update `name`, `saved` (users only; guests get 403 `account_required`), `shared` |
-| `DELETE /api/v1/trips/{id}` | owner | Delete trip, routes and heatmap |
-| `POST /api/v1/trips/{id}/replan` | owner, or anyone if shared | New trip with the same inputs and current weather; departure moved to now if in the past. Owned by the caller. |
+| `PATCH /api/v1/trips/{id}` | owner | Update any of `name`, `saved` (users only; guests get 403 `account_required`), `shared`; returns the trip |
+| `DELETE /api/v1/trips/{id}` | owner | Delete trip, routes and heatmap; 204 |
+| `POST /api/v1/trips/{id}/replan` | owner, or anyone if shared | New trip with the same inputs and current weather; departure moved to now if in the past. Owned by the caller, with `replanned_from` set; returns it like `GET`. Takes `Idempotency-Key` and the plan throttles, as `POST /plans` does. |
 
 ### 7.5 Accounts
 
