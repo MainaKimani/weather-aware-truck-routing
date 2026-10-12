@@ -13,7 +13,12 @@ import { RouteSkeletons } from './RouteSkeletons'
 
 const hasPlan = (plan: Plan) => plan.routes.length > 0
 
-export function ResultsArea() {
+interface ResultsAreaProps {
+  /** Called with the new plan when a failed one is retried successfully. */
+  onPlanned?: (plan: Plan) => void
+}
+
+export function ResultsArea({ onPlanned }: ResultsAreaProps = {}) {
   const attempt = useLatestPlanAttempt()
   const planned = usePlan(hasPlan) ?? false
   const { plan, isPending } = usePlanTrip()
@@ -24,7 +29,7 @@ export function ResultsArea() {
   const failure =
     attempt.status === 'error' && attempt.error?.code !== 'invalid_input' ? attempt.error : null
   const retry = () => {
-    if (attempt.request) plan(attempt.request)
+    if (attempt.request) plan(attempt.request, { onSuccess: onPlanned })
   }
 
   return (

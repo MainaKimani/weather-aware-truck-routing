@@ -18,6 +18,7 @@ import { useUiStore } from '../state/ui'
 import { api, unwrap } from './client'
 import type { ApiError } from './errors'
 import { heatmapQuery } from './heatmap'
+import { addPlannedTrip } from './trips'
 import type { Plan, PlanRequest } from './schema'
 
 export const planKeys = {
@@ -63,6 +64,7 @@ export function usePlanTrip(): PlanMutation {
       // The heatmap starts now, after the plan, so the routes are drawn first.
       // A failure stays in its query, where the map reads it.
       queryClient.query(heatmapQuery(plan.trip_id)).catch(() => undefined)
+      addPlannedTrip(queryClient, plan)
     },
   })
   const plan = useCallback(

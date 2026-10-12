@@ -91,13 +91,13 @@ link to their sections instead of repeating them.
 | SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | Done        |
 | SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | Done        |
-| SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
-| SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
-| SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do       |
-| SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
-| SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | To do       |
-| SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
-| SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do       |
+| SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
+| SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
+| SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | Done        |
+| SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
+| SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | Done        |
+| SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
+| SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
 **Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 29 (60 points).
 
@@ -117,16 +117,15 @@ here when that task closes it.
 - PRD Q3: paid routing tier (see Blocked).
 
 **Branch housekeeping**
-- Unpushed: `feat/spot-110-112-trips` (trips, heatmap endpoint and its per-condition
-  levels) and `feat/spot-80-92-heatmap`, which holds the map commits (70–74), the trips
-  branch merged in, and 80–92.
+- Unpushed: `feat/spot-113-119-accounts` (trip read and action endpoints, accounts, guest
+  claim, account deletion, purge, demo seed; from `main`) and `feat/spot-120-126-account-ui`
+  (the routed app, trip pages, recent trips, log-in and sign-up, My trips, trip actions,
+  account page; from `main` with the accounts branch merged in).
 - Merge order, so each PR shows only its own side:
-  1. `feat/spot-110-112-trips` → `dev-backend` → `main`. It starts from `main`, so it also
-     brings `dev-backend` up to date.
-  2. Merge `main` into `dev-frontend` (it is one merge behind).
-  3. `feat/spot-80-92-heatmap` → `dev-frontend` → `main`; the backend commits are then
+  1. `feat/spot-113-119-accounts` → `dev-backend` → `main`.
+  2. `feat/spot-120-126-account-ui` → `dev-frontend` → `main`; the backend commits are then
      already there, so its diff is frontend, docs and CI only.
-  4. Merge `main` back into both dev branches.
+  3. Merge `main` back into both dev branches.
 
 **Carried over to a later task**
 
@@ -139,8 +138,6 @@ here when that task closes it.
 | SPOT-118 | Schedule `manage.py purge_trips` daily on the host. | SPOT-100 |
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
-| SPOT-90 | Second smoke flow: plan as a guest, sign up, see the trip in My trips, share it, open the link in a fresh context. Needs accounts and trip pages. | SPOT-125 |
-| SPOT-91 | Keyboard walkthrough and axe checks for PRD stories 8–11 (recent trips, sign-up, My trips, sharing). Those screens don't exist yet. | SPOT-125 |
 
 ## Epics
 
@@ -2497,6 +2494,9 @@ Spec: PRD §8.
     the obvious saving if one is set.
 - Left: plan latency on the hosted app with real providers (SPOT-100/101); frame times in a
   visible desktop Chrome rather than headless.
+- 2026-10-12: with the routed app and account pages (SPOT-120–126), the main chunk is
+  171.0 KB gzipped, from 131.6 KB: react-router and the new pages. Still no PRD budget; the
+  pages beyond the planner could be split out if one is set.
 
 ---
 
@@ -3041,105 +3041,239 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-51 |
+| Frontend · 2 | P0 | Done | SPOT-51 |
 
 **Sub-tasks**
-- [ ] react-router routes: `/`, `/trips/:id`, `/trips`, `/login`, `/signup`, `/account`;
-  guard redirecting guests from `/trips` and `/account` to `/login?next=…`.
-- [ ] `me` query; API client sends `X-CSRFToken` and an `Idempotency-Key` per plan submission.
-- [ ] Vite dev proxy for `/api` (same origin as production).
+- [x] react-router routes: `/`, `/trips/:id`, `/trips`, `/login`, `/signup`, `/account`;
+  guard redirecting guests from `/trips` and `/account` to `/login?next=…`. _(the router,
+  `/`, a not-found page and the guard here; each page's route lands with its task)_
+- [x] `me` query; API client sends `X-CSRFToken` and an `Idempotency-Key` per plan submission.
+  _(the header and key since SPOT-51)_
+- [x] Vite dev proxy for `/api` (same origin as production). _(since SPOT-51; preview too, SPOT-90)_
 
 **Acceptance criteria**
 - Logging in or out refreshes the header and trip lists without a page reload.
 - Double-clicking Plan creates one trip.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: router and session (`app/routes.tsx`, `app/layouts.tsx`, `api/me.ts`,
+  `api/auth.ts`, `features/shell/RequireAccount.tsx`, `SessionMenu.tsx`).
+  - **react-router** 7.18.4 (pinned; 8 needs React 19 and Node 22). A root layout (header,
+    then the page) holds two layouts: the planner's (panel, map, timeline), shared by its
+    pages so the map stays mounted between them, and a plain page column for the rest.
+    Unknown paths get "Page not found" with a link back. `App` takes an initial path so
+    tests run on an in-memory router.
+  - `/` opens a new trip: it clears whatever plan was on screen and the selection.
+  - **`useMe`** reads `GET /api/v1/me`, which also sets the CSRF cookie before any unsafe
+    request. `useCurrentUser` is the signed-in user or null.
+  - **`api/auth.ts`**: sign-up, login and logout against allauth's headless API with the
+    CSRF header. Its responses parse into `AuthError` (messages by field, `has(code)`);
+    the API's own JSON 403, a 429, a proxy page and a dropped connection all read cleanly.
+    Logout's 401 counts as done. Afterwards `/me` and every trip query except heatmaps
+    refetch, so the header and lists change with no reload.
+  - **`RequireAccount`** sends anyone not signed in to `/login?next=<path and query>`. It
+    waits for `/me`, and says so if it can't be checked.
+  - **Header:** a signed-in user's email and Log out, which then returns to the planner.
+    The home link is a router link.
+- Verified (15 new tests, 316 total):
+  - Not found and back; `/` clears a plan left on screen.
+  - **Double-clicking Plan makes one request** (the button is disabled while planning).
+  - The signed-in header shows the email; Log out sends the token, the header empties and
+    the planner opens, with no reload.
+  - Guard: a visitor goes to `/login?next=%2Ftrips%3Fsaved%3Dtrue`; a user sees the page;
+    a failed `/me` says it couldn't check.
+  - Auth client: credentials and CSRF header; errors by field; CSRF, 429, proxy-page and
+    network failures; logout's 401; logging in invalidates `/me`.
+  - Logging in from the UI and the trip lists refreshing are exercised with those pages
+    (SPOT-122–124).
 
 ### SPOT-121 · Trip page
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-120, SPOT-113 |
+| Frontend · 2 | P0 | Done | SPOT-120, SPOT-113 |
 
 **Sub-tasks**
-- [ ] `/trips/:id` renders the planner view from the saved snapshot and stored heatmap; banner
+- [x] `/trips/:id` renders the planner view from the saved snapshot and stored heatmap; banner
   "Planned … · forecast as of then".
-- [ ] After planning, the URL changes to the new trip's page.
-- [ ] "Trip not found" page for 404s.
+- [x] After planning, the URL changes to the new trip's page.
+- [x] "Trip not found" page for 404s.
 
 **Acceptance criteria**
 - Reloading a trip page shows exactly the same routes, numbers and heatmap.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip page (`features/trip/TripPage.tsx`, `api/trips.ts`, `useOpenTrip`).
+  - `/trips/:id` loads `GET /api/v1/trips/{id}` and puts the trip on screen, so the map,
+    heatmap (the stored one), timeline, cards and table show it as planned. A banner says
+    "Planned Mon 12 Oct, 09:05 CDT, with the forecast as of then", with the trip's name if
+    it has one. The form starts collapsed to the trip's inputs.
+  - Planning, from `/` or a trip page, and a successful retry open the new trip's page, so
+    the address is always the trip's own link.
+  - A plan just made stays on screen while its saved copy loads (the same response), so
+    the routes don't blink to skeletons, and the selection is kept. Opening another trip
+    starts on its recommended route.
+  - 404: "Trip not found … deleted, or it's private to whoever planned it." Other errors:
+    the planner's failure panel with Try again.
+  - **Edit trip** on an older trip moves a past departure to the next whole hour, as
+    re-planning does; the summary still shows when it was planned for.
+  - `valuesFromInputs` and `hosFromInputs` turn saved inputs back into form values;
+    `formatDateTime` adds the date for times that may be days away.
+- Decisions:
+  - The plan on screen stays one cache entry (`['plan', 'current']`) that the trip page
+    fills, rather than every component learning about trip ids: the map, timeline and
+    results didn't change.
+- Verified (7 new tests, 323 total):
+  - A saved strong-storm trip opened directly (as on reload) shows the same routes (Route B
+    Not drivable), the dated banner, its inputs, and one request.
+  - The name in the banner; not found; a failed load retried.
+  - Planning from a trip's page opens and shows the new trip.
+  - Editing an older trip starts from the next hour, with no "in the past" error.
+  - Planner tests now wait for the trip page after a successful plan: acting during the
+    switch hit elements that had just been replaced.
 
 ### SPOT-122 · Recent trips menu (guest)
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 1 | P0 | To do | SPOT-121 |
+| Frontend · 1 | P0 | Done | SPOT-121 |
 
 **Sub-tasks**
-- [ ] Header dropdown with the last 20 trips and the "Sign up to keep these" prompt.
+- [x] Header dropdown with the last 20 trips and the "Sign up to keep these" prompt.
 
 **Acceptance criteria**
 - A new trip appears at the top immediately after planning.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: recent trips (`features/shell/RecentTripsMenu.tsx`, `api/trips.ts`).
+  - A **Recent trips** button with the count, for guests who have planned (from `/me`);
+    signed-in users get My trips instead (SPOT-124). It opens a panel listing their last 20
+    trips (`GET /api/v1/trips`), each a link to its page: name or route, departure and
+    load, and the recommended route with its worst level. Below: "Trips you plan as a guest
+    stay on this device for 30 days. Sign up to keep these".
+  - **A new trip is at the top at once:** on a successful plan its summary is built from
+    the response and put first in the cached list, then the lists and `/me` refetch behind
+    it.
+  - Escape closes it and returns focus to the button; so does a press outside, or
+    following a link. A disclosure (button and region), not an ARIA menu: it holds links.
+  - `TripSummaryLine`, `RiskChip` and `tripTitle` are shared with My trips.
+- Decisions:
+  - Departures in lists show in the viewer's time zone, with its abbreviation: a summary
+    carries no time zone, and adding one wasn't worth another API change.
+- Verified (4 tests, 327 total):
+  - Not shown to a visitor or a signed-in user.
+  - A guest's list: count, link to the trip, load, the sign-up link; following a trip
+    opens its page and closes the panel.
+  - **A new plan is first in the list while the refetch is still pending**; with the
+    prepend removed, this test fails.
+  - Escape closes and returns focus; a press outside closes.
 
 ### SPOT-123 · Log in and sign-up pages
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P1 | To do | SPOT-120, SPOT-114 |
+| Frontend · 2 | P1 | Done | SPOT-120, SPOT-114 |
 
 **Sub-tasks**
-- [ ] Forms with inline server errors and password hints; redirect to `next`.
-- [ ] Toast after sign-in: "N trips from this device were added to your account."
+- [x] Forms with inline server errors and password hints; redirect to `next`.
+- [x] Toast after sign-in: "N trips from this device were added to your account."
 
 **Acceptance criteria**
 - Keyboard-only sign-up and login work; errors are announced to screen readers.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: log in and sign up (`features/account/AuthPage.tsx`, `state/toasts.ts`,
+  `features/shell/Toaster.tsx`).
+  - `/login` and `/signup`, one form: email (`autocomplete=email`) and password
+    (`current-password` / `new-password`), with Django's rules as a hint on sign-up. Checked
+    before sending (required, email shape, 8 characters for a new password).
+  - **Server reasons:** allauth's `email` and `password` errors go on those fields
+    (`aria-invalid`, described by the message, announced as alerts) and the first is
+    focused. Reasons with no field (too many attempts, a refused CSRF check, a dropped
+    connection) are an alert above the form.
+  - **After success:** to `next` if it is a path on this site, else the planner.
+    `//evil.example`, `/\…`, full URLs and bare words are refused, so a crafted link
+    can't send someone away after logging in. A signed-in user opening either page goes
+    straight on. Each page links to the other, keeping `next`.
+  - **Toast:** "3 trips from this device were added to your account." (or "1 trip … was")
+    when a guest with trips signs up or logs in. The count comes from `/me` just before;
+    the server claims them (SPOT-115). Toasts are announced politely, have a close button
+    and go after 6 s.
+  - **Header:** Log in and Sign up for anyone not signed in.
+- Verified (20 new tests, 347 total):
+  - Sign-up with the keyboard alone (the password hint is its description), then on to
+    `next` with the header showing the user; login to the planner by default.
+  - Server field errors announced, on their fields, first one focused; a fieldless reason
+    above the form; client checks with no request sent.
+  - The toast for 3 and for 1 trip, none for a visitor, gone after 6 s.
+  - Signed in already: sent on. `next` kept across the two pages. Header links.
+  - `safeNext` against eight inputs, including the three ways out of the site.
 
 ### SPOT-124 · My trips page
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P1 | To do | SPOT-123, SPOT-116 |
+| Frontend · 3 | P1 | Done | SPOT-123, SPOT-116 |
 
 **Sub-tasks**
-- [ ] List with saved star, name or route, departure, load, recommended route and worst level,
+- [x] List with saved star, name or route, departure, load, recommended route and worst level,
   planned date; All/Saved tabs; search; infinite scroll on the cursor.
-- [ ] Row actions: open, rename, share, delete (confirm).
+- [x] Row actions: open, rename, share, delete (confirm).
 
 **Acceptance criteria**
 - Works with 0, 1 and 200 trips; empty state links to the planner.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: My trips (`features/trips/TripsPage.tsx`, `useTripActions.ts`,
+  `features/shell/ConfirmDialog.tsx`, `api/trips.ts`).
+  - `/trips`, for signed-in users (others go to log in and come back). All / Saved, and a
+    search box (300 ms after typing stops) sent as `q`. Each row: a star (`aria-pressed`)
+    to save; the name or route as a link to the trip; departure, load, the recommended
+    route and its worst level; when it was planned; a Shared tag.
+  - **More trips** load when the end of the list scrolls into view (an
+    `IntersectionObserver`), or with **Load more**, which the keyboard reaches; the cursor
+    from each page's `next` asks for the following one.
+  - **Row actions**, each named with its trip for screen readers ("Delete: Weekly run"):
+    - Rename in place (Enter saves, Escape cancels).
+    - Share or Stop sharing, with a toast saying what it means for the link.
+    - Copy link (to the clipboard, or the link in the toast if that's refused).
+    - Delete, which asks first in an alert dialog: focus starts on Cancel and stays inside,
+      Escape cancels, and focus returns to the button.
+  - Changes show at once in the row, the trip's page and the header's list (the caches are
+    edited), then lists refetch, since saving can move a trip in or out of Saved. A
+    deleted trip leaves every list and its page's cache.
+  - Empty states: "No trips yet … Plan your first trip", or "No trips match." when filtered.
+    A failed load says so with Try again. The header has a My trips link for signed-in
+    users.
+- Verified (11 tests, 358 total):
+  - 0 trips (empty state and link), 1 trip (every field, link to its page), **200 trips**
+    in ten pages of 20, each once, Load more gone at the end.
+  - Saved alone (`saved=true`); one search request after typing stops; no matches.
+  - Star, rename by keyboard, share and copy (the clipboard holds the link).
+  - Delete: Escape keeps it and returns focus, focus stays in the dialog, and confirming
+    removes the row with a toast.
+  - A failed list retried; a visitor sent to log in.
+  - Loading on scroll uses `IntersectionObserver`, which jsdom lacks; checked in Chrome
+    with the rest of the pages.
 
 ### SPOT-125 · Trip actions UI
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P1 | To do | SPOT-121, SPOT-116 |
+| Frontend · 2 | P1 | Done | SPOT-121, SPOT-116 |
 
 Replaces the earlier "shareable URL" task: a real trip link is better than encoding inputs,
 because it shows the result the user actually saw.
 
 **Sub-tasks**
-- [ ] On the trip page: Re-plan with current weather, Save (with name), Share (switch + copy
+- [x] On the trip page: Re-plan with current weather, Save (with name), Share (switch + copy
   link), Delete.
-- [ ] Guests clicking Save get a "Create an account to save trips" dialog.
-- [ ] Shared trip opened by someone else: read-only, only "Re-plan" available.
-- [ ] Add the second Playwright flow to `frontend/e2e/`: plan as a guest, sign up, see the
+- [x] Guests clicking Save get a "Create an account to save trips" dialog.
+- [x] Shared trip opened by someone else: read-only, only "Re-plan" available.
+- [x] Add the second Playwright flow to `frontend/e2e/`: plan as a guest, sign up, see the
   trip in My trips, share it, open the link in a fresh browser context (carried over from
   SPOT-90, which runs the first flow in CI).
-- [ ] Extend `frontend/e2e/keyboard.spec.ts` and `a11y.spec.ts` to PRD stories 8–11: recent
+- [x] Extend `frontend/e2e/keyboard.spec.ts` and `a11y.spec.ts` to PRD stories 8–11: recent
   trips, sign-up, My trips, saving, sharing, by keyboard and with no serious or critical axe
   violations in either theme (carried over from SPOT-91, which covers stories 1–7).
 
@@ -3147,19 +3281,87 @@ because it shows the result the user actually saw.
 - Each action updates the page and lists without a reload; share-off revokes the copied link.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip actions (`features/trip/TripActions.tsx`, `features/shell/Modal.tsx`,
+  `api/trips.ts` `useReplanTrip`).
+  - **Re-plan with current weather**, for anyone who can see the trip: `POST …/replan` with
+    a fresh `Idempotency-Key`. The new trip is cached from the response, so its page opens
+    with no second request, and it goes to the top of recent trips.
+  - **Owner:**
+    - Save asks for a name (prefilled with the name or route; Escape cancels), then saves
+      both at once; Saved (★) unsaves.
+    - Share is a switch (`role=switch`), with Copy link while it's on and a toast saying
+      what the switch does to the link.
+    - Delete asks first, then goes to My trips (a user) or the planner (a guest).
+  - **A guest's Save** opens "Create an account to save trips" (a dialog: Not now, Log in,
+    Sign up), and the links come back to this trip. Nothing is saved.
+  - **Someone else's shared trip:** only Re-plan, a "Shared with you, read-only" note, and
+    the form's summary with no Edit.
+  - The modal logic (focus in and back, Tab kept inside, Escape) is now `Modal`, shared by
+    the delete confirmation and the sign-up dialog.
+  - `/me` stays fresh until something invalidates it (sign-in, sign-out, a plan), rather
+    than being fetched again by each component that mounts. The smoke test caught a
+    refetch while scrubbing.
+- **End-to-end** (`e2e/accounts.spec.ts`; `keyboard.spec.ts` and `a11y.spec.ts` extended),
+  carried over from SPOT-90 and SPOT-91:
+  - Second smoke flow: plan as a guest; sign up and see "1 trip … was added"; find it in My
+    trips; share it from its page; a fresh browser context opens the link, read-only;
+    sharing off, and the same link is "Trip not found" for them.
+  - Keyboard only, stories 8–11:
+    - back to a recent trip from the header;
+    - sign up keeping the trip;
+    - My trips, save under a name, re-plan;
+    - share, copy the link, and unshare.
+  - axe, both themes: recent trips; sign-up-to-save dialog; a login error; sign-up; the
+    save form; a saved, shared trip; My trips; the delete dialog; a shared trip seen
+    read-only. No serious or critical violations.
+  - The end-to-end sign-up found that Django refused it from the dev proxy's origin (fixed
+    in SPOT-114's settings). Specs that fake a plan now serve its trip page too.
+- Verified (9 new unit tests, 367 total; 19 end-to-end tests pass with 2 workers):
+  - Save under a name (focus in the field, toast, ★, the banner's name); unsave; a guest's
+    dialog (focus on Not now, back on Save, nothing saved); share on and off (`aria-checked`,
+    clipboard, toast); delete to My trips or the planner.
+  - Read-only for a non-owner; re-plan with a key, the new trip on screen without
+    fetching it again; a failed re-plan says so.
 
 ### SPOT-126 · Account page
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 1 | P1 | To do | SPOT-123, SPOT-117 |
+| Frontend · 1 | P1 | Done | SPOT-123, SPOT-117 |
 
 **Sub-tasks**
-- [ ] Email, log out, delete-account danger zone with password confirmation.
+- [x] Email, log out, delete-account danger zone with password confirmation.
 
 **Acceptance criteria**
 - After deletion the user lands on the planner as a guest with an empty recent-trips list.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: account page (`features/account/AccountPage.tsx`, `sessionHandoff.ts`,
+  `api/me.ts` `deleteAccount`).
+  - `/account`, for signed-in users, linked from the header's email ("Account" on a phone):
+    who is signed in, Log out, and a Delete account danger zone. Deleting needs the
+    password, checked as present first, then asks once more ("Delete your account?",
+    focus on Cancel). A wrong password goes back to its field, announced; nothing changes.
+  - **After logging out or deleting**, the page goes to the planner and says what
+    happened in the navigation's state; the planner then refreshes who the caller is (and,
+    after a deletion, drops every cached trip). Done the other way round, the account
+    page's guard saw a visitor first and sent them to log in: React Router's `navigate()`
+    finishes later and can't be awaited. So the person lands on the planner as a visitor,
+    with no Recent trips, and a toast.
+  - `deleteAccount` is a plain fetch with the CSRF header: OpenAPI 3.0 gives a DELETE body
+    no meaning, so the generated client has no type for it, though the API reads it.
+- Verified (6 tests, 373 total; 28 end-to-end tests pass with 2 workers):
+  - The header link opens the page; Log out lands on the planner.
+  - No password: an announced error and no request. A wrong one: back on the field,
+    `aria-invalid`, nothing deleted.
+  - Right password: DELETE with the password and CSRF token, the planner, "Log in" in the
+    header, no Recent trips, no trip data left in the cache, and the toast.
+  - A visitor is sent to log in.
+  - **End to end:** sign up, plan, delete with the password, land on `/` with Log in and no
+    Recent trips. axe, both themes: the account page, the missing-password error, and the
+    confirmation dialog.
+  - In Chrome (dev servers): My trips, a trip page with its actions and the account page
+    look right. With 34 trips, scrolling to the end of My trips loaded the second page by
+    itself, and Load more went once there was nothing left.
+  - The trip-page waits in the planner tests allow 3 s: under a full parallel run, plan,
+    navigation and the saved trip's request took over the default 1 s twice.

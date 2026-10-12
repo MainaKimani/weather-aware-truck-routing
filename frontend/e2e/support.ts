@@ -37,7 +37,11 @@ export async function tabTo(
 ): Promise<void> {
   const key = backwards ? 'Shift+Tab' : 'Tab'
   for (let i = 0; i < limit; i++) {
-    if ((await target.count()) > 0 && (await target.evaluate(isFocused))) return
+    // A short wait: the element can be replaced between the count and the check.
+    const focused =
+      (await target.count()) > 0 &&
+      (await target.evaluate(isFocused, undefined, { timeout: 1000 }).catch(() => false))
+    if (focused) return
     await page.keyboard.press(key)
   }
   throw new Error(`${key} never reached ${target.toString()} in ${String(limit)} presses`)
@@ -47,9 +51,23 @@ function isFocused(element: Element): boolean {
   return element === document.activeElement
 }
 
-/** Answers the next plan request with `plan`, as the backend would. */
+/**
+ * Answers plan requests with `plan`, as the backend would, and its trip's
+ * page with the same plan saved: planning opens that page, and the real
+ * backend never saw this trip.
+ */
 export async function respondToPlanWith(page: Page, plan: Plan): Promise<void> {
+  const saved = {
+    ...plan,
+    name: '',
+    saved: false,
+    shared: false,
+    created_at: plan.generated_at,
+    is_owner: true,
+    replanned_from: null,
+  }
   await page.route('**/api/v1/plans', (route) => route.fulfill({ json: plan }))
+  await page.route(`**/api/v1/trips/${plan.trip_id}`, (route) => route.fulfill({ json: saved }))
 }
 
 export async function planDemoTrip(page: Page): Promise<void> {
@@ -60,4 +78,20 @@ export async function planDemoTrip(page: Page): Promise<void> {
   )
   // The legend shows once the map has drawn the plan.
   await expect(page.getByRole('region', { name: 'Legend' })).toBeVisible()
+}
+
+/** A fresh address per run: sign-ups go to a database that outlives the test. */
+export function uniqueEmail(): string {
+  return `e2e-${String(Date.now())}-${String(Math.floor(Math.random() * 1e6))}@example.com`
+}
+
+/** Signs up a new user from wherever the page is; returns the email. */
+export async function signUp(page: Page): Promise<string> {
+  const email = uniqueEmail()
+  await page.goto('/signup')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill('correct-horse-9')
+  await page.getByRole('button', { name: 'Sign up' }).click()
+  await expect(page.getByRole('link', { name: 'My trips' })).toBeVisible()
+  return email
 }

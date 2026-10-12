@@ -4,6 +4,7 @@ import {
   formatAge,
   formatAvgRisk,
   formatClockTime,
+  formatDateTime,
   formatDuration,
   formatMiles,
   formatStopLength,
@@ -39,6 +40,11 @@ describe('format', () => {
   it('formats clock times in the given zone with its abbreviation', () => {
     expect(formatClockTime('2026-10-12T12:04:00Z', 'America/Chicago')).toBe('Mon 07:04 CDT')
     expect(formatClockTime('2026-10-13T05:53:43Z', 'America/Denver')).toBe('Mon 23:53 MDT')
+  })
+
+  it('formats a date and time with the day, for times that may be days away', () => {
+    expect(formatDateTime('2026-10-12T12:04:00Z', 'America/Chicago')).toBe('Mon 12 Oct, 07:04 CDT')
+    expect(formatDateTime('2026-11-02T03:30:00Z', 'America/Denver')).toBe('Sun 1 Nov, 20:30 MST')
   })
 
   it('says No data rather than showing nothing or zero', () => {

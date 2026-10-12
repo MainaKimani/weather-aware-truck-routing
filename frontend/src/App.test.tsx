@@ -15,11 +15,19 @@ import { demoPlan } from './test/fixtures/demoPlan'
 import { freshClient } from './test/render'
 import { PLANS, apiError, server } from './test/server'
 
-const renderApp = () => render(<App queryClient={freshClient()} />)
+const renderApp = () => render(<App queryClient={freshClient()} initialPath="/" />)
 
-async function planDemoTrip() {
+/** Plans the demo trip; by default waits until its trip page has opened. */
+async function planDemoTrip({ waitForTrip = true } = {}) {
   await userEvent.click(screen.getByRole('button', { name: 'Use the demo trip' }))
   await userEvent.click(screen.getByRole('button', { name: 'Plan trip' }))
+  if (waitForTrip) await tripPageOpened()
+}
+
+/** A successful plan opens its trip page; it's settled once the saved trip's banner shows. */
+async function tripPageOpened() {
+  // Plan, navigation and the saved trip's request: allow for a busy test run.
+  await screen.findByText(/with the forecast as of then/, undefined, { timeout: 3000 })
 }
 
 describe('App shell', () => {
@@ -70,7 +78,6 @@ describe('planning the demo trip', () => {
   it('selects a route on click', async () => {
     renderApp()
     await planDemoTrip()
-    await screen.findByRole('list', { name: 'Ranked routes' })
     const routeA = screen.getByRole('button', { name: /Route A/ })
     const routeB = screen.getByRole('button', { name: /Route B/ })
 
@@ -91,7 +98,7 @@ describe('planning the demo trip', () => {
     )
     renderApp()
 
-    await planDemoTrip()
+    await planDemoTrip({ waitForTrip: false })
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('No truck route between these places')

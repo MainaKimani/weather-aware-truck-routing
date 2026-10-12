@@ -1,38 +1,21 @@
 import type { ReactNode } from 'react'
 
 import { Header } from './Header'
+import { Toaster } from './Toaster'
 
 interface AppShellProps {
   badges?: ReactNode
-  /** Left pane: trip form above the route results. */
-  panel: ReactNode
-  /** Right pane: the map and its overlays. */
-  map: ReactNode
-  /** Bottom bar: the heatmap timeline. */
-  timeline: ReactNode
+  /** The page: the planner, or one of the account and trip-list pages. */
+  children: ReactNode
 }
 
-/**
- * The planner layout: header, a scrollable left panel beside a full-height
- * map, and the timeline bar along the bottom. On narrow screens the map goes
- * on top and the panel scrolls below it.
- */
-export function AppShell({ badges, panel, map, timeline }: AppShellProps) {
+/** Every page: the header above, the page filling the rest of the window. */
+export function AppShell({ badges, children }: AppShellProps) {
   return (
     <div className="flex h-dvh flex-col">
       <Header badges={badges} />
-      <div className="flex min-h-0 flex-1 flex-col-reverse md:flex-row">
-        <aside
-          aria-label="Trip planner"
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto border-line bg-surface md:w-[400px] md:flex-none md:border-r"
-        >
-          {panel}
-        </aside>
-        <main className="relative min-h-[45dvh] flex-1 md:min-h-0">{map}</main>
-      </div>
-      <footer aria-label="Forecast timeline" className="shrink-0 border-t border-line bg-surface">
-        {timeline}
-      </footer>
+      {children}
+      <Toaster />
     </div>
   )
 }

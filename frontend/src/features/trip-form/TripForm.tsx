@@ -9,6 +9,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { Controller, useForm, useWatch, type Control, type Resolver } from 'react-hook-form'
 
 import { useLatestPlanAttempt, usePlanTrip } from '../../api/plans'
+import type { Plan } from '../../api/schema'
 import { DEMO_DESTINATION, DEMO_LOAD_LB, DEMO_ORIGIN } from '../plan/demoTrip'
 import { nextWholeHourInput, zoneAbbreviation, zonedToUtc } from '../../lib/time'
 import { Chip, FieldError, inputClass } from './fields'
@@ -23,28 +24,40 @@ import {
   parseLoad,
   toPlanRequest,
   tripFormSchema,
+  valuesFromInputs,
   type TripFormValues,
 } from './schema'
 
 interface TripFormProps {
   /** Injected in tests; the real clock otherwise. */
   now?: () => Date
+  /** A saved trip's inputs: the form starts with them, collapsed to a summary. */
+  inputs?: Plan['inputs']
+  /** Called with each new plan, once it is saved. */
+  onPlanned?: (plan: Plan) => void
+  /** Someone else's shared trip: its summary only, with no way to edit it. */
+  readOnly?: boolean
 }
 
-export function TripForm({ now = () => new Date() }: TripFormProps) {
+export function TripForm({
+  now = () => new Date(),
+  inputs,
+  onPlanned,
+  readOnly = false,
+}: TripFormProps) {
   const schema = useMemo(() => tripFormSchema(now), [now])
   const { control, handleSubmit, setError, setValue, reset, getValues, formState } =
     useForm<TripFormValues>({
       resolver: zodResolver(schema) as Resolver<TripFormValues>,
-      defaultValues: emptyValues(
-        nextWholeHourInput(now(), departureZone({ text: '', place: null })),
-      ),
+      defaultValues: inputs
+        ? valuesFromInputs(inputs)
+        : emptyValues(nextWholeHourInput(now(), departureZone({ text: '', place: null }))),
       reValidateMode: 'onChange',
     })
   const { plan, error } = usePlanTrip()
   // Pending for any plan request, including a retry from the results area.
   const isPending = useLatestPlanAttempt().status === 'pending'
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(inputs !== undefined)
   const ids = { departure: useId(), load: useId(), root: useId() }
 
   // Field errors the server found anyway go next to their inputs.
@@ -60,8 +73,9 @@ export function TripForm({ now = () => new Date() }: TripFormProps) {
 
   const submit = handleSubmit((values) => {
     plan(toPlanRequest(values), {
-      onSuccess: () => {
+      onSuccess: (planned) => {
         setCollapsed(true)
+        onPlanned?.(planned)
       },
     })
   })
@@ -80,9 +94,20 @@ export function TripForm({ now = () => new Date() }: TripFormProps) {
     return (
       <TripSummary
         values={getValues()}
-        onEdit={() => {
-          setCollapsed(false)
-        }}
+        onEdit={
+          readOnly
+            ? undefined
+            : () => {
+                // Editing an older trip starts from the next hour, as re-planning does:
+                // its departure has passed and couldn't be planned again.
+                const values = getValues()
+                const zone = departureZone(values.origin)
+                if (zonedToUtc(values.departureLocal, zone).getTime() < now().getTime()) {
+                  setValue('departureLocal', nextWholeHourInput(now(), zone))
+                }
+                setCollapsed(false)
+              }
+        }
       />
     )
   }
@@ -312,7 +337,7 @@ function parseDeparture(local: string, zone: string): Date | null {
   }
 }
 
-function TripSummary({ values, onEdit }: { values: TripFormValues; onEdit: () => void }) {
+function TripSummary({ values, onEdit }: { values: TripFormValues; onEdit?: () => void }) {
   const zone = departureZone(values.origin)
   const when = zonedToUtc(values.departureLocal, zone)
   const departure = new Intl.DateTimeFormat('en-US', {
@@ -333,13 +358,15 @@ function TripSummary({ values, onEdit }: { values: TripFormValues; onEdit: () =>
           {values.intervalMi} mi{values.hos.enabled && ' · HOS on'}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="shrink-0 rounded-md border border-line px-2.5 py-1 text-sm font-medium hover:bg-surface"
-      >
-        Edit trip
-      </button>
+      {onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="shrink-0 rounded-md border border-line px-2.5 py-1 text-sm font-medium hover:bg-surface"
+        >
+          Edit trip
+        </button>
+      )}
     </div>
   )
 }
