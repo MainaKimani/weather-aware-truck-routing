@@ -35,14 +35,26 @@ def test_schema_is_served() -> None:
     assert set(schema["paths"]) == {
         "/api/v1/plans",
         "/api/v1/geocode/suggest",
+        "/api/v1/me",
+        "/api/v1/trips",
+        "/api/v1/trips/{trip_id}",
         "/api/v1/trips/{trip_id}/heatmap",
+        "/api/v1/trips/{trip_id}/replan",
     }
 
 
 def test_contract_names_the_shapes_the_frontend_uses() -> None:
     components = yaml.safe_load(COMMITTED.read_text())["components"]["schemas"]
 
-    assert {"PlanRequest", "Plan", "Route", "Checkpoint", "Place", "Heatmap", "Error"} <= set(
-        components
-    )
+    assert {
+        "PlanRequest",
+        "Plan",
+        "Route",
+        "Checkpoint",
+        "Place",
+        "Heatmap",
+        "Trip",
+        "TripSummary",
+        "Error",
+    } <= set(components)
     assert components["RiskLevelEnum"]["enum"] == ["LOW", "MODERATE", "HIGH", "SEVERE", "NO_TRAVEL"]

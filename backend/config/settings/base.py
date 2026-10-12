@@ -32,6 +32,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "allauth",
+    "allauth.account",
+    "allauth.headless",
     "accounts",
     "planner",
 ]
@@ -44,6 +47,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -80,6 +84,41 @@ DATABASES = {
 
 AUTH_USER_MODEL = "accounts.User"
 
+# Accounts (RFC §3.2, §7.5): django-allauth's headless API for the browser,
+# under /api/auth/. Email and password only, no usernames; verification is
+# off for the assessment (PRD §7.9). Failed logins are rate limited by
+# allauth's defaults (per IP and per email), counted in the cache.
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+ACCOUNT_ADAPTER = "accounts.adapter.AccountAdapter"
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_UNIQUE_EMAIL = True
+# Signed-in sessions last as long as guest ones (SESSION_COOKIE_AGE), not
+# until the browser closes.
+ACCOUNT_SESSION_REMEMBER = True
+HEADLESS_ONLY = True
+HEADLESS_CLIENTS = ("browser",)
+# Where allauth's emails would link to; only password reset sends one, and
+# the SPA has no page for it yet, so it points at the planner.
+HEADLESS_FRONTEND_URLS = {
+    "account_reset_password_from_key": "/?reset={key}",
+    "account_signup": "/signup",
+}
+
+# Argon2 for new and changed passwords (RFC §12); the rest still verify
+# hashes made before it.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
+
 # Cookies (RFC §3.2, §12). The browser sees one origin (the frontend proxies
 # /api), so Lax is enough and no CORS is configured. The CSRF cookie is
 # readable by JavaScript on purpose: the client copies it into X-CSRFToken,
@@ -93,6 +132,7 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_FAILURE_VIEW = "config.csrf.csrf_failure"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
@@ -136,6 +176,10 @@ HERE_API_KEY = env.str("HERE_API_KEY", default="")
 PROVIDERS = env.str("PROVIDERS", default="fake")
 FAKE_SCENARIO = env.str("FAKE_SCENARIO", default="demo")
 
+# The reviewer's demo account (manage.py seed_demo); its password is never in the code.
+DEMO_EMAIL = env.str("DEMO_EMAIL", default="demo@example.com")
+DEMO_PASSWORD = env.str("DEMO_PASSWORD", default="")
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -164,6 +208,10 @@ REST_FRAMEWORK = {
         "plans_user": "30/min",
         "geocode": "60/min",
         "heatmap": "20/min",
+        # Reading trips: lists and pages, which the UI refetches as trips change.
+        "trips": "120/min",
+        # Deleting an account checks its password; per user.
+        "delete_account": "5/min",
     },
     # How many proxies sit in front of Django and append to X-Forwarded-For.
     # 0 trusts only REMOTE_ADDR, so a client can't pick its own throttle key;

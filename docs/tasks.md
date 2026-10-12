@@ -84,13 +84,13 @@ link to their sections instead of repeating them.
 | SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
 | SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | Done        |
-| SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | To do       |
-| SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | To do       |
-| SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | To do       |
-| SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | To do       |
-| SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | To do       |
-| SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | To do       |
-| SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | To do       |
+| SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
+| SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | Done        |
+| SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | Done        |
+| SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | Done        |
+| SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | Done        |
+| SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | Done        |
+| SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
 | SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
 | SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do       |
@@ -136,6 +136,7 @@ here when that task closes it.
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
+| SPOT-118 | Schedule `manage.py purge_trips` daily on the host. | SPOT-100 |
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
 | SPOT-90 | Second smoke flow: plan as a guest, sign up, see the trip in My trips, share it, open the link in a fresh context. Needs accounts and trip pages. | SPOT-125 |
@@ -143,20 +144,20 @@ here when that task closes it.
 
 ## Epics
 
-| Epic | Goal | Graded under |
-|---|---|---|
-| E0 Planning | Agree what we're building and how | Docs 5% |
-| E1 Foundation | Repo, tooling and CI so everything after is checked automatically | Code quality 10% |
-| E2 Domain | The rules: sampling, ETAs, risk, HOS, metrics, ranking, all pure and tested | Logic 40% |
-| E3 Providers | Routing, geocoding and weather behind adapters, cached and resilient | Logic 40% |
-| E4 API | HTTP layer, contract, security and operability | Logic 40%, code quality 10% |
-| E5 Frontend base | Shell, theme, typed client, state | UI 35% |
-| E6 Planning UI | Form, results, states | UI 35% |
-| E7 Map | Routes, checkpoints, stops on a fast map | UI 35% |
-| E8 Heatmap | Corridor heatmap and a smooth 48 h slider | UI 35% |
-| E9 Hardening | Prove it works, is accessible and meets the budgets | All |
-| E10 Delivery | Hosted app, README, video | Docs 5% |
-| E11 Trips & accounts | Save every plan as a trip; guests and signed-in users; My trips, sharing | Code quality 10%, UI 35% |
+| Epic                 | Goal                                                                        |
+| -------------------- | --------------------------------------------------------------------------- |
+| E0 Planning          | Agree what we're building and how                                           |
+| E1 Foundation        | Repo, tooling and CI so everything after is checked automatically           |
+| E2 Domain            | The rules: sampling, ETAs, risk, HOS, metrics, ranking, all pure and tested |
+| E3 Providers         | Routing, geocoding and weather behind adapters, cached and resilient        |
+| E4 API               | HTTP layer, contract, security and operability                              |
+| E5 Frontend base     | Shell, theme, typed client, state                                           |
+| E6 Planning UI       | Form, results, states                                                       |
+| E7 Map               | Routes, checkpoints, stops on a fast map                                    |
+| E8 Heatmap           | Corridor heatmap and a smooth 48 h slider                                   |
+| E9 Hardening         | Prove it works, is accessible and meets the budgets                         |
+| E10 Delivery         | Hosted app, README, video                                                   |
+| E11 Trips & accounts | Save every plan as a trip; guests and signed-in users; My trips, sharing    |
 
 **Suggested order:** E1 → E2 → E3 → E4 → E11 (P0 tasks) on the backend while SPOT-4 settles the
 design; then E5 → E6/E7 → E8 → E11 (P0 frontend) → E9 → E10. P1 tasks, including accounts, only
@@ -2403,6 +2404,10 @@ Spec: RFC §10.4.
     (the legend only appears when the map starts). The servers stop afterwards.
   - The workflows pass actionlint. The first CI run will be on the PR.
 - Left: the second flow needs accounts, My trips and sharing; moved to SPOT-125.
+- 2026-10-12: with accounts, the specs plan about twenty trips a minute from one address,
+  past the guest limit of 10. Local settings take `THROTTLE_GENEROUS=1`, which lifts every
+  API limit (allauth's login-failure limits stay), and `playwright.config.ts` sets it for
+  its backend. Production settings don't read it.
 
 ### SPOT-91 · Accessibility pass
 
@@ -2687,6 +2692,11 @@ core features, per PRD §5.
   - **`domain/` imports nothing from Django:** an AST check over `planner/domain` allows
     only the standard library and `planner.domain`.
   - Existing plan API, OpenAPI drift and logging tests now run with the database.
+- 2026-10-12: the race test ("two requests racing with one key") never simulated the race:
+  its patched lookup fell through to the real one, which found the trip, so the recovery
+  path didn't run. It now misses once, the save hits the unique key, and the second lookup
+  finds the trip (checked by counting lookups). A save failure that isn't a key race now
+  has a test that it is re-raised, not hidden.
 
 ### SPOT-112 · Guest identity and access layer
 
@@ -2740,32 +2750,62 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-111, SPOT-112 |
+| Backend · 2 | P0 | Done | SPOT-111, SPOT-112 |
 
 **Sub-tasks**
-- [ ] `GET /api/v1/trips` (summaries, cursor pagination, `saved` and `q` filters; guests capped
+- [x] `GET /api/v1/trips` (summaries, cursor pagination, `saved` and `q` filters; guests capped
   at 20).
-- [ ] `GET /api/v1/trips/{id}` (full snapshot + meta, `is_owner`).
+- [x] `GET /api/v1/trips/{id}` (full snapshot + meta, `is_owner`).
 
 **Acceptance criteria**
 - Listing 20 trips runs in 2 queries (`django_assert_num_queries`).
 - A guest can open their own trip; another guest gets 404; anyone can open a shared trip.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip read endpoints (`TripListView`, `TripDetailView`, `repositories.summaries`,
+  `access.owned_trips`).
+  - `GET /api/v1/trips`: the caller's own trips, newest first, through `owned_trips` in the
+    access layer. Each summary has the name, saved and shared flags, the places, departure,
+    load, interval, demo and stale flags, and the recommended route (id, name, label, worst
+    level, drivable), or null when nothing is drivable. Filters: `saved=true|false`, and `q`
+    against the name, origin or destination, case-insensitive.
+  - **Pages:** users page with a cursor (`next`), 20 at a time, ordered by creation time then
+    id. Guests get their latest 20 and `next: null`. A visitor who hasn't planned gets an
+    empty list.
+  - `GET /api/v1/trips/{id}`: the saved plan response plus `name`, `saved`, `shared`,
+    `created_at`, `is_owner` and `replanned_from`, through `get_visible_trip` (the owner, or
+    anyone if shared; otherwise a JSON 404, malformed ids included).
+  - Both have a `trips` throttle scope, 120 a minute (RFC §12 updated). The schema, the
+    frontend's types and the OpenAPI path test are updated.
+- Decisions:
+  - A cursor rather than page numbers: new trips arrive at the top, and a cursor neither
+    repeats nor skips one when they do. It needs no count query either.
+  - Only the recommended route is fetched for a list, and only its summary columns: what the
+    list shows, and none of the geometry, checkpoint or stop JSON.
+- Verified (16 tests, 660 total):
+  - Only the caller's trips, newest first; others' shared trips are not in their list.
+  - The summary's exact shape; null recommendation when nothing is drivable.
+  - `saved` and `q` filters; a bad `saved` or a 101-character `q` is a 400.
+  - **Paging:** 45 trips come back as 20, 20 and 5 with each exactly once, even with a new
+    trip added after the first page. A guest with 23 trips gets 20 and no `next`.
+  - **20 trips with 3 routes each in 2 queries** (`django_assert_num_queries`), and no
+    `checkpoints`, `geometry` or `hos_stops` column in the SQL.
+  - Detail: the plan made through the API reads back identical, with the meta; another
+    guest gets 404; a shared trip opens for anyone with `is_owner: false`; unknown and
+    malformed ids are JSON 404s; `replanned_from` names the earlier trip.
 
 ### SPOT-114 · Accounts (sign up, log in, log out, session)
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P1 | To do | SPOT-14, SPOT-112 |
+| Backend · 3 | P1 | Done | SPOT-14, SPOT-112 |
 
 **Sub-tasks**
-- [ ] `django-allauth` headless (browser client), email login, verification off; mounted at
+- [x] `django-allauth` headless (browser client), email login, verification off; mounted at
   `/api/auth/`.
-- [ ] Argon2 hasher and Django password validators.
-- [ ] `GET /api/v1/me`.
-- [ ] Higher plan throttle for signed-in users.
+- [x] Argon2 hasher and Django password validators.
+- [x] `GET /api/v1/me`.
+- [x] Higher plan throttle for signed-in users. _(already in place since SPOT-45: 30/min vs 10)_
 
 **Acceptance criteria**
 - Sign-up, login, session and logout work from the SPA with CSRF enforced (requests without
@@ -2774,16 +2814,50 @@ core features, per PRD §5.
 - Repeated failed logins are rate limited.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: accounts (`django-allauth` headless, `accounts/adapter.py`, `accounts/api.py`,
+  `config/csrf.py`).
+  - **allauth headless**, browser client only, at `/api/auth/` (`…/browser/v1/auth/signup`,
+    `login`, `session` GET and DELETE). Email and password, no usernames, verification off
+    (PRD §7.9). Sessions on sign-in last 30 days like guest ones (`ACCOUNT_SESSION_REMEMBER`).
+  - **Emails** are lower-cased by the account adapter, as the user manager does, so
+    `A@x.com` and `a@x.com` are one account (`email_taken`, and login works in any case).
+  - **Passwords:** Argon2 first in `PASSWORD_HASHERS` (older hashes still verify); Django's
+    validators reject weak ones with their codes.
+  - **Failed logins:** allauth's limits in the cache, per IP and per email; the 6th try in
+    5 minutes is `too_many_login_attempts`, even with the right password.
+  - **`GET /api/v1/me`:** `{user: {email} | null, guest, recent_trip_count}` for the header.
+    It sets the CSRF cookie (`ensure_csrf_cookie`), so the app has a token before its first
+    unsafe request.
+  - **CSRF failures** Django refuses (allauth's views) are the API's JSON 403
+    `csrf_failed`, not Django's HTML page.
+  - **Trusted origins:** Django checks an unsafe request's `Origin` too, so local settings
+    now trust the frontend's dev server and preview (`localhost` and `127.0.0.1`, ports
+    5173 and 4173) by default; production sets the site's own (`CSRF_TRUSTED_ORIGINS`).
+    The end-to-end sign-up found this: with an empty list, every sign-in from the dev
+    proxy was refused.
+- Decisions (RFC §7.5 updated):
+  - `django-allauth` without its `headless` extra: that extra adds PyJWT and `cryptography`
+    for app (token) clients, and only the browser client is used. 65.19.4 is pinned in the
+    lock (released 2026-09-17).
+  - allauth's response shape is kept as it is rather than wrapped in the API's: the client
+    reads it with its own small parser.
+- Verified (11 tests, 672 total):
+  - Sign-up, session and logout from a CSRF-enforcing client; logging in to an existing
+    account.
+  - A sign-up without the token is a JSON 403 `csrf_failed` and creates no user. A signed-in
+    plan without the token is a 403, and with it the trip belongs to the user.
+  - Case-insensitive email; Argon2 hashes; weak passwords refused with reasons.
+  - Five wrong passwords, then the sixth try and the right password are both refused.
+  - `/me` for a visitor (and its CSRF cookie), a guest with two trips, and a user.
 
 ### SPOT-115 · Move guest trips into the account on sign-in
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P1 | To do | SPOT-114 |
+| Backend · 1 | P1 | Done | SPOT-114 |
 
 **Sub-tasks**
-- [ ] `user_logged_in` handler: transfer trips for the session's `guest_id`, then drop it.
+- [x] `user_logged_in` handler: transfer trips for the session's `guest_id`, then drop it.
 
 **Acceptance criteria**
 - Guest plans 3 trips, signs up: all 3 are in the account and no guest trips remain.
@@ -2791,19 +2865,41 @@ core features, per PRD §5.
 - Logging out and planning again creates a new guest whose trips the account can't see.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: guest trips claimed on sign-in (`access.claim_guest_trips`, `planner/signals.py`).
+  - A `user_logged_in` handler, connected in `PlannerConfig.ready`, runs on every login,
+    sign-up included (allauth logs the new user in). In one transaction it moves the
+    session's guest trips to the user and clears their guest id, then drops `guest_id` from
+    the session. Django keeps session data when `login()` rotates the key, so it is there.
+  - Logout (allauth) flushes the session, so the next plan starts a new guest.
+- Decisions:
+  - The rule lives in the access layer with the rest of trip ownership; the signal module
+    only connects it.
+  - Logging back in on the same device claims that device's newer guest trips too: the
+    handler can't tell a second person from the same one, and the trips were made in this
+    browser.
+  - How many trips moved isn't returned by the API: the client knows its guest's
+    `recent_trip_count` from `/me` before signing in, which is what the "N trips were added"
+    message needs (SPOT-123).
+- Verified (6 tests, 678 total):
+  - A guest plans 3 trips and signs up: all 3 are the user's and no guest trips of theirs
+    remain; another guest's trip is untouched; `/me` counts 3.
+  - Logging in to an existing account with 1 trip after planning 2 as a guest: 3 trips.
+  - After logout, a new plan belongs to a new guest the account can't see; logging back in
+    claims it.
+  - Another account's trips are never claimed; no guest id, or a garbled one, claims
+    nothing and leaves the session clean.
 
 ### SPOT-116 · Trip actions API
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P1 | To do | SPOT-113, SPOT-114 |
+| Backend · 2 | P1 | Done | SPOT-113, SPOT-114 |
 
 **Sub-tasks**
-- [ ] `PATCH /api/v1/trips/{id}`: name, saved (users only → else 403 `account_required`),
+- [x] `PATCH /api/v1/trips/{id}`: name, saved (users only → else 403 `account_required`),
   shared.
-- [ ] `DELETE /api/v1/trips/{id}`.
-- [ ] `POST /api/v1/trips/{id}/replan`: new trip, same inputs, current weather, departure
+- [x] `DELETE /api/v1/trips/{id}`.
+- [x] `POST /api/v1/trips/{id}/replan`: new trip, same inputs, current weather, departure
   moved to now if past, `replanned_from` set, owned by the caller.
 
 **Acceptance criteria**
@@ -2812,57 +2908,134 @@ core features, per PRD §5.
 - Turning sharing off makes the link 404 for others immediately.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip actions (`TripDetailView.patch/delete`, `TripReplanView`,
+  `repositories.replan_request`).
+  - `PATCH /api/v1/trips/{id}`: any of `name` (trimmed, up to 120), `saved` and `shared`;
+    returns the trip. A guest setting `saved` is a 403 `account_required` and nothing
+    changes. Through `get_owned_trip`, so anyone else gets 404, shared or not.
+  - `DELETE /api/v1/trips/{id}`: 204; routes and heatmap go with the trip.
+  - `POST /api/v1/trips/{id}/replan`: from any trip the caller can see. It plans again with
+    the same places, load, interval and HOS clocks, leaving now if the departure has passed.
+    The new trip is the caller's (a guest is made if needed), with `replanned_from` set, and
+    is returned like `GET`.
+  - Planning and re-planning share one path (`_plan_and_save`): validation, the plan,
+    `Idempotency-Key` replay and the race on a key, the guest made only on success, and the
+    plan throttles. RFC §7.4 updated.
+- Decisions:
+  - Re-plan sends the saved inputs back through the plan request's own validation, so a
+    re-plan can't skip a rule a new plan would meet.
+  - Guests can still rename and share their trips; only saving needs an account (saving is
+    what keeps a trip past guest retention).
+- Verified (17 tests, 695 total):
+  - **Access matrix:** another user, another guest and a visitor get 404 for PATCH, DELETE
+    and re-plan, including on a shared trip for PATCH and DELETE; nothing changes.
+  - Rename, save and share by a user, only the fields sent changing; a guest renames and
+    shares but saving is 403 with nothing changed; bad values are 400s.
+  - Turning sharing off makes the trip and its heatmap 404 for a reader straight away.
+  - Delete removes the trip, routes and heatmap.
+  - Re-plan: same inputs (with HOS), new id, `replanned_from`, same owner; a departure two
+    days past moves to now; a shared trip re-planned by a stranger becomes theirs; the same
+    `Idempotency-Key` gives one new trip.
 
 ### SPOT-117 · Delete account
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P1 | To do | SPOT-114 |
+| Backend · 1 | P1 | Done | SPOT-114 |
 
 **Sub-tasks**
-- [ ] `DELETE /api/v1/me` with password confirmation; cascade trips; end the session.
+- [x] `DELETE /api/v1/me` with password confirmation; cascade trips; end the session.
 
 **Acceptance criteria**
 - Wrong password → 400 and nothing deleted; right password → user, trips, routes and heatmaps
   gone, and the old session cookie no longer authenticates.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: account deletion (`MeView.delete`).
+  - `DELETE /api/v1/me` with `{"password"}`: signed-in users only (403
+    `not_authenticated` otherwise), CSRF enforced. A wrong password is a 400 on `password`
+    and nothing changes. The right one deletes the user in a transaction: trips, routes,
+    heatmaps and allauth's email records cascade. Then `logout()` ends the session; 204.
+  - Its own throttle scope, `delete_account`, 5 a minute per user, because it checks a
+    password (RFC §12 updated).
+- Verified (5 tests, 700 total):
+  - Wrong password: 400 with the field message; user and trip remain; still signed in.
+  - Right password: 204; the user, their trip, routes, heatmap and email record are gone,
+    another user's trip is not; `/me` is a visitor again, and a copy of the old session
+    cookie in another client no longer authenticates.
+  - Not signed in: 403 `not_authenticated`. Without the CSRF token: 403, nothing deleted.
+  - Six wrong passwords in a minute: five 400s, then 429.
 
 ### SPOT-118 · Retention purge
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-110 |
+| Backend · 1 | P0 | Done | SPOT-110 |
 
 **Sub-tasks**
-- [ ] `manage.py purge_trips`: guest trips > 30 days, unsaved user trips > 90 days; then
+- [x] `manage.py purge_trips`: guest trips > 30 days, unsaved user trips > 90 days; then
   `clearsessions`. Logs counts.
-- [ ] Scheduled daily on the host (wired up in SPOT-100).
+- [ ] Scheduled daily on the host (wired up in SPOT-100). _(moved to SPOT-100, which already lists it)_
 
 **Acceptance criteria**
 - Test with trips either side of each cut-off: exactly the expired ones are deleted; saved
   trips are never deleted.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: retention purge (`planner/management/commands/purge_trips.py`,
+  `repositories.expired_trips`).
+  - Deletes, in one transaction, guest trips created over 30 days ago and users' unsaved
+    trips over 90 days ago; saved trips are never expired. Routes and heatmaps cascade.
+    Then `clearsessions`.
+  - Logs the counts (`event: purge`, `guest_trips`, `unsaved_trips`) and prints them.
+    `--dry-run` counts without deleting.
+- Verified (5 tests, 705 total):
+  - Trips either side of each cut-off (guest 29 and 31 days, unsaved user 89 and 91 days,
+    a user's unsaved 31-day trip, a saved 400-day trip): exactly the 31-day guest and 91-day
+    unsaved trips go.
+  - Routes and heatmaps go with them; a dry run deletes nothing and reports what would go;
+    an expired session is cleared and a live one kept; the log record carries the counts.
+- Left: scheduling it daily on the host, which is SPOT-100's (already a sub-task there).
 
 ### SPOT-119 · Demo account seed
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P1 | To do | SPOT-114, SPOT-30 |
+| Backend · 1 | P1 | Done | SPOT-114, SPOT-30 |
 
 **Sub-tasks**
-- [ ] `manage.py seed_demo`: reviewer account plus 4 saved trips from the fake providers;
+- [x] `manage.py seed_demo`: reviewer account plus 4 saved trips from the fake providers;
   idempotent.
 
 **Acceptance criteria**
 - Running it twice leaves one demo user with 4 trips.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: demo account (`planner/management/commands/seed_demo.py`).
+  - Makes or resets `DEMO_EMAIL` (default `demo@example.com`) with `DEMO_PASSWORD`, which
+    has no default: the command refuses to run without it (or `--password`). Each run
+    resets the password, reactivates the account, deletes its trips and seeds four saved,
+    named trips:
+    - Dallas → Denver, weekly;
+    - the same on a storm day (strong scenario);
+    - Houston → Kansas City every 10 mi;
+    - Phoenix → Salt Lake City with HOS on.
+  - The trips come from the fake providers whatever `PROVIDERS` says, so they say "Demo
+    data". Each trip's heatmap is computed and kept at seed time from the same fake weather,
+    so it matches the routes, conditions included. Their forecasts go through a private cache.
+  - `DEMO_EMAIL` and `DEMO_PASSWORD` settings, in `.env.example` too.
+- Decisions:
+  - Resetting rather than only creating: the password is shared with reviewers, so anyone
+    could change it or delete trips; a rerun (the host runs it, SPOT-100) puts it back.
+  - A private forecast cache, because fake forecasts under the shared keys would be served
+    to real plans in production.
+- Verified (4 tests, 709 total):
+  - Run twice: one demo user, four saved demo trips with the right names, each with its
+    heatmap and conditions. Other users' and guests' trips untouched, and nothing written to
+    the shared cache (this check fails if the seed uses it). The password logs in and a
+    wrong one doesn't.
+  - After a reviewer changes the password and deletes a trip, a rerun restores both.
+  - No password: an error and no user. `--email` seeds another address.
 
 ### SPOT-120 · Routing and session handling
 

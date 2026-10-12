@@ -21,6 +21,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Who the caller is: a signed-in user, a guest who has planned, or neither.
+         *
+         *     The app asks this first, so the response also sets the CSRF cookie that
+         *     every later sign-up, login or plan sends back as `X-CSRFToken`.
+         */
+        get: operations["get_me"];
+        put?: never;
+        post?: never;
+        /**
+         * @description Delete the account and everything in it, then end the session.
+         *
+         *     Needs the password, so a session left open on a shared computer can't
+         *     be used to delete someone's account. The user's trips, their routes
+         *     and heatmaps, and allauth's email records all go with the user.
+         */
+        delete: operations["delete_me"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/plans": {
         parameters: {
             query?: never;
@@ -45,6 +74,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The caller's trips, newest first.
+         *
+         *     Signed-in users page through all of theirs with the cursor in `next`.
+         *     A guest gets their latest 20 and no further pages. A visitor who hasn't
+         *     planned yet gets an empty list.
+         */
+        get: operations["list_trips"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A saved trip: the plan as it was made, for its owner or, if shared, anyone. */
+        get: operations["get_trip"];
+        put?: never;
+        post?: never;
+        /** @description A saved trip: the plan as it was made, for its owner or, if shared, anyone. */
+        delete: operations["delete_trip"];
+        options?: never;
+        head?: never;
+        /** @description A saved trip: the plan as it was made, for its owner or, if shared, anyone. */
+        patch: operations["update_trip"];
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/heatmap": {
         parameters: {
             query?: never;
@@ -62,6 +133,29 @@ export interface paths {
         get: operations["trip_heatmap"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/replan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Plan the trip again with current weather: the same places, load, interval
+         *     and HOS clocks, leaving now if the original departure has passed.
+         *
+         *     The new trip belongs to the caller, so anyone who can open a shared trip
+         *     can re-plan it into their own. It records which trip it came from.
+         */
+        post: operations["replan_trip"];
         delete?: never;
         options?: never;
         head?: never;
@@ -228,6 +322,19 @@ export interface components {
          * @enum {string}
          */
         LoadRuleEnum: "wind_45_54_over_30k" | "wind_35_44_over_40k";
+        /** @description Who the caller is, for the header. */
+        Me: {
+            /** @description The signed-in user, or null. */
+            user: components["schemas"]["MeUser"] | null;
+            /** @description A guest who has planned on this device. */
+            guest: boolean;
+            /** @description Trips the caller owns: a guest's on this device, or a user's in total. */
+            recent_trip_count: number;
+        };
+        MeUser: {
+            /** Format: email */
+            email: string;
+        };
         Metrics: {
             miles_by_level: components["schemas"]["MilesByLevel"];
             /** Format: double */
@@ -253,6 +360,14 @@ export interface components {
         };
         /** @enum {unknown} */
         NullEnum: null;
+        /** @description What the owner can change; send only the fields to change. */
+        PatchedTripUpdateRequest: {
+            name?: string;
+            /** @description Signed-in users only. */
+            saved?: boolean;
+            /** @description Anyone with the link can open it, read-only. */
+            shared?: boolean;
+        };
         Place: {
             label: string;
             /** Format: double */
@@ -359,6 +474,78 @@ export interface components {
             readonly avg_risk_tolerance: number;
             readonly hos_enabled: boolean;
         };
+        /** @description A saved trip: its plan response, what the owner has set, and who is asking. */
+        Trip: {
+            /** Format: date-time */
+            generated_at: string;
+            rules_version: string;
+            stale: boolean;
+            /** Format: date-time */
+            forecast_as_of: string | null;
+            demo: boolean;
+            inputs: components["schemas"]["Inputs"];
+            settings: components["schemas"]["Settings"];
+            recommended_route_id: string | null;
+            reason_code: components["schemas"]["ReasonCodeEnum"];
+            recommendation_reason: string;
+            warnings: components["schemas"]["Warning"][];
+            routes: components["schemas"]["Route"][];
+            corridor: components["schemas"]["Corridor"];
+            /**
+             * Format: uuid
+             * @description The saved trip; its heatmap is under /trips/{id}.
+             */
+            trip_id: string;
+            name: string;
+            saved: boolean;
+            shared: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Whether the caller may change the trip. */
+            is_owner: boolean;
+            /**
+             * Format: uuid
+             * @description The trip this one re-planned, if any.
+             */
+            replanned_from: string | null;
+        };
+        /** @description A page of trips, newest first. Follow `next` for the one after; guests get one page. */
+        TripPage: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["TripSummary"][];
+        };
+        /** @description The recommended route, as a trip list shows it. */
+        TripRouteSummary: {
+            id: string;
+            name: string;
+            label: string | null;
+            worst: (components["schemas"]["RiskLevelEnum"] | components["schemas"]["NullEnum"]) | null;
+            drivable: boolean;
+        };
+        /** @description One trip in a list: enough to recognise it, without its routes' detail. */
+        TripSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Set by the owner; empty until then. */
+            name: string;
+            saved: boolean;
+            shared: boolean;
+            origin: string;
+            destination: string;
+            /** Format: date-time */
+            departure: string;
+            load_lb: number;
+            interval_mi: number;
+            demo: boolean;
+            stale: boolean;
+            /** @description Null when no route is drivable, so none is recommended. */
+            readonly recommended: components["schemas"]["TripRouteSummary"] | null;
+        };
         Warning: {
             code: components["schemas"]["WarningCodeEnum"];
             message: string;
@@ -395,9 +582,12 @@ export type HosStopReasonEnum = components['schemas']['HosStopReasonEnum'];
 export type Inputs = components['schemas']['Inputs'];
 export type IntervalMiEnum = components['schemas']['IntervalMiEnum'];
 export type LoadRuleEnum = components['schemas']['LoadRuleEnum'];
+export type Me = components['schemas']['Me'];
+export type MeUser = components['schemas']['MeUser'];
 export type Metrics = components['schemas']['Metrics'];
 export type MilesByLevel = components['schemas']['MilesByLevel'];
 export type NullEnum = components['schemas']['NullEnum'];
+export type PatchedTripUpdateRequest = components['schemas']['PatchedTripUpdateRequest'];
 export type Place = components['schemas']['Place'];
 export type PlaceRequest = components['schemas']['PlaceRequest'];
 export type Plan = components['schemas']['Plan'];
@@ -408,6 +598,10 @@ export type RiskDriverEnum = components['schemas']['RiskDriverEnum'];
 export type RiskLevelEnum = components['schemas']['RiskLevelEnum'];
 export type Route = components['schemas']['Route'];
 export type Settings = components['schemas']['Settings'];
+export type Trip = components['schemas']['Trip'];
+export type TripPage = components['schemas']['TripPage'];
+export type TripRouteSummary = components['schemas']['TripRouteSummary'];
+export type TripSummary = components['schemas']['TripSummary'];
 export type Warning = components['schemas']['Warning'];
 export type WarningCodeEnum = components['schemas']['WarningCodeEnum'];
 export type $defs = Record<string, never>;
@@ -452,6 +646,70 @@ export interface operations {
             };
             /** @description geocoding_unavailable */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    delete_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description invalid_input: wrong password */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_authenticated */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -534,6 +792,190 @@ export interface operations {
             };
         };
     };
+    list_trips: {
+        parameters: {
+            query?: {
+                /** @description From a previous page's `next`. */
+                cursor?: string;
+                /** @description Matches the name, origin or destination. */
+                q?: string;
+                /** @description Only saved trips, or only not. */
+                saved?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripPage"];
+                };
+            };
+            /** @description invalid_input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_trip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trip"];
+                };
+            };
+            /** @description not_found: no such trip, or not yours and not shared */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    delete_trip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description not_found: no such trip, or not yours */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    update_trip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTripUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTripUpdateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedTripUpdateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trip"];
+                };
+            };
+            /** @description invalid_input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description account_required: only signed-in users save trips */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found: no such trip, or not yours (sharing doesn't let others edit) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     trip_heatmap: {
         parameters: {
             query?: {
@@ -579,6 +1021,84 @@ export interface operations {
                 };
             };
             /** @description weather_unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    replan_trip: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description A UUID per click; a repeat returns the same new trip. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trip"];
+                };
+            };
+            /** @description invalid_input: the trip's inputs no longer make a valid plan */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found: no such trip, or not yours and not shared */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description idempotency_conflict: the key belongs to another caller's trip */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description no_route: no truck route between the places */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description routing_unavailable or weather_unavailable */
             502: {
                 headers: {
                     [name: string]: unknown;

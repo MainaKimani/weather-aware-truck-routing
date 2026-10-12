@@ -48,6 +48,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: geocoding_unavailable
+  /api/v1/me:
+    get:
+      operationId: get_me
+      description: |-
+        Who the caller is: a signed-in user, a guest who has planned, or neither.
+
+        The app asks this first, so the response also sets the CSRF cookie that
+        every later sign-up, login or plan sends back as `X-CSRFToken`.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+    delete:
+      operationId: delete_me
+      description: |-
+        Delete the account and everything in it, then end the session.
+
+        Needs the password, so a session left open on a shared computer can't
+        be used to delete someone's account. The user's trips, their routes
+        and heatmaps, and allauth's email records all go with the user.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'invalid_input: wrong password'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_authenticated
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
   /api/v1/plans:
     post:
       operationId: create_plan
@@ -120,6 +173,185 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: routing_unavailable or weather_unavailable
+  /api/v1/trips:
+    get:
+      operationId: list_trips
+      description: |-
+        The caller's trips, newest first.
+
+        Signed-in users page through all of theirs with the cursor in `next`.
+        A guest gets their latest 20 and no further pages. A visitor who hasn't
+        planned yet gets an empty list.
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+        description: From a previous page's `next`.
+      - in: query
+        name: q
+        schema:
+          type: string
+          default: ''
+          maxLength: 100
+        description: Matches the name, origin or destination.
+      - in: query
+        name: saved
+        schema:
+          type: boolean
+          nullable: true
+        description: Only saved trips, or only not.
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripPage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: invalid_input
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+  /api/v1/trips/{trip_id}:
+    get:
+      operationId: get_trip
+      description: 'A saved trip: the plan as it was made, for its owner or, if shared,
+        anyone.'
+      parameters:
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours and not shared'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+    patch:
+      operationId: update_trip
+      description: 'A saved trip: the plan as it was made, for its owner or, if shared,
+        anyone.'
+      parameters:
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTripUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTripUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTripUpdateRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: invalid_input
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'account_required: only signed-in users save trips'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours (sharing doesn''t let
+            others edit)'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+    delete:
+      operationId: delete_trip
+      description: 'A saved trip: the plan as it was made, for its owner or, if shared,
+        anyone.'
+      parameters:
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
   /api/v1/trips/{trip_id}/heatmap:
     get:
       operationId: trip_heatmap
@@ -177,6 +409,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: weather_unavailable
+  /api/v1/trips/{trip_id}/replan:
+    post:
+      operationId: replan_trip
+      description: |-
+        Plan the trip again with current weather: the same places, load, interval
+        and HOS clocks, leaving now if the original departure has passed.
+
+        The new trip belongs to the caller, so anyone who can open a shared trip
+        can re-plan it into their own. It records which trip it came from.
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+          format: uuid
+        description: A UUID per click; a repeat returns the same new trip.
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'invalid_input: the trip''s inputs no longer make a valid plan'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours and not shared'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'idempotency_conflict: the key belongs to another caller''s
+            trip'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'no_route: no truck route between the places'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: routing_unavailable or weather_unavailable
 components:
   schemas:
     Checkpoint:
@@ -528,6 +831,34 @@ components:
       description: |-
         * `wind_45_54_over_30k` - wind_45_54_over_30k
         * `wind_35_44_over_40k` - wind_35_44_over_40k
+    Me:
+      type: object
+      description: Who the caller is, for the header.
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/MeUser'
+          nullable: true
+          description: The signed-in user, or null.
+        guest:
+          type: boolean
+          description: A guest who has planned on this device.
+        recent_trip_count:
+          type: integer
+          description: 'Trips the caller owns: a guest''s on this device, or a user''s
+            in total.'
+      required:
+      - guest
+      - recent_trip_count
+      - user
+    MeUser:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
     Metrics:
       type: object
       properties:
@@ -584,6 +915,19 @@ components:
     NullEnum:
       enum:
       - null
+    PatchedTripUpdateRequest:
+      type: object
+      description: What the owner can change; send only the fields to change.
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        saved:
+          type: boolean
+          description: Signed-in users only.
+        shared:
+          type: boolean
+          description: Anyone with the link can open it, read-only.
     Place:
       type: object
       properties:
@@ -865,6 +1209,185 @@ components:
       - avg_risk_tolerance
       - hos_enabled
       - wind_basis
+    Trip:
+      type: object
+      description: 'A saved trip: its plan response, what the owner has set, and who
+        is asking.'
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        rules_version:
+          type: string
+        stale:
+          type: boolean
+        forecast_as_of:
+          type: string
+          format: date-time
+          nullable: true
+        demo:
+          type: boolean
+        inputs:
+          $ref: '#/components/schemas/Inputs'
+        settings:
+          $ref: '#/components/schemas/Settings'
+        recommended_route_id:
+          type: string
+          nullable: true
+        reason_code:
+          $ref: '#/components/schemas/ReasonCodeEnum'
+        recommendation_reason:
+          type: string
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Warning'
+        routes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Route'
+        corridor:
+          $ref: '#/components/schemas/Corridor'
+        trip_id:
+          type: string
+          format: uuid
+          description: The saved trip; its heatmap is under /trips/{id}.
+        name:
+          type: string
+        saved:
+          type: boolean
+        shared:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        is_owner:
+          type: boolean
+          description: Whether the caller may change the trip.
+        replanned_from:
+          type: string
+          format: uuid
+          nullable: true
+          description: The trip this one re-planned, if any.
+      required:
+      - corridor
+      - created_at
+      - demo
+      - forecast_as_of
+      - generated_at
+      - inputs
+      - is_owner
+      - name
+      - reason_code
+      - recommendation_reason
+      - recommended_route_id
+      - replanned_from
+      - routes
+      - rules_version
+      - saved
+      - settings
+      - shared
+      - stale
+      - trip_id
+      - warnings
+    TripPage:
+      type: object
+      description: A page of trips, newest first. Follow `next` for the one after;
+        guests get one page.
+      properties:
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TripSummary'
+      required:
+      - next
+      - previous
+      - results
+    TripRouteSummary:
+      type: object
+      description: The recommended route, as a trip list shows it.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        label:
+          type: string
+          nullable: true
+        worst:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/RiskLevelEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        drivable:
+          type: boolean
+      required:
+      - drivable
+      - id
+      - label
+      - name
+      - worst
+    TripSummary:
+      type: object
+      description: 'One trip in a list: enough to recognise it, without its routes''
+        detail.'
+      properties:
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        name:
+          type: string
+          description: Set by the owner; empty until then.
+        saved:
+          type: boolean
+        shared:
+          type: boolean
+        origin:
+          type: string
+        destination:
+          type: string
+        departure:
+          type: string
+          format: date-time
+        load_lb:
+          type: integer
+        interval_mi:
+          type: integer
+        demo:
+          type: boolean
+        stale:
+          type: boolean
+        recommended:
+          allOf:
+          - $ref: '#/components/schemas/TripRouteSummary'
+          nullable: true
+          readOnly: true
+          description: Null when no route is drivable, so none is recommended.
+      required:
+      - created_at
+      - demo
+      - departure
+      - destination
+      - id
+      - interval_mi
+      - load_lb
+      - name
+      - origin
+      - recommended
+      - saved
+      - shared
+      - stale
     Warning:
       type: object
       properties:
