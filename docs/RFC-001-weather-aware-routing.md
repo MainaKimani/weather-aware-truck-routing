@@ -815,8 +815,10 @@ plus a 49-frame heatmap, and smooth scrubbing is 35% of the grade.
    colour, 6 px, with a casing.
 4. **Checkpoints:** a single `circle` layer, colour from a `match` on `level`, radius scaled by
    zoom. Hover and selection via `feature-state`, no re-render of the source.
-5. **HOS stops** (only when HOS is on): a `symbol` layer with distinct icons for break, rest and
-   restart, labelled with start time and length.
+5. **HOS stops** (only when HOS is on): a marker per stop with distinct icons for break, rest
+   and restart. A route has only a handful of stops, so markers cost nothing, and each is a
+   button that can be reached and opened from the keyboard. Its popup gives start, end, length
+   and reason.
 6. **Popups:** one React popup for the hovered or clicked checkpoint or stop.
 
 All routes and checkpoints go in **one GeoJSON source each**, built once per plan with
@@ -832,17 +834,30 @@ On slider change:
 
 ```ts
 map.setPaintProperty("corridor-heat", "heatmap-weight",
-  ["/", ["get", `h${hour}`], 4]);
+  ["/", ["+", ["coalesce", ["get", `h${hour}`], -1], 1], 5]);
 ```
+
+Each level gets a fifth of the weight scale, Low included (0.2, so Low shows pale yellow as on
+the checkpoints, rather than nothing). An hour with no forecast has no property and weighs 0, so
+Unknown is left uncoloured rather than drawn as Low.
 
 That is one paint update with no data upload and no React re-render of the map tree. It is
 throttled with `requestAnimationFrame`, so dragging is capped at one update per frame.
 Play mode steps one hour every 250 ms.
 
 - The grid is uniform, so the heatmap's density effect is even and the colour follows the
-  weight (risk), not point clustering. `heatmap-radius` is interpolated by zoom so cells
-  merge without gaps at every zoom level. `heatmap-color` uses the same 5-step risk ramp as
-  the checkpoints, with a legend.
+  weight (risk), not point clustering. `heatmap-radius` grows ×2 per zoom level, keeping the
+  kernel at 0.6 grid steps, so cells merge without gaps at every zoom level.
+  `heatmap-intensity` is set so the summed kernels give a density equal to the weight (within
+  ±4% on and between cells, checked numerically), allowing for Mercator's taller rows at the
+  grid's mean latitude. `heatmap-color` steps on density at the midpoints between levels, so
+  each band is exactly one of the checkpoints' colours, with a legend.
+- **Truck position.** While scrubbing, each route shows its truck where the plan puts it at
+  the slider's hour: the mile is interpolated by time between the checkpoints' ETAs, with
+  each HOS stop as two points at one mile (start and end) so the truck stands still through
+  it, then placed on the line as the backend places checkpoints (line length scaled to the
+  reported miles). At a checkpoint's ETA the truck is on that checkpoint. It is hidden before
+  departure and after arrival. Three DOM markers moved by props: no data upload.
 - **Fallback if the blurred look misleads at high zoom:** switch the layer to a `fill` layer
   of grid cells with the same `["get", "h<hour>"]` expression. Same data, same scrubbing method.
 

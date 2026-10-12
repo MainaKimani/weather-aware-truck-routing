@@ -1,11 +1,18 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest'
 
 import { resetTimelineStore } from '../state/timeline'
 import { resetUiStore } from '../state/ui'
-import { setSystemDark } from './matchMedia'
+import { resetFakeMap } from './fakeMap'
+import { setReducedMotion, setSystemDark } from './matchMedia'
 import { server } from './server'
+
+// jsdom has no WebGL; every test gets the stand-in map from fakeMap.ts.
+vi.mock('react-map-gl/maplibre', async () => ({
+  ...(await import('./fakeMapLibrary')),
+  useMap: (await import('./fakeMap')).useMap,
+}))
 
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' })
@@ -14,9 +21,11 @@ beforeAll(() => {
 beforeEach(() => {
   localStorage.clear()
   setSystemDark(false)
+  setReducedMotion(false)
   delete document.documentElement.dataset.theme
   resetUiStore()
   resetTimelineStore()
+  resetFakeMap()
 })
 
 afterEach(() => {

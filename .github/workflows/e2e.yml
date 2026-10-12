@@ -1,0 +1,62 @@
+# End-to-end smoke test. Called from ci.yml when either side changes; not run
+# directly. Runs the production build in Chromium against the real backend
+# (fake providers, Postgres), both started by frontend/playwright.config.ts.
+name: End-to-end
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: spotter
+          POSTGRES_PASSWORD: spotter
+          POSTGRES_DB: spotter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U spotter"
+          --health-interval 2s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://spotter:spotter@localhost:5432/spotter
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Smoke test
+        run: npm run test:e2e
+      - name: Report and traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7

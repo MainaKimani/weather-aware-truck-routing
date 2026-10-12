@@ -14,18 +14,26 @@ export interface CheckpointRef {
 
 export type Layer = 'heatmap' | 'checkpoints' | 'alternatives'
 
+/** What the heatmap colours by: the overall rating, or one condition's level. */
+export type HeatmapMetric = 'risk' | 'wind' | 'rain' | 'snow'
+
 interface UiState {
   selectedRouteId: string | null
   hoveredRouteId: string | null
   selectedCheckpoint: CheckpointRef | null
   hoveredCheckpoint: CheckpointRef | null
   layers: Readonly<Record<Layer, boolean>>
+  heatmapMetric: HeatmapMetric
   selectRoute: (routeId: string | null) => void
   hoverRoute: (routeId: string | null) => void
   selectCheckpoint: (checkpoint: CheckpointRef | null) => void
   hoverCheckpoint: (checkpoint: CheckpointRef | null) => void
   toggleLayer: (layer: Layer) => void
-  /** A new plan arrived: select its recommended route and clear pointers into the old one. */
+  showHeatmapMetric: (metric: HeatmapMetric) => void
+  /**
+   * A new plan arrived: select its recommended route and clear pointers into
+   * the old one. Layer choices and the heatmap metric stay.
+   */
   showPlan: (routeId: string | null) => void
 }
 
@@ -35,6 +43,7 @@ const initial = {
   selectedCheckpoint: null,
   hoveredCheckpoint: null,
   layers: { heatmap: true, checkpoints: true, alternatives: true },
+  heatmapMetric: 'risk',
 } satisfies Partial<UiState>
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -60,8 +69,12 @@ export const useUiStore = create<UiState>()((set) => ({
   toggleLayer: (layer) => {
     set((s) => ({ layers: { ...s.layers, [layer]: !s.layers[layer] } }))
   },
+  showHeatmapMetric: (metric) => {
+    set({ heatmapMetric: metric })
+  },
   showPlan: (routeId) => {
-    set({ ...initial, layers: useUiStore.getState().layers, selectedRouteId: routeId })
+    const { layers, heatmapMetric } = useUiStore.getState()
+    set({ ...initial, layers, heatmapMetric, selectedRouteId: routeId })
   },
 }))
 

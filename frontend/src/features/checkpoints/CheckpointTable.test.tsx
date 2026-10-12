@@ -160,4 +160,30 @@ describe('checkpoint table', () => {
     expect(indexes).toContain(202)
     expect(indexes).not.toContain(2)
   })
+
+  it("starts another route's list at its first row, where the keyboard can reach it", () => {
+    const plan = clone(demoPlan)
+    const template = at(at(plan.routes, 0).checkpoints, 0)
+    for (const route of plan.routes) {
+      route.checkpoints = Array.from({ length: 300 }, (_, i) => ({
+        ...template,
+        mile: i * 10,
+        owned_mi: 10,
+      }))
+    }
+    renderTable(plan)
+    const scroller = () => required(screen.getByRole('table').parentElement, 'scroll container')
+    act(() => {
+      scroller().scrollTop = 200 * ROW_HEIGHT
+      fireEvent.scroll(scroller())
+    })
+    expect(bodyRows()[0]).not.toHaveAttribute('aria-rowindex', '2')
+
+    act(() => {
+      useUiStore.getState().selectRoute('r2')
+    })
+
+    expect(scroller().scrollTop).toBe(0)
+    expect(bodyRows()[0]).toHaveAttribute('aria-rowindex', '2')
+  })
 })

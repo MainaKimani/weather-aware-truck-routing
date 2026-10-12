@@ -4,9 +4,11 @@ import { describe, expect, it } from 'vitest'
 
 import { demoTripRequest } from '../features/plan/demoTrip'
 import { useUiStore } from '../state/ui'
+import { demoHeatmap } from '../test/fixtures/demoHeatmap'
 import { demoPlan } from '../test/fixtures/demoPlan'
 import { renderHookWithClient } from '../test/render'
-import { PLANS, apiError, server } from '../test/server'
+import { HEATMAP, PLANS, apiError, server } from '../test/server'
+import { heatmapKeys } from './heatmap'
 import { planKeys, usePlan, usePlanTrip } from './plans'
 
 describe('usePlanTrip', () => {
@@ -23,6 +25,56 @@ describe('usePlanTrip', () => {
 
     expect(client.getQueryData(planKeys.current())).toEqual(demoPlan)
     expect(useUiStore.getState().selectedRouteId).toBe('r1')
+  })
+
+  it("requests the trip's heatmap once the plan has arrived, not before", async () => {
+    const log: string[] = []
+    server.use(
+      http.post(PLANS, async () => {
+        log.push('plan requested')
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        log.push('plan answered')
+        return HttpResponse.json(demoPlan)
+      }),
+      http.get(HEATMAP, ({ params }) => {
+        log.push(`heatmap requested for ${String(params.tripId)}`)
+        return HttpResponse.json(demoHeatmap)
+      }),
+    )
+    const { result, client } = renderHookWithClient(() => usePlanTrip())
+
+    act(() => {
+      result.current.plan(demoTripRequest())
+    })
+    await waitFor(() => {
+      expect(client.getQueryData(heatmapKeys.trip(demoPlan.trip_id))).toEqual(demoHeatmap)
+    })
+
+    expect(log).toEqual([
+      'plan requested',
+      'plan answered',
+      `heatmap requested for ${demoPlan.trip_id}`,
+    ])
+  })
+
+  it('requests no heatmap when the plan fails', async () => {
+    let heatmaps = 0
+    server.use(
+      http.post(PLANS, () => apiError(422, 'no_route', 'No route.')),
+      http.get(HEATMAP, () => {
+        heatmaps += 1
+        return HttpResponse.json(demoHeatmap)
+      }),
+    )
+    const { result } = renderHookWithClient(() => usePlanTrip())
+
+    act(() => {
+      result.current.plan(demoTripRequest())
+    })
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+    expect(heatmaps).toBe(0)
   })
 
   it('sends one Idempotency-Key per submission, reused by the automatic retry', async () => {

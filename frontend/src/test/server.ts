@@ -6,14 +6,23 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 
+import { demoHeatmap, demoHeatmapWithMetrics } from './fixtures/demoHeatmap'
 import { demoPlan } from './fixtures/demoPlan'
 
 export const PLANS = '*/api/v1/plans'
 export const SUGGEST = '*/api/v1/geocode/suggest'
+export const HEATMAP = '*/api/v1/trips/:tripId/heatmap'
 
 export const handlers = [
   http.post(PLANS, () =>
     HttpResponse.json(demoPlan, { headers: { 'X-Request-ID': 'req-plan-0001' } }),
+  ),
+  http.get(HEATMAP, ({ request }) =>
+    HttpResponse.json(
+      new URL(request.url).searchParams.get('include') === 'metrics'
+        ? demoHeatmapWithMetrics
+        : demoHeatmap,
+    ),
   ),
   http.get(SUGGEST, ({ request }) => {
     const q = new URL(request.url).searchParams.get('q') ?? ''

@@ -44,7 +44,10 @@ export function CheckpointTable() {
       <h2 id="checkpoints-title" className="text-sm font-semibold">
         Checkpoints <span className="font-normal text-muted">· {data.name}</span>
       </h2>
-      <Rows routeId={routeId} checkpoints={data.checkpoints} zone={data.zone} />
+      {/* Keyed by route, so another route's list starts at its first row. Rows are
+          rendered only near the scroll position, and Tab can reach only rendered
+          rows, so a list left scrolled would hide its first rows from the keyboard. */}
+      <Rows key={routeId} routeId={routeId} checkpoints={data.checkpoints} zone={data.zone} />
     </section>
   )
 }
