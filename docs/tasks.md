@@ -76,7 +76,7 @@ link to their sections instead of repeating them.
 | SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | Done        |
 | SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | Done        |
 | SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | Done        |
-| SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | To do       |
+| SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | In progress |
 | SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | To do       |
 | SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do       |
 | SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do       |
@@ -117,9 +117,16 @@ here when that task closes it.
 - PRD Q3: paid routing tier (see Blocked).
 
 **Branch housekeeping**
-- `dev-frontend` is behind `main`; merge `main` into it before frontend work starts.
-- `dev-backend` is behind `main`. The trips branch starts from `main`, so its PR brings
-  `dev-backend` up to date.
+- Unpushed: `feat/spot-110-112-trips` (trips, heatmap endpoint and its per-condition
+  levels) and `feat/spot-80-92-heatmap`, which holds the map commits (70–74), the trips
+  branch merged in, and 80–92.
+- Merge order, so each PR shows only its own side:
+  1. `feat/spot-110-112-trips` → `dev-backend` → `main`. It starts from `main`, so it also
+     brings `dev-backend` up to date.
+  2. Merge `main` into `dev-frontend` (it is one merge behind).
+  3. `feat/spot-80-92-heatmap` → `dev-frontend` → `main`; the backend commits are then
+     already there, so its diff is frontend, docs and CI only.
+  4. Merge `main` back into both dev branches.
 
 **Carried over to a later task**
 
@@ -2440,7 +2447,7 @@ Spec: RFC §10.4.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 2 | P0 | To do | SPOT-100, SPOT-101 |
+| Full stack · 2 | P0 | In progress | SPOT-100, SPOT-101 |
 
 Spec: PRD §8.
 
@@ -2457,7 +2464,22 @@ Spec: PRD §8.
 - p95 plan < 6 s cold, < 1.5 s warm; slider and map at 60 fps; numbers logged below.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: local numbers (fake providers; the hosted app doesn't exist yet).
+  - **Frames** (Playwright Chromium on this laptop's Intel Arc GPU, LA → NY every 10 mi,
+    heatmap on): scrubbing one hour per frame for 147 frames, median 16.7 ms, p95 16.8 ms, one
+    frame at 33 ms, no long tasks. Pan and zoom, 320 frames all ≤ 16.8 ms, no long tasks.
+    With the heatmap hidden, pan/zoom had one 132 ms long task (likely basemap tiles at a new
+    zoom). In software WebGL (SwiftShader) the heatmap dominates pan/zoom (66.7 ms median
+    with it, 16.7 ms without), so a machine without a GPU will feel it.
+  - **Plan latency** (local API, LA → Kansas City, ~1,400 mi at 10 mi, 141–145 checkpoints a
+    route): 1.29 s cold, 0.43 s and 0.51 s warm. LA → NY at 10 mi: 1.95 s for the plan
+    (286 KB JSON), 1.55 s for the heatmap. Real providers will add network time.
+  - **Bundle** (gzipped): main 131.6 KB, map chunk 13.9 KB plus MapLibre 285.6 KB (lazy),
+    CSS 5.4 KB + 10.7 KB. The main chunk is mostly the trip form's libraries: zod 30% of its
+    source, downshift 14%, react-hook-form 12%. There is no PRD budget for it; `zod/mini` is
+    the obvious saving if one is set.
+- Left: plan latency on the hosted app with real providers (SPOT-100/101); frame times in a
+  visible desktop Chrome rather than headless.
 
 ---
 
