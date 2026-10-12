@@ -13,6 +13,7 @@ from planner.access import Owner, current_owner, get_visible_trip
 from planner.api.errors import IdempotencyConflict
 from planner.api.serializers import (
     ErrorSerializer,
+    HeatmapQuerySerializer,
     HeatmapSerializer,
     PlaceOutSerializer,
     PlanRequestSerializer,
@@ -130,7 +131,10 @@ class TripHeatmapView(APIView):
 
     @extend_schema(
         operation_id="trip_heatmap",
-        parameters=[OpenApiParameter("trip_id", uuid.UUID, OpenApiParameter.PATH)],
+        parameters=[
+            OpenApiParameter("trip_id", uuid.UUID, OpenApiParameter.PATH),
+            HeatmapQuerySerializer,
+        ],
         responses={
             200: HeatmapSerializer,
             404: _error("not_found: no such trip, or not yours and not shared"),
@@ -139,13 +143,18 @@ class TripHeatmapView(APIView):
         },
     )
     def get(self, request: Request, trip_id: str) -> Response:
+        query = HeatmapQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        include_metrics = query.validated_data.get("include") == "metrics"
         trip = get_visible_trip(trip_id, current_owner(request))
-        saved = load_heatmap(trip)
+        saved = load_heatmap(trip, include_metrics=include_metrics)
         if saved is not None:
             return Response(saved)
         weather = get_providers().weather
         grid = corridor_grid(route_lines(trip), trip.load_lb, ForecastStore(weather))
-        return Response(save_heatmap(trip, HeatmapSerializer(grid).data))
+        # Kept with its metrics, so asking for them later reads the same copy.
+        computed = HeatmapSerializer(grid, context={"include_metrics": True}).data
+        return Response(save_heatmap(trip, computed, include_metrics=include_metrics))
 
 
 class GeocodeSuggestView(APIView):

@@ -136,6 +136,21 @@ class TestCorridorGrid:
                     )
                     assert level == expected.level
 
+    def test_each_conditions_levels_are_the_ratings_own(self) -> None:
+        weather = StripedWeather()
+        grid = corridor_grid(lines(DALLAS, DENVER), 45_000, store(weather), lambda: NOW)
+
+        assert len(grid.wind) == len(grid.rain) == len(grid.snow) == len(grid.points)
+        for i in range(0, len(grid.points), 37):
+            for h in range(grid.hours):
+                rating = classify(
+                    weather.forecast(grid.points[i], grid.start_hour + timedelta(hours=h)),
+                    45_000,
+                )
+                assert grid.wind[i][h] == rating.wind_adjusted  # after the load rules
+                assert grid.rain[i][h] == rating.rain
+                assert grid.snow[i][h] == rating.snow
+
     def test_load_rules_change_the_grid(self) -> None:
         weather = StripedWeather()
         light = corridor_grid(lines(DALLAS, DENVER), 20_000, store(weather), lambda: NOW)
@@ -212,6 +227,18 @@ def test_serialized_shape() -> None:
     lon, lat = data["points"][0]
     assert -106 < lon < -96 and 31 < lat < 41
     assert set(data["risk"][0]) <= {0, 1, 2, 3, 4}
+    assert "metrics" not in data
+
+
+def test_serialized_metrics_only_when_asked_for() -> None:
+    grid = corridor_grid(lines(DALLAS, DENVER), 42_000, store(StripedWeather()), lambda: NOW)
+    data = HeatmapSerializer(grid, context={"include_metrics": True}).data
+
+    assert set(data["metrics"]) == {"wind", "rain", "snow"}
+    for rows in data["metrics"].values():
+        assert len(rows) == len(data["points"])
+        assert all(len(row) == 49 for row in rows)
+        assert {v for row in rows for v in row} <= {None, 0, 1, 2, 3, 4}
 
 
 def test_coast_to_coast_grid_is_quick_with_cached_forecasts() -> None:

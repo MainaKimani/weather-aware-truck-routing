@@ -142,6 +142,20 @@ export interface components {
             /** @description [lon, lat] per grid point. */
             readonly points: number[][];
             readonly risk: (number | null)[][];
+            /** @description Only with `?include=metrics`. Null for a heatmap kept before conditions were. */
+            metrics?: components["schemas"]["HeatmapMetrics"] | null;
+        };
+        /**
+         * @description Each condition's level (0-4; null for no data), indexed like `risk`.
+         *
+         *     The levels a checkpoint's rating shows for each condition, so whichever
+         *     one the map shows, it agrees with the checkpoint table.
+         */
+        HeatmapMetrics: {
+            /** @description Gusts, after the trip's load rules. */
+            readonly wind: (number | null)[][];
+            readonly rain: (number | null)[][];
+            readonly snow: (number | null)[][];
         };
         Hos: {
             readonly enabled: boolean;
@@ -372,6 +386,7 @@ export type Error = components['schemas']['Error'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 export type Forecast = components['schemas']['Forecast'];
 export type Heatmap = components['schemas']['Heatmap'];
+export type HeatmapMetrics = components['schemas']['HeatmapMetrics'];
 export type Hos = components['schemas']['Hos'];
 export type HosRequest = components['schemas']['HosRequest'];
 export type HosStop = components['schemas']['HosStop'];
@@ -521,7 +536,14 @@ export interface operations {
     };
     trip_heatmap: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description `metrics` adds each condition's levels, for the map's metric switcher.
+                 *
+                 *     * `metrics` - metrics
+                 */
+                include?: "metrics";
+            };
             header?: never;
             path: {
                 trip_id: string;
@@ -576,6 +598,7 @@ type ReadonlyArray<T> = [
 ] extends [
     unknown[]
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
+export const pathsApiV1TripsTrip_idHeatmapGetParametersQueryIncludeValues: ReadonlyArray<FlattenedDeepRequired<paths>["/api/v1/trips/{trip_id}/heatmap"]["get"]["parameters"]["query"]["include"]> = ["metrics"];
 export const cycleEnumValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CycleEnum"]> = ["70h_8d", "60h_7d"];
 export const hosStopKindEnumValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["HosStopKindEnum"]> = ["break", "rest", "restart"];
 export const hosStopReasonEnumValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["HosStopReasonEnum"]> = ["break", "drive_limit", "window", "cycle"];
