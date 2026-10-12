@@ -28,6 +28,7 @@ import { INTERACTIVE_LAYERS } from './layers'
 import { Legend } from './Legend'
 import { PlaceMarkers } from './PlaceMarkers'
 import { RoutesLayer } from './RoutesLayer'
+import { TruckMarkers } from './TruckMarkers'
 import { useMapPointer } from './useMapPointer'
 
 // react-map-gl reports a map that couldn't start (no WebGL, say) as an error
@@ -74,6 +75,7 @@ export default function MapView() {
         <CheckpointsLayer theme={theme} />
         <PlaceMarkers />
         <HosStopsLayer />
+        <TruckMarkers />
         <CheckpointPopups />
       </Map>
       {planned && <Legend />}

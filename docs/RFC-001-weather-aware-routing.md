@@ -845,6 +845,12 @@ Play mode steps one hour every 250 ms.
   ±4% on and between cells, checked numerically), allowing for Mercator's taller rows at the
   grid's mean latitude. `heatmap-color` steps on density at the midpoints between levels, so
   each band is exactly one of the checkpoints' colours, with a legend.
+- **Truck position.** While scrubbing, each route shows its truck where the plan puts it at
+  the slider's hour: the mile is interpolated by time between the checkpoints' ETAs, with
+  each HOS stop as two points at one mile (start and end) so the truck stands still through
+  it, then placed on the line as the backend places checkpoints (line length scaled to the
+  reported miles). At a checkpoint's ETA the truck is on that checkpoint. It is hidden before
+  departure and after arrival. Three DOM markers moved by props: no data upload.
 - **Fallback if the blurred look misleads at high zoom:** switch the layer to a `fill` layer
   of grid cells with the same `["get", "h<hour>"]` expression. Same data, same scrubbing method.
 

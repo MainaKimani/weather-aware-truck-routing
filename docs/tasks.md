@@ -72,7 +72,7 @@ link to their sections instead of repeating them.
 | SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | Done        |
 | SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | Done        |
 | SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | Done        |
-| SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | To do       |
+| SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | Done        |
 | SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | To do       |
 | SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | To do       |
 | SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | To do       |
@@ -2243,17 +2243,45 @@ Spec: RFC §10.4.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P1 | To do | SPOT-81 |
+| Frontend · 2 | P1 | Done | SPOT-81 |
 
 **Sub-tasks**
-- [ ] For each route, position at the slider time from checkpoint ETAs (and HOS stops).
-- [ ] Hidden before departure and after arrival; stationary during HOS stops.
+- [x] For each route, position at the slider time from checkpoint ETAs (and HOS stops).
+- [x] Hidden before departure and after arrival; stationary during HOS stops.
 
 **Acceptance criteria**
 - Truck marker sits on the checkpoint whose ETA equals the slider time.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: truck markers (`features/map/TruckMarkers.tsx`, `truckTrack.ts`).
+  - Each route's truck at the slider's hour: the mile is interpolated by time between
+    waypoints (departure, every checkpoint's ETA, arrival, and each HOS stop as its start and
+    end at one mile), then placed on the line the way the backend places checkpoints (line
+    length scaled to the reported miles).
+  - Hidden before departure and after arrival; stationary, and labelled "stopped at", through
+    an HOS stop.
+  - The selected route's truck is full size; the others are small and follow the "Other
+    routes" switch. Each is labelled ("Route B truck, at 338 mi").
+  - Slider hours mean the same instant here as on the slider: `useTimelineStart`, shared by both.
+- Decisions (RFC §10.4 updated; it had no section on this):
+  - DOM markers, not a symbol layer: three of them, moved by props, with no data upload while
+    scrubbing.
+  - Positions come from the plan's own schedule rather than a constant speed, so a slow
+    stretch or a stop shows where it happens.
+- Verified (20 new tests, 290 total):
+  - **On the checkpoint at its ETA:** every checkpoint of every route in both recorded plans,
+    to within 0.01 mi (the worst is 0.002 mi, from 5-decimal rounding).
+  - Hidden a minute before departure and after arrival; at mile 0 and the full distance at
+    each end.
+  - Through every HOS stop of the strong-storm plan: on the stop, "stopped", from its start
+    to a minute before its end, then moving again. Without the stop waypoints, this test fails.
+  - The mile never goes backwards, checked every 5 minutes of every route.
+  - **Markers:** at the computed position for each route; selected full size, others small;
+    move with the slider; none before departure or after every truck arrives; the switch
+    keeps only the selected route's truck.
+  - **In Chrome** (real backend): at +5 h (Mon 15:00 CDT) the trucks are at 326, 338 and
+    325 mi. Route B's sits on its line south of Wichita, in the Severe zone, between its
+    checkpoints at mile 325 (14:48) and 350 (15:10).
 
 ### SPOT-83 · Heatmap metric switcher
 

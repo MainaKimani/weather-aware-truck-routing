@@ -8,20 +8,18 @@
  */
 import { useEffect, useId } from 'react'
 
-import { useHeatmap } from '../../api/heatmap'
 import { usePlan } from '../../api/plans'
 import type { Plan } from '../../api/schema'
 import { formatClockTime } from '../../lib/format'
 import { browserZone } from '../../lib/time'
 import { MAX_HOUR, useTimelineStore } from '../../state/timeline'
-import { hourLabel, hourValueText, timelineStart, windowEndBeforeDeparture } from './clock'
+import { hourLabel, hourValueText, windowEndBeforeDeparture } from './clock'
+import { useTimelineStart } from './useTimelineStart'
 
 /** One forecast hour per step while playing (RFC §10.4). */
 export const PLAY_STEP_MS = 250
 const TICKS = Array.from({ length: MAX_HOUR / 6 + 1 }, (_, i) => i * 6)
 
-const selectTripId = (plan: Plan) => plan.trip_id
-const selectGeneratedAt = (plan: Plan) => plan.generated_at
 const selectDeparture = (plan: Plan) => plan.inputs.departure
 const selectZone = (plan: Plan) => plan.inputs.origin.tz ?? undefined
 
@@ -30,8 +28,7 @@ export function HourSlider() {
   const playing = useTimelineStore((s) => s.playing)
   const setHour = useTimelineStore((s) => s.setHour)
   const setPlaying = useTimelineStore((s) => s.setPlaying)
-  const { data: heatmap } = useHeatmap(usePlan(selectTripId))
-  const start = timelineStart(heatmap?.start_hour, usePlan(selectGeneratedAt))
+  const start = useTimelineStart()
   const zone = usePlan(selectZone) ?? browserZone()
   const windowEnd = windowEndBeforeDeparture(start, MAX_HOUR, usePlan(selectDeparture))
   const ticksId = useId()
