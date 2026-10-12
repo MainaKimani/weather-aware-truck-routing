@@ -138,8 +138,8 @@ class TestInterpolate:
     def test_ends_and_midpoint(self) -> None:
         mid = interpolate(DALLAS, DENVER, 0.5)
 
-        assert interpolate(DALLAS, DENVER, 0.0) == pytest.approx(DALLAS)
-        assert interpolate(DALLAS, DENVER, 1.0) == pytest.approx(DENVER)
+        assert interpolate(DALLAS, DENVER, 0.0) == DALLAS
+        assert interpolate(DALLAS, DENVER, 1.0) == DENVER
         assert haversine_mi(DALLAS, mid) == pytest.approx(haversine_mi(mid, DENVER), rel=1e-9)
 
     def test_same_point(self) -> None:

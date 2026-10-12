@@ -300,8 +300,11 @@ different routes, which is the sort of thing a truck-focused reviewer will notic
 **Integration notes**
 
 - Request: `origin`, `destination`, `transportMode=truck`, `vehicle[grossWeight]=<kg>`,
-  `departureTime=<ISO>`, `alternatives=4`, `return=polyline,summary`, plus spans with
-  duration and length so ETAs can follow real speed changes along the route.
+  `departureTime=<ISO>`, `alternatives=4`, `return=polyline,summary,routeLabels`, and
+  `spans=dynamicSpeedInfo,length,duration` so ETAs can follow real speed changes along the
+  route. `length` and `duration` are metadata that never start a span on their own, so asking
+  for them alone gives one span per section; `dynamicSpeedInfo` starts a new span whenever
+  the expected speed changes.
 - Geometry comes back as HERE *flexible polyline*; decode with the official `flexpolyline`
   package.
 - Ask for more alternatives than needed (4), then **de-duplicate**: drop any route whose
@@ -440,9 +443,10 @@ def plan_hos(total_drive_s: int, c: HosClocks, r: HosRules = HosRules()) -> HosP
 - **Order of checks** is longest stop first (cycle, then the two 10-hour limits, then the break),
   so when limits coincide we take one stop that satisfies all of them. A 10 h rest also counts as
   the 30 min break; a 34 h restart counts as everything.
-- **Window after a break:** taking a 30 min break can push `window_left` to zero or below. The
-  next loop then sees `window` at zero and takes a 10 h rest straight away, which is what the rule
-  requires.
+- **Window after a break:** if a 30 min break would use up the rest of the 14 h window, the
+  driver would need a 10 h rest straight after it, and that rest also counts as the break. So the
+  planner takes the rest instead (reason `window`), and two stops never fall at the same point.
+  (The loop above, taken literally, would schedule the break and then the rest.)
 - **Starting at zero:** if any clock starts at 0, the first step drives 0 and the matching stop is
   inserted at mile 0, e.g. a driver with no drive time left starts with a 10 h rest.
 - **Cycle:** `cycle_left` is only spent by driving (all on-duty time is driving here) and does

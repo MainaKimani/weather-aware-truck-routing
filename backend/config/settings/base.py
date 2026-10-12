@@ -103,6 +103,12 @@ CACHES = cache_config(REDIS_URL)
 # Provider credentials. Open-Meteo needs no key.
 HERE_API_KEY = env.str("HERE_API_KEY", default="")
 
+# "fake" runs on deterministic providers with no network or keys (tests,
+# local dev, demo mode); "real" uses HERE and Open-Meteo. FAKE_SCENARIO picks
+# the demo storm: "demo" or "strong".
+PROVIDERS = env.str("PROVIDERS", default="fake")
+FAKE_SCENARIO = env.str("FAKE_SCENARIO", default="demo")
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
