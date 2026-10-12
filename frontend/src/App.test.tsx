@@ -130,7 +130,7 @@ describe('render isolation', () => {
       useTimelineStore.getState().step(-1)
     })
 
-    expect(screen.getByText('+47 h')).toBeInTheDocument()
+    expect(slider).toHaveValue('47')
     expect(commits.filter((id) => id === 'slider')).toHaveLength(7)
     expect(commits.filter((id) => id === 'routes')).toHaveLength(0)
   })

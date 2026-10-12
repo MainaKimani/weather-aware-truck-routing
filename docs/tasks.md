@@ -71,7 +71,7 @@ link to their sections instead of repeating them.
 | SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | Done        |
 | SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | Done        |
 | SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | Done        |
-| SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | To do       |
+| SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | Done        |
 | SPOT-82  | Truck position while scrubbing                    | E8 Heatmap           | Frontend · 2   | P1  | To do       |
 | SPOT-83  | Heatmap metric switcher                           | E8 Heatmap           | Full stack · 2 | P1  | To do       |
 | SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | To do       |
@@ -129,6 +129,8 @@ here when that task closes it.
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
+| SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
+| SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
 
 ## Epics
 
@@ -2189,12 +2191,12 @@ Spec: RFC §10.4.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P0 | To do | SPOT-80 |
+| Frontend · 3 | P0 | Done | SPOT-80 |
 
 **Sub-tasks**
-- [ ] Native range input 0–48, 6 h ticks, label "+14 h · Sat 20:00 CDT", arrow keys.
-- [ ] `setPaintProperty` on change, throttled with `requestAnimationFrame`.
-- [ ] Play/pause at 250 ms per hour, looping; note when the window ends before departure.
+- [x] Native range input 0–48, 6 h ticks, label "+14 h · Sat 20:00 CDT", arrow keys.
+- [x] `setPaintProperty` on change, throttled with `requestAnimationFrame`.
+- [x] Play/pause at 250 ms per hour, looping; note when the window ends before departure.
 
 **Acceptance criteria**
 - Chrome performance trace while dragging: no long tasks > 50 ms, frames ≤ 16 ms, zero
@@ -2202,7 +2204,40 @@ Spec: RFC §10.4.
 - `aria-valuetext` reads "+14 hours, Saturday 20:00".
 
 **Progress log**
-- _Not started._
+- 2026-10-12: timeline bar (`features/timeline/HourSlider.tsx`, `clock.ts`).
+  - Native range 0–48 with a datalist tick every 6 h and `+0`…`+48` tick labels. The label
+    reads "+14 h · Sat 20:00 CDT" on the origin's clock, and `aria-valuetext` reads "+14 hours,
+    Saturday 20:00".
+  - Hour 0 is the heatmap's `start_hour` (the forecast hour in progress). Until the heatmap
+    arrives, the next whole hour after the plan stands in; before any plan, the label is the
+    offset alone ("+3 hours from now").
+  - The map's paint update, at most once a frame, came with SPOT-80.
+  - **Play/pause:** one hour every 250 ms, looping from +48 back to +0. Moving the slider by
+    hand stops playback. The button's name says what it will do ("Play forecast", "Pause
+    forecast").
+  - A note appears when the 48 hours end before the trip departs (departures can be 7 days
+    out): "The forecast runs to Wed 04:00 CDT, before this trip departs…".
+- Decisions:
+  - Times are the forecast hour's record time (the end of the hour, as checkpoints read it),
+    on the origin's clock like the rest of the plan.
+  - The label has a fixed minimum width, so the slider doesn't shift as "+5 h" becomes "+48 h".
+- Verified (18 new tests, 270 total):
+  - **Clock:** start from the heatmap, or the next whole hour after the plan; labels across
+    the end of daylight saving (01:00 CDT → 01:00 CST); singular "hour"; window end before a
+    departure, and none when the trip leaves within it.
+  - **Slider:** 0–48 with nine ticks; clock times from the heatmap, and from the plan before
+    it; the note shows only when the window ends first.
+  - **Playback** (fake timers): three steps in 750 ms, paused stays put, 47 → 48 → 0, and
+    dragging stops it.
+  - The render-isolation test still holds: moving the hour re-renders the slider and not the
+    routes panel.
+  - **In Chrome** (dev build, real backend): arrow keys step one hour (19 × Left from +24 to
+    +5). Two scripted sweeps of all 49 hours took 4.3 ms of main thread per step (median; max
+    5.5 ms), with no long tasks and no network requests. Play loops 48 → 0 at about 250 ms an
+    hour and pause holds the hour.
+  - jsdom doesn't step range inputs on arrow keys, so that is checked in Chrome only.
+- Left: frame times (≤ 16 ms) while dragging. Chrome throttled the hidden window to about one
+  frame a second, so only the per-step cost above was measured. Moved to SPOT-92.
 
 ### SPOT-82 · Truck position while scrubbing
 
@@ -2287,6 +2322,8 @@ Spec: PRD §8.
 - [ ] Chrome trace for pan/zoom and slider scrubbing; bundle size report. Include pan/zoom
   with all 773 checkpoints of a Los Angeles → New York plan every 10 mi showing (SPOT-72
   measured render time only, in a throttled window).
+- [ ] Frame times while dragging the slider, ≤ 16 ms (carried over from SPOT-81, which measured
+  the 4.3 ms per-step main-thread cost only, in a throttled window).
 - [ ] Record numbers here; fix anything over budget.
 
 **Acceptance criteria**
