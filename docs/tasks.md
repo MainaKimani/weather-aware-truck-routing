@@ -68,7 +68,7 @@ link to their sections instead of repeating them.
 | SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | Done        |
 | SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | Done        |
 | SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | Done        |
-| SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | To do       |
+| SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | Done        |
 | SPOT-74  | Legend and layer toggles                          | E7 Map               | Frontend · 1   | P0  | To do       |
 | SPOT-80  | Corridor heatmap layer                            | E8 Heatmap           | Frontend · 3   | P0  | To do       |
 | SPOT-81  | 48-hour slider and playback                       | E8 Heatmap           | Frontend · 3   | P0  | To do       |
@@ -2016,18 +2016,42 @@ Spec: PRD §9, RFC §11.
 
 ### SPOT-73 · HOS stops layer
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 1 | P1 | To do | SPOT-72, SPOT-24 |
 
 **Sub-tasks**
-- [ ] Symbol layer with break, rest and restart icons; popup with start, duration, reason.
+- [x] Symbol layer with break, rest and restart icons; popup with start, duration, reason.
 
 **Acceptance criteria**
 - Shown only when HOS is on; stop positions match the API's coordinates.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: HOS stops on the map (`features/map/HosStopsLayer.tsx`).
+  - The selected route's stops, only when the plan has HOS on, at the API's `lat`/`lon`.
+    Each stop is a round icon button: pause bars for a break, a moon for a rest, a circular
+    arrow for a restart. The button's accessible name is "Break 30 min, Mon 13:00 CDT".
+  - A click opens a popup with the stop's length, start and end (on the origin's clock, like
+    the table), mile, and reason. It closes on its button or a second click, and with a
+    change of route.
+  - Stop names and reasons are shared with the route cards' HOS summary (`lib/hosStops.ts`),
+    so the two always read the same.
+- Decisions:
+  - **Markers, not a symbol layer.** A route has a handful of stops, so DOM markers cost
+    nothing. Each is a real button, reachable and openable from the keyboard, and no sprite
+    images need adding to (and re-adding after a basemap change on) the map. RFC §10.3
+    updated.
+  - A stop click stops propagating, so the map doesn't read it as a click on empty map and
+    close the checkpoint popup.
+- Verified (5 tests, 220 total, on the real HOS fixture):
+  - A marker per stop at the API's coordinates, with accessible names.
+  - Nothing when HOS is off.
+  - Popup start, end, length and reason; close.
+  - A stop click leaves the checkpoint selection alone.
+  - Switching routes moves the markers and closes the popup.
+  - **In Chrome:** with HOS on, the demo trip showed a break near Raton and a rest near
+    Colorado Springs on Route A. The rest's popup read "Rest 10 h, Starts Mon 18:30 CDT,
+    Ends Tue 04:30 CDT, 702 mi in, 11 h driving limit".
 
 ### SPOT-74 · Legend and layer toggles
 

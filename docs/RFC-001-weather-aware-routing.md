@@ -806,8 +806,10 @@ plus a 49-frame heatmap, and smooth scrubbing is 35% of the grade.
    colour, 6 px, with a casing.
 4. **Checkpoints:** a single `circle` layer, colour from a `match` on `level`, radius scaled by
    zoom. Hover and selection via `feature-state`, no re-render of the source.
-5. **HOS stops** (only when HOS is on): a `symbol` layer with distinct icons for break, rest and
-   restart, labelled with start time and length.
+5. **HOS stops** (only when HOS is on): a marker per stop with distinct icons for break, rest
+   and restart. A route has only a handful of stops, so markers cost nothing, and each is a
+   button that can be reached and opened from the keyboard. Its popup gives start, end, length
+   and reason.
 6. **Popups:** one React popup for the hovered or clicked checkpoint or stop.
 
 All routes and checkpoints go in **one GeoJSON source each**, built once per plan with

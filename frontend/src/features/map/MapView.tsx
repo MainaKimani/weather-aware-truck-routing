@@ -22,6 +22,7 @@ import { BASEMAP, INITIAL_VIEW } from './basemap'
 import { Camera } from './Camera'
 import { CheckpointPopups } from './CheckpointPopups'
 import { CheckpointsLayer } from './CheckpointsLayer'
+import { HosStopsLayer } from './HosStopsLayer'
 import { INTERACTIVE_LAYERS } from './layers'
 import { PlaceMarkers } from './PlaceMarkers'
 import { RoutesLayer } from './RoutesLayer'
@@ -67,6 +68,7 @@ export default function MapView() {
         <RoutesLayer theme={theme} />
         <CheckpointsLayer theme={theme} />
         <PlaceMarkers />
+        <HosStopsLayer />
         <CheckpointPopups />
       </Map>
       {!planned && (
