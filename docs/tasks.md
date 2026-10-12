@@ -53,7 +53,7 @@ link to their sections instead of repeating them.
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done      |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | In review |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | In review |
-| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | To do     |
+| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress|
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | To do     |
 | SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | To do     |
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | To do     |
@@ -1134,14 +1134,14 @@ Spec: RFC §7.2, §11.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-40, SPOT-111 |
+| Backend · 3 | P0 | In progress | SPOT-40, SPOT-111 |
 
 Spec: RFC §7.3, §8.
 
 **Sub-tasks**
-- [ ] Union of simplified routes, 40 mi buffer, lattice points inside, point cap with coarser
+- [x] Union of simplified routes, 40 mi buffer, lattice points inside, point cap with coarser
   step.
-- [ ] Classify every point-hour (0–48) with `classify()` and the plan's load.
+- [x] Classify every point-hour (0–48) with `classify()` and the plan's load.
 - [ ] `GET /api/v1/trips/{id}/heatmap`: compute from the stored trip on first request, save as
   `TripHeatmap`, read the saved copy afterwards; same access rules as the trip.
 
@@ -1151,7 +1151,37 @@ Spec: RFC §7.3, §8.
 - A grid point that equals a checkpoint location and hour has the same level as the checkpoint.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: grid half done; the endpoint waits for SPOT-111.
+  - `planner/services/corridor.py`: `corridor_points` simplifies each route (~1 km), takes
+    lattice points within 40 mi of any route (`lattice_near`), and steps the lattice
+    0.25° → 0.5° → 1° until there are at most 700 points.
+  - `corridor_grid(lines, load_lb, store, clock)` fetches every point's forecasts in one
+    cache-first batch at the lattice's own step, then classifies all 49 hours per point with
+    `classify` and the plan's load. It returns `HeatmapGrid` with start hour, cell size, points,
+    `risk[i][h]` (`None` = Unknown), `stale` and `forecast_as_of`.
+  - `HeatmapSerializer` gives the RFC §7.3 shape: `[lon, lat]` points and integer levels,
+    with null for Unknown.
+- Decisions (RFC §7.3 updated):
+  - Hours count from when the grid is computed, not from departure (PRD A10). Hour 0 is the
+    hour in progress, read from the record stamped at its end, exactly as a checkpoint whose
+    ETA falls in that hour would read it.
+  - Without Redis, Django's local-memory cache kept only 300 entries, fewer than one heatmap
+    needs, so the grid was refetched every time. It now holds 10,000 entries.
+- Verified (16 tests in `tests/test_corridor.py`, plus one in `test_cache_config.py`):
+  - **Point cap:** LA → New York and Seattle → Miami (three fake routes each) step to 0.5°
+    and stay under the cap (580 and 662 points). Dallas → Denver keeps 0.25° (649 points).
+    Points sit on the global lattice and within the buffer.
+  - **Payload:** the strong-storm Dallas → Denver grid (649 points × 49 h) is under 20 KB
+    gzipped.
+  - **Grid matches checkpoints:** a plan whose checkpoints sit on lattice points has the same
+    level on the grid at the same point and hour. Gusts vary by place and hour in that test,
+    so reading the wrong point or hour would show.
+  - Every sampled point-hour equals `classify` for three loads, and a heavier load raises
+    No Travel cells (load rules apply).
+  - Missing points are Unknown in every hour, and stale data is flagged.
+  - One weather call per grid. A cached coast-to-coast grid is recomputed in about 1 s.
+- Left: `GET /api/v1/trips/{id}/heatmap`, which stores the grid as `TripHeatmap` and shares
+  the trip's access rules, needs trips (SPOT-110–112). Its throttle rate is set in SPOT-45.
 
 ### SPOT-43 · Geocode suggest endpoint
 

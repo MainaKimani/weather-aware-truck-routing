@@ -95,7 +95,14 @@ def cache_config(redis_url: str) -> dict[str, dict[str, Any]]:
                 },
             }
         }
-    return {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+    return {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            # The default of 300 entries is less than one corridor heatmap
+            # (up to ~700 forecast entries), which would never stay cached.
+            "OPTIONS": {"MAX_ENTRIES": 10_000},
+        }
+    }
 
 
 CACHES = cache_config(REDIS_URL)

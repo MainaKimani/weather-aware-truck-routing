@@ -12,3 +12,7 @@ def test_falls_back_to_local_memory() -> None:
     assert cache_config("")["default"]["BACKEND"] == (
         "django.core.cache.backends.locmem.LocMemCache"
     )
+
+
+def test_local_memory_holds_a_whole_heatmap() -> None:
+    assert cache_config("")["default"]["OPTIONS"]["MAX_ENTRIES"] >= 10 * 700

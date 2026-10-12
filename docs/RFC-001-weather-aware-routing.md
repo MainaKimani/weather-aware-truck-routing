@@ -698,7 +698,11 @@ Response:
 }
 ```
 
-`risk[i][h]` is the composite level (0–4) at point `i`, hour `h`, for the trip's load. Raw
+`risk[i][h]` is the composite level (0–4) at point `i`, hour `h`, for the trip's load, or
+`null` where there's no forecast (Unknown, never Low). Hours count from when the grid is
+computed (PRD A10): hour 0 is the hour in progress, and like a checkpoint whose ETA falls in it,
+it reads the record stamped at the end of that hour (`start_hour`, §6.3). The response also
+carries `stale` and `forecast_as_of`, as the plan does. Raw
 metrics are included only if the P1 metric switcher is built (`?include=metrics`). Size for
 ~600 points × 49 hours of single-digit integers is about 60 KB raw, under 15 KB gzipped.
 

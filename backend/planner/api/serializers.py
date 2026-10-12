@@ -21,6 +21,7 @@ from planner.domain.ranking import RISK_AVG_TOLERANCE
 from planner.domain.sampling import ALLOWED_INTERVALS_MI
 from planner.domain.types import LatLon
 from planner.providers.base import Place
+from planner.services.corridor import HeatmapGrid
 from planner.services.plan import Plan, PlanRequest
 
 MAX_LOAD_LB: Final = 80_000
@@ -374,3 +375,27 @@ class PlanSerializer(serializers.Serializer[Plan]):
     warnings = WarningSerializer(many=True)
     routes = RouteSerializer(many=True)
     corridor = CorridorSerializer(source="*")
+
+
+# --- Heatmap -----------------------------------------------------------------
+
+
+class HeatmapSerializer(serializers.Serializer[HeatmapGrid]):
+    """The corridor grid (RFC §7.3).
+
+    `risk[i][h]` is point i's level (0-4) at hour h; null is Unknown.
+    """
+
+    start_hour = UtcDateTimeField(help_text="The forecast hour shown at slider hour 0.")
+    hours = serializers.IntegerField()
+    cell_deg = serializers.FloatField()
+    stale = serializers.BooleanField()
+    forecast_as_of = UtcDateTimeField(allow_null=True)
+    points = serializers.SerializerMethodField(help_text="[lon, lat] per grid point.")
+    risk = serializers.SerializerMethodField()
+
+    def get_points(self, grid: HeatmapGrid) -> list[list[float]]:
+        return [[round(p.lon, 4), round(p.lat, 4)] for p in grid.points]
+
+    def get_risk(self, grid: HeatmapGrid) -> list[list[int | None]]:
+        return [[None if level is None else int(level) for level in row] for row in grid.risk]
