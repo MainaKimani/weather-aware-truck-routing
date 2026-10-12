@@ -21,6 +21,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Who the caller is: a signed-in user, a guest who has planned, or neither.
+         *
+         *     The app asks this first, so the response also sets the CSRF cookie that
+         *     every later sign-up, login or plan sends back as `X-CSRFToken`.
+         */
+        get: operations["get_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/plans": {
         parameters: {
             query?: never;
@@ -268,6 +290,19 @@ export interface components {
          * @enum {string}
          */
         LoadRuleEnum: "wind_45_54_over_30k" | "wind_35_44_over_40k";
+        /** @description Who the caller is, for the header. */
+        Me: {
+            /** @description The signed-in user, or null. */
+            user: components["schemas"]["MeUser"] | null;
+            /** @description A guest who has planned on this device. */
+            guest: boolean;
+            /** @description Trips the caller owns: a guest's on this device, or a user's in total. */
+            recent_trip_count: number;
+        };
+        MeUser: {
+            /** Format: email */
+            email: string;
+        };
         Metrics: {
             miles_by_level: components["schemas"]["MilesByLevel"];
             /** Format: double */
@@ -507,6 +542,8 @@ export type HosStopReasonEnum = components['schemas']['HosStopReasonEnum'];
 export type Inputs = components['schemas']['Inputs'];
 export type IntervalMiEnum = components['schemas']['IntervalMiEnum'];
 export type LoadRuleEnum = components['schemas']['LoadRuleEnum'];
+export type Me = components['schemas']['Me'];
+export type MeUser = components['schemas']['MeUser'];
 export type Metrics = components['schemas']['Metrics'];
 export type MilesByLevel = components['schemas']['MilesByLevel'];
 export type NullEnum = components['schemas']['NullEnum'];
@@ -573,6 +610,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
                 };
             };
         };

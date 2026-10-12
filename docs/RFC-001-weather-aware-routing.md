@@ -741,7 +741,14 @@ probed.
 | `DELETE /api/v1/me` | Delete account and all its trips; requires `{"password": …}`; ends the session |
 
 The client gets the CSRF token from the `csrftoken` cookie and sends it as `X-CSRFToken` on
-every unsafe request. DRF's `SessionAuthentication` enforces it.
+every unsafe request. DRF's `SessionAuthentication` enforces it. `GET /api/v1/me` sets the
+cookie (the app calls it first), and a request Django refuses for CSRF gets the API's JSON
+error with code `csrf_failed` rather than Django's HTML page.
+
+allauth's endpoints answer in allauth's own shape (`{status, data, meta}`, or `{status,
+errors: [{code, message, param}]}`), which the client reads separately from the API's
+`{error}` shape. Codes the UI uses: `email_taken`, `email_password_mismatch`,
+`too_many_login_attempts` and the password validators' (`password_too_short`, …).
 
 ## 8. Corridor grid
 

@@ -48,6 +48,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: geocoding_unavailable
+  /api/v1/me:
+    get:
+      operationId: get_me
+      description: |-
+        Who the caller is: a signed-in user, a guest who has planned, or neither.
+
+        The app asks this first, so the response also sets the CSRF cookie that
+        every later sign-up, login or plan sends back as `X-CSRFToken`.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
   /api/v1/plans:
     post:
       operationId: create_plan
@@ -617,6 +637,34 @@ components:
       description: |-
         * `wind_45_54_over_30k` - wind_45_54_over_30k
         * `wind_35_44_over_40k` - wind_35_44_over_40k
+    Me:
+      type: object
+      description: Who the caller is, for the header.
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/MeUser'
+          nullable: true
+          description: The signed-in user, or null.
+        guest:
+          type: boolean
+          description: A guest who has planned on this device.
+        recent_trip_count:
+          type: integer
+          description: 'Trips the caller owns: a guest''s on this device, or a user''s
+            in total.'
+      required:
+      - guest
+      - recent_trip_count
+      - user
+    MeUser:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
     Metrics:
       type: object
       properties:

@@ -35,6 +35,7 @@ def test_schema_is_served() -> None:
     assert set(schema["paths"]) == {
         "/api/v1/plans",
         "/api/v1/geocode/suggest",
+        "/api/v1/me",
         "/api/v1/trips",
         "/api/v1/trips/{trip_id}",
         "/api/v1/trips/{trip_id}/heatmap",

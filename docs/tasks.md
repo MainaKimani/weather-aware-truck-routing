@@ -85,7 +85,7 @@ link to their sections instead of repeating them.
 | SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-112 | Guest identity and access layer                   | E11 Trips & accounts | Backend · 2    | P0  | Done        |
 | SPOT-113 | Trip read endpoints                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
-| SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | To do       |
+| SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | Done        |
 | SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | To do       |
 | SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | To do       |
 | SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | To do       |
@@ -2788,14 +2788,14 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P1 | To do | SPOT-14, SPOT-112 |
+| Backend · 3 | P1 | Done | SPOT-14, SPOT-112 |
 
 **Sub-tasks**
-- [ ] `django-allauth` headless (browser client), email login, verification off; mounted at
+- [x] `django-allauth` headless (browser client), email login, verification off; mounted at
   `/api/auth/`.
-- [ ] Argon2 hasher and Django password validators.
-- [ ] `GET /api/v1/me`.
-- [ ] Higher plan throttle for signed-in users.
+- [x] Argon2 hasher and Django password validators.
+- [x] `GET /api/v1/me`.
+- [x] Higher plan throttle for signed-in users. _(already in place since SPOT-45: 30/min vs 10)_
 
 **Acceptance criteria**
 - Sign-up, login, session and logout work from the SPA with CSRF enforced (requests without
@@ -2804,7 +2804,41 @@ core features, per PRD §5.
 - Repeated failed logins are rate limited.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: accounts (`django-allauth` headless, `accounts/adapter.py`, `accounts/api.py`,
+  `config/csrf.py`).
+  - **allauth headless**, browser client only, at `/api/auth/` (`…/browser/v1/auth/signup`,
+    `login`, `session` GET and DELETE). Email and password, no usernames, verification off
+    (PRD §7.9). Sessions on sign-in last 30 days like guest ones (`ACCOUNT_SESSION_REMEMBER`).
+  - **Emails** are lower-cased by the account adapter, as the user manager does, so
+    `A@x.com` and `a@x.com` are one account (`email_taken`, and login works in any case).
+  - **Passwords:** Argon2 first in `PASSWORD_HASHERS` (older hashes still verify); Django's
+    validators reject weak ones with their codes.
+  - **Failed logins:** allauth's limits in the cache, per IP and per email; the 6th try in
+    5 minutes is `too_many_login_attempts`, even with the right password.
+  - **`GET /api/v1/me`:** `{user: {email} | null, guest, recent_trip_count}` for the header.
+    It sets the CSRF cookie (`ensure_csrf_cookie`), so the app has a token before its first
+    unsafe request.
+  - **CSRF failures** Django refuses (allauth's views) are the API's JSON 403
+    `csrf_failed`, not Django's HTML page.
+  - **Trusted origins:** Django checks an unsafe request's `Origin` too, so local settings
+    now trust the frontend's dev server and preview (`localhost` and `127.0.0.1`, ports
+    5173 and 4173) by default; production sets the site's own (`CSRF_TRUSTED_ORIGINS`).
+    The end-to-end sign-up found this: with an empty list, every sign-in from the dev
+    proxy was refused.
+- Decisions (RFC §7.5 updated):
+  - `django-allauth` without its `headless` extra: that extra adds PyJWT and `cryptography`
+    for app (token) clients, and only the browser client is used. 65.19.4 is pinned in the
+    lock (released 2026-09-17).
+  - allauth's response shape is kept as it is rather than wrapped in the API's: the client
+    reads it with its own small parser.
+- Verified (11 tests, 672 total):
+  - Sign-up, session and logout from a CSRF-enforcing client; logging in to an existing
+    account.
+  - A sign-up without the token is a JSON 403 `csrf_failed` and creates no user. A signed-in
+    plan without the token is a 403, and with it the trip belongs to the user.
+  - Case-insensitive email; Argon2 hashes; weak passwords refused with reasons.
+  - Five wrong passwords, then the sixth try and the right password are both refused.
+  - `/me` for a visitor (and its CSRF cookie), a guest with two trips, and a user.
 
 ### SPOT-115 · Move guest trips into the account on sign-in
 
