@@ -12,7 +12,7 @@ from planner.api.serializers import (
     PlanSerializer,
     SuggestQuerySerializer,
 )
-from planner.api.throttles import PlanGuestThrottle, PlanUserThrottle
+from planner.api.throttles import PlanGuestSessionThrottle, PlanGuestThrottle, PlanUserThrottle
 from planner.providers.registry import get_providers
 from planner.services.geocoding import suggest
 from planner.services.plan import plan_trip
@@ -26,7 +26,7 @@ class PlanView(APIView):
     """Plan a trip: three routes rated for weather risk, and a recommendation."""
 
     permission_classes = (AllowAny,)
-    throttle_classes = (PlanGuestThrottle, PlanUserThrottle)
+    throttle_classes = (PlanGuestThrottle, PlanGuestSessionThrottle, PlanUserThrottle)
 
     @extend_schema(
         operation_id="create_plan",
