@@ -176,6 +176,10 @@ HERE_API_KEY = env.str("HERE_API_KEY", default="")
 PROVIDERS = env.str("PROVIDERS", default="fake")
 FAKE_SCENARIO = env.str("FAKE_SCENARIO", default="demo")
 
+# The reviewer's demo account (manage.py seed_demo); its password is never in the code.
+DEMO_EMAIL = env.str("DEMO_EMAIL", default="demo@example.com")
+DEMO_PASSWORD = env.str("DEMO_PASSWORD", default="")
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

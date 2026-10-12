@@ -90,7 +90,7 @@ link to their sections instead of repeating them.
 | SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | Done        |
 | SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | Done        |
-| SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | To do       |
+| SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
 | SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
 | SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do       |
@@ -2992,17 +2992,41 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P1 | To do | SPOT-114, SPOT-30 |
+| Backend · 1 | P1 | Done | SPOT-114, SPOT-30 |
 
 **Sub-tasks**
-- [ ] `manage.py seed_demo`: reviewer account plus 4 saved trips from the fake providers;
+- [x] `manage.py seed_demo`: reviewer account plus 4 saved trips from the fake providers;
   idempotent.
 
 **Acceptance criteria**
 - Running it twice leaves one demo user with 4 trips.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: demo account (`planner/management/commands/seed_demo.py`).
+  - Makes or resets `DEMO_EMAIL` (default `demo@example.com`) with `DEMO_PASSWORD`, which
+    has no default: the command refuses to run without it (or `--password`). Each run
+    resets the password, reactivates the account, deletes its trips and seeds four saved,
+    named trips:
+    - Dallas → Denver, weekly;
+    - the same on a storm day (strong scenario);
+    - Houston → Kansas City every 10 mi;
+    - Phoenix → Salt Lake City with HOS on.
+  - The trips come from the fake providers whatever `PROVIDERS` says, so they say "Demo
+    data". Each trip's heatmap is computed and kept at seed time from the same fake weather,
+    so it matches the routes, conditions included. Their forecasts go through a private cache.
+  - `DEMO_EMAIL` and `DEMO_PASSWORD` settings, in `.env.example` too.
+- Decisions:
+  - Resetting rather than only creating: the password is shared with reviewers, so anyone
+    could change it or delete trips; a rerun (the host runs it, SPOT-100) puts it back.
+  - A private forecast cache, because fake forecasts under the shared keys would be served
+    to real plans in production.
+- Verified (4 tests, 709 total):
+  - Run twice: one demo user, four saved demo trips with the right names, each with its
+    heatmap and conditions. Other users' and guests' trips untouched, and nothing written to
+    the shared cache (this check fails if the seed uses it). The password logs in and a
+    wrong one doesn't.
+  - After a reviewer changes the password and deletes a trip, a rerun restores both.
+  - No password: an error and no user. `--email` seeds another address.
 
 ### SPOT-120 · Routing and session handling
 
