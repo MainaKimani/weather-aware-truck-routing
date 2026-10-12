@@ -37,19 +37,19 @@ link to their sections instead of repeating them.
 | SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done      |
-| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | In review |
-| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | In review |
-| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | In review |
-| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | In review |
-| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | In review |
+| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | Done      |
+| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | Done      |
+| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | Done      |
+| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | Blocked   |
+| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | Done      |
+| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | Done      |
+| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | Done      |
+| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done      |
+| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done      |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | To do     |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | To do     |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | To do     |
@@ -464,9 +464,9 @@ rewriting migrations.
 
 ### SPOT-21 · Checkpoint sampling and owned miles
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-20 |
+| Backend · 2 | P0 | Done | SPOT-20 |
 
 Spec: RFC §6.1, PRD §7.3, §7.5.
 
@@ -495,12 +495,13 @@ Spec: RFC §6.1, PRD §7.3, §7.5.
   distances ±10% off the geometry, with owned miles summing to the reported distance within
   0.01 mi, all positive, and miles strictly increasing. A route shorter than N gives exactly
   two checkpoints. An exact multiple (50 mi every 25) doesn't duplicate the destination.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-22 · ETA interpolation
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-20 |
+| Backend · 2 | P0 | Done | SPOT-20 |
 
 Spec: RFC §6.2.
 
@@ -530,12 +531,13 @@ Spec: RFC §6.2.
   - An ETA exactly on the hour selects that hour; one second (or one microsecond) past selects
     the next.
   - Non-UTC and half-hour zones normalise to UTC hours.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-23 · Risk classification and load rules
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-20 |
+| Backend · 3 | P0 | Done | SPOT-20 |
 
 Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
 
@@ -574,12 +576,13 @@ Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
     44.99). Gust 55 is No Travel at 1 lb, and the 40 mph / 35,000 lb gap case stays High.
   - Tie-breaks, and sustained wind 80 with gust 10 rating Low.
   - Hypothesis: the level is the worst component, and a heavier load is never safer.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-24 · Hours of Service planner
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 5 | P1 | To do | SPOT-22 |
+| Backend · 5 | P1 | Done | SPOT-22 |
 
 Spec: PRD §7.3.1, RFC §6.2.1.
 
@@ -618,12 +621,13 @@ Spec: PRD §7.3.1, RFC §6.2.1.
   - Hypothesis, up to 120 h with random clocks: an independent replay checks that no driving
     stretch breaks any limit; stops are strictly ordered within the trip; `clock_offset` is
     monotonic and ends at `trip_duration_s`.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-25 · Route metrics
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-21, SPOT-23 |
+| Backend · 2 | P0 | Done | SPOT-21, SPOT-23 |
 
 Spec: PRD §7.5, RFC §6.5.
 
@@ -648,12 +652,13 @@ Spec: PRD §7.5, RFC §6.5.
   average; an all-Unknown route has no average and no Low miles; one No Travel checkpoint makes
   the route not drivable. Hypothesis: miles by level sum to the route distance, the average
   stays within 0–4, and drivable means no No Travel.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-26 · Ranking and recommendation reason
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-25 |
+| Backend · 2 | P0 | Done | SPOT-25 |
 
 Spec: PRD §7.6, RFC §6.6.
 
@@ -692,6 +697,7 @@ Spec: PRD §7.6, RFC §6.6.
   and time decides; 1.04 vs 1.06 doesn't tie; rounded miles; Unknown average; deterministic
   order by id; no drivable route; single route; the 20% warning boundary; reason text for
   each criterion.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ---
 
@@ -699,9 +705,9 @@ Spec: PRD §7.6, RFC §6.6.
 
 ### SPOT-30 · Provider protocols, fakes and demo scenarios
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-20 |
+| Backend · 3 | P0 | Done | SPOT-20 |
 
 **Sub-tasks**
 - [x] `RoutingProvider`, `WeatherProvider`, `Geocoder` protocols in `providers/base.py`.
@@ -742,12 +748,13 @@ Spec: PRD §7.6, RFC §6.6.
 - Fixed along the way: `geo.interpolate` returned the endpoints with float noise
   (-96.79700000000001); it now returns them exactly.
 - Left: the `real` branch of the registry is wired in SPOT-31/33/34.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-31 · HERE truck routing adapter
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-30 |
+| Backend · 3 | P0 | Blocked | SPOT-30 |
 
 Spec: RFC §5.1.
 
@@ -791,12 +798,14 @@ Spec: RFC §5.1.
   allocation per service, but HERE's plans page wouldn't load (TLS error). Third-party sites
   quote ~30,000 transactions a month. Q3 stays open for the owner: a card on file with
   usage inside the free allocation, or a different router.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Blocked: the acceptance check needs
+  a real HERE request, which needs a key and the PRD Q3 decision on the paid plan.
 
 ### SPOT-32 · Route alternatives: dedupe and via-point fallback
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-31 |
+| Backend · 3 | P0 | Done | SPOT-31 |
 
 Spec: RFC §5.1.
 
@@ -830,12 +839,13 @@ Spec: RFC §5.1.
   in under 2 s. Two identical routes reduce to one, the fallback fills the set to three, the
   fastest three are kept, a failed fallback gives the warning, and via points sit 10% either
   side of the midpoint.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-33 · HERE autosuggest adapter
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-30 |
+| Backend · 1 | P0 | Done | SPOT-30 |
 
 **Sub-tasks**
 - [x] Autosuggest call biased to North America; return label, lat, lon, time zone.
@@ -859,12 +869,14 @@ Spec: RFC §5.1.
   `None`; a short query makes no call; HTTP 401/429/503 and malformed bodies are handled.
 - **Not verified against the live API** (no key). The fixture is synthetic, shaped to HERE's
   documented response.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done against the fixture; the live
+  check goes with SPOT-31's.
 
 ### SPOT-34 · Open-Meteo forecast adapter
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-30 |
+| Backend · 3 | P0 | Done | SPOT-30 |
 
 Spec: RFC §5.2, §6.3.
 
@@ -904,12 +916,13 @@ Spec: RFC §5.2, §6.3.
   - Changed units fail loudly, and a wrong location count is an error.
   - 250 points go out as batches of 100, 100 and 50, kept in order.
   - Live run: 120 points × 49 h in 1.2 s, with every point-hour rated.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ### SPOT-35 · Forecast cache
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | To do | SPOT-34, SPOT-13 |
+| Backend · 3 | P0 | Done | SPOT-34, SPOT-13 |
 
 Spec: RFC §9, §18.2, §18.3, §18.4.
 
@@ -955,12 +968,14 @@ Spec: RFC §9, §18.2, §18.3, §18.4.
 - Left: the plan-level criterion "plan succeeds with `stale: true`" gets its end-to-end check
   in SPOT-40/41, which put `stale` in the response. Running against real Redis: SPOT-100
   (Docker isn't available here).
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done; the plan-level `stale`
+  check moves to SPOT-40.
 
 ### SPOT-36 · Provider resilience
 
-| Effort | Priority | In review | Depends on |
+| Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-31, SPOT-34 |
+| Backend · 2 | P0 | Done | SPOT-31, SPOT-34 |
 
 Spec: RFC §18.3.
 
@@ -999,6 +1014,7 @@ Spec: RFC §18.3.
   `weather_unavailable`.
 - Tests zero the retry pause (`tests/providers/conftest.py`), so the suite stays at about 10 s;
   one test checks the real jitter range.
+- 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
 
 ---
 
