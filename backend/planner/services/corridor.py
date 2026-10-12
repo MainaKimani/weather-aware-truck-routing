@@ -22,12 +22,15 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from itertools import repeat
+from operator import attrgetter
 from typing import Final
 
 from planner.domain.eta import ceil_to_hour
+from planner.domain.forecast import ForecastSeries
 from planner.domain.geo import lattice_near, simplify
 from planner.domain.risk import Level, classify
-from planner.domain.types import LatLon
+from planner.domain.types import Forecast, LatLon
 from planner.services.forecasts import ForecastStore
 
 BUFFER_MI: Final = 40.0
@@ -78,15 +81,16 @@ def corridor_grid(
     weather_started = time.perf_counter()
     lookup = store.get(points, step)
     weather_ms = round((time.perf_counter() - weather_started) * 1000)
-    hours = [start + timedelta(hours=h) for h in range(HOURS)]
     risk, wind, rain, snow = [], [], [], []
     for p in points:
-        series = lookup.for_point(p)
-        ratings = [classify(series.at(t) if series else None, load_lb) for t in hours]
-        risk.append(tuple(r.level for r in ratings))
-        wind.append(tuple(r.wind_adjusted for r in ratings))
-        rain.append(tuple(r.rain for r in ratings))
-        snow.append(tuple(r.snow for r in ratings))
+        # map and zip keep the per-hour loop in C: about 28,000 point-hours
+        # coast to coast, so only `classify` itself runs per hour.
+        ratings = map(classify, _window(lookup.for_point(p), start), repeat(load_lb))
+        point_risk, point_wind, point_rain, point_snow = zip(*map(_LEVELS, ratings), strict=True)
+        risk.append(point_risk)
+        wind.append(point_wind)
+        rain.append(point_rain)
+        snow.append(point_snow)
     logger.info(
         "heatmap %d points at %g deg",
         len(points),
@@ -113,3 +117,22 @@ def corridor_grid(
         rain=tuple(rain),
         snow=tuple(snow),
     )
+
+
+# Overall level, then each condition's: wind after the load rules, rain, snow.
+_LEVELS: Final = attrgetter("level", "wind_adjusted", "rain", "snow")
+
+
+def _window(series: ForecastSeries | None, start: datetime) -> Sequence[Forecast | None]:
+    """The series' forecasts for the grid's hours, as `series.at` gives them hour by hour.
+
+    The offset is found once per point rather than once per point-hour.
+    """
+    if series is None:
+        return (None,) * HOURS
+    # Both are on the hour (ForecastSeries requires it; `start` is rounded up).
+    first = (start - series.start) // timedelta(hours=1)
+    available = series.hours
+    if first >= 0 and first + HOURS <= len(available):
+        return available[first : first + HOURS]
+    return [available[i] if 0 <= i < len(available) else None for i in range(first, first + HOURS)]

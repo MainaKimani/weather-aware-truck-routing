@@ -1239,6 +1239,10 @@ Spec: RFC §7.3, §8.
     429.
   - All acceptance criteria now met (point cap, payload and grid-equals-checkpoint
     were verified with the grid on 2026-10-12).
+- 2026-10-12: CI timed a cached coast-to-coast grid at 1.51 s against the 1.5 s limit once
+  each condition's level was kept. The cache decode and the grid's per-hour loop now run in
+  C (map, zip, one slice per point): 0.53 s locally under coverage, from 0.71 s (0.66 s
+  before). `corridor.py` and `forecasts.py` are fully covered.
 
 ### SPOT-43 · Geocode suggest endpoint
 
