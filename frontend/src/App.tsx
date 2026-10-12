@@ -1,13 +1,17 @@
 import type { QueryClient } from '@tanstack/react-query'
+import { lazy, Suspense } from 'react'
 
 import { AppProviders } from './app/AppProviders'
 import { useLatestPlanAttempt, usePlan } from './api/plans'
 import type { Plan } from './api/schema'
+import { MapPlaceholder } from './features/map/MapPlaceholder'
 import { DemoBadge } from './features/plan/DemoBadge'
 import { ResultsArea } from './features/plan/ResultsArea'
 import { TripForm } from './features/trip-form/TripForm'
 import { AppShell } from './features/shell/AppShell'
 import { HourSlider } from './features/timeline/HourSlider'
+
+const MapView = lazy(() => import('./features/map/MapView'))
 
 export default function App({ queryClient }: { queryClient?: QueryClient }) {
   return (
@@ -16,9 +20,9 @@ export default function App({ queryClient }: { queryClient?: QueryClient }) {
         badges={<DemoBadge />}
         panel={<Panel />}
         map={
-          <div className="flex h-full items-center justify-center bg-canvas text-sm text-muted">
-            The map appears here once a trip is planned.
-          </div>
+          <Suspense fallback={<MapPlaceholder />}>
+            <MapView />
+          </Suspense>
         }
         timeline={<HourSlider />}
       />

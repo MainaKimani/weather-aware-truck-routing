@@ -65,7 +65,7 @@ link to their sections instead of repeating them.
 | SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | Done        |
 | SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | Done        |
-| SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | To do       |
+| SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | Done        |
 | SPOT-71  | Routes layer with risk-coloured segments          | E7 Map               | Frontend · 3   | P0  | To do       |
 | SPOT-72  | Checkpoints layer, tooltip and popup              | E7 Map               | Frontend · 3   | P0  | To do       |
 | SPOT-73  | HOS stops layer                                   | E7 Map               | Frontend · 1   | P1  | To do       |
@@ -1848,19 +1848,49 @@ Spec: PRD §9, RFC §11.
 
 ### SPOT-70 · Map view, basemap and camera
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | Done | Depends on |
 |---|---|---|---|
 | Frontend · 2 | P0 | To do | SPOT-50 |
 
 **Sub-tasks**
-- [ ] `react-map-gl/maplibre` with OpenFreeMap positron (and a dark style for dark mode).
-- [ ] Fit to routes with padding for the left panel; origin/destination pins.
+- [x] `react-map-gl/maplibre` with OpenFreeMap positron (and a dark style for dark mode).
+- [x] Fit to routes with padding for the left panel; origin/destination pins.
 
 **Acceptance criteria**
 - Map loads without any token; camera fits all routes after each plan.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: map view (`features/map/MapView.tsx`).
+  - **Library:** `react-map-gl/maplibre` 8.1 on MapLibre 6.11. The map is lazy-loaded
+    (`React.lazy`), so MapLibre's ~285 KB gzipped chunk never delays the form; a pulsing
+    placeholder fills the pane meanwhile.
+  - **Basemap:** OpenFreeMap `positron` (light) and `dark`, picked from the theme. Both are
+    public, keyless styles.
+  - **Camera:** fits `corridor.bbox` each time a plan arrives (keyed on `generated_at`, so
+    hovering, theme changes or re-renders never refit). Padding scales down on small maps so
+    the fit can't fail. The top clears the destination pin. Fits jump instead of fly under
+    `prefers-reduced-motion`.
+  - **Pins:** origin (ring) and destination (pin), each with an accessible name ("Origin:
+    Dallas, TX").
+  - **No WebGL:** a map that can't start is replaced by a status message pointing to the
+    panel. A later error (a failed tile) leaves the map up.
+- Decisions:
+  - "Padding for the left panel": the panel sits beside the map rather than over it, so
+    equal padding is enough.
+  - MapLibre 6 looks for its worker beside its own module, which Vite's bundling moves. The
+    worker is now built by Vite (`?worker&url`, ES format) and passed as `workerUrl`, which
+    works in dev and in the build.
+  - Tests use a stand-in for `react-map-gl/maplibre` (`test/fakeMap.ts`), installed for every
+    test, because jsdom has no WebGL. It records sources, `setData` calls, layer props and
+    camera calls.
+- Verified (10 tests, 178 total):
+  - Light and dark basemaps; a hint before planning.
+  - One fit per plan with the corridor bbox and padding, a refit for a new plan and none
+    otherwise, and a jump under reduced motion.
+  - Pin positions, the no-WebGL fallback, and a tile error that keeps the map.
+  - **In Chrome** against the fake providers: the US view loads with no key. The demo trip
+    fits Dallas → Denver with both pins visible. The dark theme swaps the basemap with no
+    console errors.
 
 ### SPOT-71 · Routes layer with risk-coloured segments
 

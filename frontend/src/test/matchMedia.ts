@@ -1,10 +1,12 @@
 /**
  * jsdom has no matchMedia. This stand-in answers `(prefers-color-scheme: dark)`
- * from a flag that tests flip, and notifies listeners like the real one.
+ * and `(prefers-reduced-motion: reduce)` from flags that tests flip, and
+ * notifies colour-scheme listeners like the real one.
  */
 type Listener = (event: MediaQueryListEvent) => void
 
 let dark = false
+let reducedMotion = false
 const listeners = new Set<Listener>()
 
 export function setSystemDark(value: boolean): void {
@@ -14,9 +16,14 @@ export function setSystemDark(value: boolean): void {
   })
 }
 
+export function setReducedMotion(value: boolean): void {
+  reducedMotion = value
+}
+
 window.matchMedia = (query: string): MediaQueryList =>
   ({
     get matches() {
+      if (query.includes('reduced-motion')) return reducedMotion
       return query.includes('dark') ? dark : false
     },
     media: query,
