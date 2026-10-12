@@ -120,6 +120,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: routing_unavailable or weather_unavailable
+  /api/v1/trips/{trip_id}/heatmap:
+    get:
+      operationId: trip_heatmap
+      description: |-
+        The trip's corridor heatmap: risk around its routes for each of the next 48 hours.
+
+        Computed from the saved routes and load on the first request, then kept,
+        so a reopened trip shows the heatmap as it was. Visible to whoever can see
+        the trip.
+      parameters:
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Heatmap'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours and not shared'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: weather_unavailable
 components:
   schemas:
     Checkpoint:
@@ -233,6 +279,53 @@ components:
       - valid_hour
       - weather_code
       - wind_mph
+    Heatmap:
+      type: object
+      description: |-
+        The corridor grid (RFC §7.3).
+
+        `risk[i][h]` is point i's level (0-4) at hour h; null is Unknown.
+      properties:
+        start_hour:
+          type: string
+          format: date-time
+          description: The forecast hour shown at slider hour 0.
+        hours:
+          type: integer
+        cell_deg:
+          type: number
+          format: double
+        stale:
+          type: boolean
+        forecast_as_of:
+          type: string
+          format: date-time
+          nullable: true
+        points:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+              format: double
+          readOnly: true
+          description: '[lon, lat] per grid point.'
+        risk:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              nullable: true
+          readOnly: true
+      required:
+      - cell_deg
+      - forecast_as_of
+      - hours
+      - points
+      - risk
+      - stale
+      - start_hour
     Hos:
       type: object
       properties:

@@ -17,11 +17,13 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Final
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils.dateparse import parse_datetime
 
 from planner.access import Owner
-from planner.models import Trip, TripRoute
+from planner.domain.polyline import decode
+from planner.domain.types import LatLon
+from planner.models import Trip, TripHeatmap, TripRoute
 
 SNAPSHOT_VERSION: Final = 1
 
@@ -173,6 +175,55 @@ def _route_snapshot(route: TripRoute) -> Snapshot:
             "drivable": route.drivable,
         },
         "checkpoints": route.checkpoints,
+    }
+
+
+def route_lines(trip: Trip) -> list[list[LatLon]]:
+    """Each route's polyline, for the corridor around them."""
+    return [decode(geometry) for geometry in trip.routes.values_list("geometry", flat=True)]
+
+
+# --- Heatmap -----------------------------------------------------------------
+
+
+def load_heatmap(trip: Trip) -> Snapshot | None:
+    """The trip's saved heatmap response, or None before it is first computed."""
+    heatmap = TripHeatmap.objects.filter(trip=trip).first()
+    return None if heatmap is None else _heatmap_snapshot(heatmap)
+
+
+def save_heatmap(trip: Trip, snapshot: Mapping[str, Any]) -> Snapshot:
+    """Keep a computed heatmap, and return what is kept.
+
+    Two first requests can compute it at once; the second insert hits the
+    one-to-one key, and both get the copy that was saved first.
+    """
+    try:
+        with transaction.atomic():
+            heatmap = TripHeatmap.objects.create(
+                trip=trip,
+                start_hour=_time(snapshot["start_hour"]),
+                hours=snapshot["hours"],
+                cell_deg=snapshot["cell_deg"],
+                stale=snapshot["stale"],
+                forecast_as_of=_maybe_time(snapshot["forecast_as_of"]),
+                points=snapshot["points"],
+                risk=snapshot["risk"],
+            )
+    except IntegrityError:
+        heatmap = TripHeatmap.objects.get(trip=trip)
+    return _heatmap_snapshot(heatmap)
+
+
+def _heatmap_snapshot(heatmap: TripHeatmap) -> Snapshot:
+    return {
+        "start_hour": _wire(heatmap.start_hour),
+        "hours": heatmap.hours,
+        "cell_deg": heatmap.cell_deg,
+        "stale": heatmap.stale,
+        "forecast_as_of": _wire(heatmap.forecast_as_of),
+        "points": heatmap.points,
+        "risk": heatmap.risk,
     }
 
 

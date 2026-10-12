@@ -45,6 +45,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The trip's corridor heatmap: risk around its routes for each of the next 48 hours.
+         *
+         *     Computed from the saved routes and load on the first request, then kept,
+         *     so a reopened trip shows the heatmap as it was. Visible to whoever can see
+         *     the trip.
+         */
+        get: operations["trip_heatmap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -98,6 +121,27 @@ export interface components {
             /** Format: double */
             snow_in_hr: number | null;
             weather_code: number | null;
+        };
+        /**
+         * @description The corridor grid (RFC §7.3).
+         *
+         *     `risk[i][h]` is point i's level (0-4) at hour h; null is Unknown.
+         */
+        Heatmap: {
+            /**
+             * Format: date-time
+             * @description The forecast hour shown at slider hour 0.
+             */
+            start_hour: string;
+            hours: number;
+            /** Format: double */
+            cell_deg: number;
+            stale: boolean;
+            /** Format: date-time */
+            forecast_as_of: string | null;
+            /** @description [lon, lat] per grid point. */
+            readonly points: number[][];
+            readonly risk: (number | null)[][];
         };
         Hos: {
             readonly enabled: boolean;
@@ -327,6 +371,7 @@ export type CycleEnum = components['schemas']['CycleEnum'];
 export type Error = components['schemas']['Error'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 export type Forecast = components['schemas']['Forecast'];
+export type Heatmap = components['schemas']['Heatmap'];
 export type Hos = components['schemas']['Hos'];
 export type HosRequest = components['schemas']['HosRequest'];
 export type HosStop = components['schemas']['HosStop'];
@@ -464,6 +509,54 @@ export interface operations {
                 };
             };
             /** @description routing_unavailable or weather_unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    trip_heatmap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Heatmap"];
+                };
+            };
+            /** @description not_found: no such trip, or not yours and not shared */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description weather_unavailable */
             502: {
                 headers: {
                     [name: string]: unknown;

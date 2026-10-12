@@ -9,10 +9,11 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from planner.access import Owner, current_owner
+from planner.access import Owner, current_owner, get_visible_trip
 from planner.api.errors import IdempotencyConflict
 from planner.api.serializers import (
     ErrorSerializer,
+    HeatmapSerializer,
     PlaceOutSerializer,
     PlanRequestSerializer,
     PlanSerializer,
@@ -22,7 +23,17 @@ from planner.api.serializers import (
 from planner.api.throttles import PlanGuestSessionThrottle, PlanGuestThrottle, PlanUserThrottle
 from planner.models import Trip
 from planner.providers.registry import get_providers
-from planner.repositories import Snapshot, load_snapshot, save_trip, trip_for_key
+from planner.repositories import (
+    Snapshot,
+    load_heatmap,
+    load_snapshot,
+    route_lines,
+    save_heatmap,
+    save_trip,
+    trip_for_key,
+)
+from planner.services.corridor import corridor_grid
+from planner.services.forecasts import ForecastStore
 from planner.services.geocoding import suggest
 from planner.services.plan import plan_trip
 
@@ -103,6 +114,38 @@ def _replay(trip: Trip, owner: Owner | None) -> Snapshot:
     if owner is None or not owner.owns(trip):
         raise IdempotencyConflict
     return load_snapshot(trip)
+
+
+class TripHeatmapView(APIView):
+    """The trip's corridor heatmap: risk around its routes for each of the next 48 hours.
+
+    Computed from the saved routes and load on the first request, then kept,
+    so a reopened trip shows the heatmap as it was. Visible to whoever can see
+    the trip.
+    """
+
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "heatmap"
+
+    @extend_schema(
+        operation_id="trip_heatmap",
+        parameters=[OpenApiParameter("trip_id", uuid.UUID, OpenApiParameter.PATH)],
+        responses={
+            200: HeatmapSerializer,
+            404: _error("not_found: no such trip, or not yours and not shared"),
+            429: _error("rate_limited"),
+            502: _error("weather_unavailable"),
+        },
+    )
+    def get(self, request: Request, trip_id: str) -> Response:
+        trip = get_visible_trip(trip_id, current_owner(request))
+        saved = load_heatmap(trip)
+        if saved is not None:
+            return Response(saved)
+        weather = get_providers().weather
+        grid = corridor_grid(route_lines(trip), trip.load_lb, ForecastStore(weather))
+        return Response(save_heatmap(trip, HeatmapSerializer(grid).data))
 
 
 class GeocodeSuggestView(APIView):

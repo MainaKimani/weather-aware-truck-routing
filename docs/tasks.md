@@ -53,7 +53,7 @@ link to their sections instead of repeating them.
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
-| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress |
+| SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | Done        |
 | SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | Done        |
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | Done        |
@@ -125,12 +125,11 @@ here when that task closes it.
 
 | From | What's left | Picked up in |
 |---|---|---|
-| SPOT-42 | `GET /api/v1/trips/{id}/heatmap`: store the grid as `TripHeatmap`, same access as the trip, `heatmap` throttle scope. | SPOT-42, once trips exist (SPOT-111) |
 | SPOT-45 | Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite + host); point host checks at `/healthz` and `/readyz`. | SPOT-100 |
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
-| SPOT-51 | Dependent heatmap query (starts after the plan resolves); the endpoint and its schema don't exist yet. | SPOT-51, once SPOT-42's endpoint lands |
+| SPOT-51 | Dependent heatmap query (starts after the plan resolves). The endpoint and its schema now exist. | SPOT-80, with the layer that draws it |
 | SPOT-50 | Nothing calls `/api/v1/healthz` any more (hosts use `/healthz`); remove the route and its test. | Next backend change |
 
 ## Epics
@@ -1172,7 +1171,7 @@ Spec: RFC §7.2, §11.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | In progress | SPOT-40, SPOT-111 |
+| Backend · 3 | P0 | Done | SPOT-40, SPOT-111 |
 
 Spec: RFC §7.3, §8.
 
@@ -1180,7 +1179,7 @@ Spec: RFC §7.3, §8.
 - [x] Union of simplified routes, 40 mi buffer, lattice points inside, point cap with coarser
   step.
 - [x] Classify every point-hour (0–48) with `classify()` and the plan's load.
-- [ ] `GET /api/v1/trips/{id}/heatmap`: compute from the stored trip on first request, save as
+- [x] `GET /api/v1/trips/{id}/heatmap`: compute from the stored trip on first request, save as
   `TripHeatmap`, read the saved copy afterwards; same access rules as the trip.
 
 **Acceptance criteria**
@@ -1220,6 +1219,27 @@ Spec: RFC §7.3, §8.
   - One weather call per grid. A cached coast-to-coast grid is recomputed in about 1 s.
 - Left: `GET /api/v1/trips/{id}/heatmap`, which stores the grid as `TripHeatmap` and shares
   the trip's access rules, needs trips (SPOT-110–112). Its throttle rate is set in SPOT-45.
+- 2026-10-12: endpoint done (`TripHeatmapView`, `planner/repositories.py`).
+  - `GET /api/v1/trips/{id}/heatmap` finds the trip through `get_visible_trip` (owner or
+    shared, otherwise a JSON 404, including for a malformed id). The first request
+    computes `corridor_grid` from the saved routes' polylines and the trip's load, and
+    keeps it as `TripHeatmap`. Later requests read that copy, so a reopened trip shows the
+    heatmap as it was.
+  - Two first requests computing at once end with one kept copy: the second insert hits
+    the one-to-one key and returns the first.
+  - `heatmap` throttle scope, 20 a minute (set in SPOT-45). `openapi.yaml` and the
+    frontend's `schema.ts` regenerated with the path and `Heatmap`.
+- Verified (11 tests, 625 total):
+  - The shape: 49 hours, points and rows matched, levels 0–4 or null. The grid is kept,
+    and the second request reads it without recomputing.
+  - The trip's three routes and its load (31,000 lb in the test) are what the grid uses.
+  - The demo trip's response is under 20 KB gzipped.
+  - Another guest gets 404 and nothing is computed. A shared trip is open to anyone.
+    Unknown and malformed ids are JSON 404s.
+  - A concurrent second save returns the first copy. The 21st request in a minute is
+    429.
+  - All acceptance criteria now met (point cap, payload and grid-equals-checkpoint
+    were verified with the grid on 2026-10-12).
 
 ### SPOT-43 · Geocode suggest endpoint
 
@@ -1563,6 +1583,9 @@ Spec: RFC §12, §18.3.
 - Left: the dependent heatmap query, and its criterion "heatmap request starts only after the
   plan resolves". The endpoint doesn't exist until trips do (SPOT-42), and it isn't in the
   schema to type against.
+- 2026-10-12: `GET /api/v1/trips/{id}/heatmap` and its `Heatmap` type now exist (SPOT-42).
+  The query is built with the heatmap layer (SPOT-80), its first reader; this task
+  closes with it.
 
 ---
 
@@ -1957,6 +1980,8 @@ Spec: RFC §10.4.
 - [ ] `heatmap` layer under routes: weight from `h<hour>`, zoom-scaled radius, risk colour ramp.
 - [ ] Visual check at zooms 4–10; switch to the fill-grid fallback if the blur misleads.
 - [ ] Fade the heatmap in when it arrives, after the routes (carried over from SPOT-64).
+- [ ] Dependent heatmap query on `trip_id`, starting after the plan resolves (carried over
+  from SPOT-51, which closes with it).
 
 **Acceptance criteria**
 - Heatmap colours agree with checkpoint colours at the same place and hour (visual check on
