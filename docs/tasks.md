@@ -59,7 +59,7 @@ link to their sections instead of repeating them.
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | Done        |
 | SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | Done        |
-| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | To do       |
+| SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | In progress |
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | To do       |
 | SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | To do       |
 | SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | To do       |
@@ -99,7 +99,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do       |
 
-**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 28 (58 points).
+**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 29 (60 points).
 
 ## Open items
 
@@ -130,6 +130,7 @@ here when that task closes it.
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
+| SPOT-51 | Dependent heatmap query (starts after the plan resolves); the endpoint and its schema don't exist yet. | SPOT-51, once SPOT-42's endpoint lands |
 | SPOT-50 | Nothing calls `/api/v1/healthz` any more (hosts use `/healthz`); remove the route and its test. | Next backend change |
 
 ## Epics
@@ -1483,12 +1484,12 @@ Spec: RFC §12, §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-44 |
+| Frontend · 2 | P0 | In progress | SPOT-44 |
 
 **Sub-tasks**
-- [ ] Typed fetch client on generated types; error shape parsed into a typed error.
+- [x] Typed fetch client on generated types; error shape parsed into a typed error.
 - [ ] TanStack Query: plan mutation, dependent heatmap query (routing and session are SPOT-120).
-- [ ] UI store (selected route, hovered/selected checkpoint, layer toggles); slider hour in
+- [x] UI store (selected route, hovered/selected checkpoint, layer toggles); slider hour in
   its own context.
 
 **Acceptance criteria**
@@ -1496,7 +1497,68 @@ Spec: RFC §12, §18.3.
 - Changing the slider hour doesn't re-render the routes panel (checked with React Profiler).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: API client, query layer and UI stores; the heatmap query waits for its endpoint.
+  - **Client** (`api/client.ts`): `openapi-fetch` typed by the generated `paths`, with
+    same-origin credentials. A middleware sends `X-CSRFToken` from Django's `csrftoken` cookie
+    on unsafe methods. `fetch` is looked up per request, so wrappers (test servers,
+    monitoring) see every call.
+  - **Errors** (`api/errors.ts`): `unwrap()` turns every failure into one `ApiError` with
+    `code`, `message`, `status`, `fields` (dotted names), `requestId` (`X-Request-ID`),
+    `retryAfterS` and `transient`. A non-JSON proxy page is `server_error` with its status, a
+    rejected fetch is `network_error`, and an abort is rethrown untouched (checked by name, as
+    it can come from another realm's `DOMException`).
+  - **Queries** (`api/queryClient.ts`): retry once, and only transient failures (network,
+    502, 503), never 4xx, 422 or 429; no refetch on focus.
+  - **Plans** (`api/plans.ts`):
+    - `usePlanTrip().plan(request)` is a mutation with one `Idempotency-Key` per submission,
+      reused by its automatic retry.
+    - On success it writes the plan to `['plan', 'current']` (becomes `['trips', id]` once
+      plans are saved) and selects the recommended route.
+    - `usePlan(select)` reads the cache with `skipToken`, so each component subscribes only to
+      its slice; TanStack's structural sharing keeps unchanged slices referentially equal.
+  - **Places** (`api/places.ts`): `usePlaceSuggestions(q)` normalises like the backend, skips
+    queries under 2 characters, caches for 24 h, cancels superseded requests and keeps the last
+    results while loading. Debouncing is the form's job (SPOT-60).
+  - **UI state** (`state/ui.ts`, Zustand): selected/hovered route and checkpoint plus layer
+    toggles. Selecting a checkpoint selects its route; a new plan resets pointers and keeps
+    layer choices.
+  - **Timeline** (`state/timeline.ts`): a separate store for the hour (0–48, clamped,
+    whole) and play state. The map layer can subscribe outside React and only set a paint
+    property (RFC §10.4).
+  - Providers with a per-test query client. TanStack Query devtools are dev-only and lazy,
+    absent from the production build. `@tanstack/eslint-plugin-query` is enabled.
+  - To exercise all this before the trip form exists, the empty state has "Plan the demo
+    trip: Dallas → Denver", with the design's "Evaluating weather corridors…" pending label
+    and an error panel (message, request id, Try again). There is also a "Demo data" header
+    badge, a placeholder routes list (name, label, recommended, worst level, selection) and a
+    minimal hour slider. Route cards (SPOT-62) and the timeline (SPOT-81) replace the
+    placeholders.
+- Decisions:
+  - Zustand for UI state, with two stores rather than a context: selector subscriptions
+    isolate re-renders, and the map can subscribe without React. RFC §10.2 allows it.
+  - The plan is a mutation whose result goes into the query cache, rather than read from
+    mutation state, so readers subscribe by slice and the same hooks serve saved trips later.
+- Verified (45 tests, MSW at the network boundary, real fixture from the backend's demo plan
+  typed `satisfies Plan`):
+  - **Errors:** 400 with field messages and request id; 422/502 codes and transience; 429
+    `Retry-After`; non-JSON 502; network failure; abort.
+  - **CSRF** is sent on POST and not on GET.
+  - **Idempotency:** one key per submission, reused on a 502 retry, new for the next
+    submission. No retry on 400/422/429.
+  - **Cache:** the plan lands in the cache and the recommended route is selected.
+    Suggestions skip short queries, normalise, and hit the cache on repeat.
+  - **Stores:** the clamps and resets behave.
+  - **App flow:** routes, reason and badge; selection; an error with request id, then Try
+    again recovers.
+  - **Isolation** (React Profiler): seven hour changes commit the slider seven times and the
+    routes panel zero times. A planted hour subscription in the panel fails the test.
+    Selecting a route is one commit, and hovering a checkpoint is none.
+  - **In Chrome against the real backend** (fake providers, via the Vite proxy): Route A
+    recommended, "Fewest severe miles (0 vs 100)", demo badge, risk chips, no console errors.
+  - The production bundle is 62.8 KB of JS gzipped (TanStack Query is most of the increase).
+- Left: the dependent heatmap query, and its criterion "heatmap request starts only after the
+  plan resolves". The endpoint doesn't exist until trips do (SPOT-42), and it isn't in the
+  schema to type against.
 
 ---
 
