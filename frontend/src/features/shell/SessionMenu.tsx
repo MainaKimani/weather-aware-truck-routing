@@ -30,6 +30,9 @@ export function SessionMenu() {
   }
   return (
     <div className="flex items-center gap-2 text-sm">
+      <Link to="/trips" className="rounded-md px-2 py-1 font-medium hover:bg-surface-raised">
+        My trips
+      </Link>
       <span className="hidden max-w-48 truncate text-muted sm:inline" title={user.email}>
         {user.email}
       </span>

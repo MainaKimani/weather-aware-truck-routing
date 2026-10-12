@@ -5,12 +5,19 @@
  * Keys start with ['trips', id] like the heatmap's, so a trip's queries can
  * be found together.
  */
-import { useQuery, type QueryClient } from '@tanstack/react-query'
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+  type QueryClient,
+} from '@tanstack/react-query'
 
-import { api, unwrap } from './client'
+import { api, unwrap, unwrapEmpty } from './client'
 import type { ApiError } from './errors'
 import { meKeys } from './me'
-import type { Plan, Trip, TripPage, TripSummary } from './schema'
+import type { PatchedTripUpdateRequest, Plan, Trip, TripPage, TripSummary } from './schema'
 
 export interface TripFilters {
   saved?: boolean
@@ -22,6 +29,8 @@ export const tripKeys = {
   lists: () => ['trips', 'list'] as const,
   /** The header's recent trips: the first page, unfiltered. */
   recent: () => ['trips', 'list', 'recent'] as const,
+  /** My trips, by tab and search. */
+  list: ({ saved, q = '' }: TripFilters) => ['trips', 'list', { saved: saved ?? null, q }] as const,
   detail: (tripId: string) => ['trips', tripId, 'detail'] as const,
 }
 
@@ -99,5 +108,99 @@ export function useTrip(tripId: string) {
     queryKey: tripKeys.detail(tripId),
     queryFn: ({ signal }) => fetchTrip(tripId, signal),
     staleTime: Infinity,
+  })
+}
+
+/** The cursor in a page's `next` link, or null on the last page. */
+function cursorFrom(next: string | null): string | null {
+  return next ? new URL(next, window.location.origin).searchParams.get('cursor') : null
+}
+
+/** All the user's trips matching the filters, newest first, a page at a time. */
+export function useTripList(filters: TripFilters) {
+  return useInfiniteQuery<
+    TripPage,
+    ApiError,
+    InfiniteData<TripPage>,
+    ReturnType<typeof tripKeys.list>,
+    string | null
+  >({
+    queryKey: tripKeys.list(filters),
+    queryFn: ({ pageParam, signal }) =>
+      fetchTripPage({ ...filters, cursor: pageParam ?? undefined }, signal),
+    initialPageParam: null,
+    getNextPageParam: (last) => cursorFrom(last.next),
+  })
+}
+
+// --- Changing trips ----------------------------------------------------------
+
+type ListData = TripPage | InfiniteData<TripPage> | undefined
+
+/** Every cached list, each row passed through `change` (null drops the row). */
+function editLists(
+  queryClient: QueryClient,
+  change: (row: TripSummary) => TripSummary | null,
+): void {
+  const editPage = (page: TripPage): TripPage => ({
+    ...page,
+    results: page.results.flatMap((row) => change(row) ?? []),
+  })
+  queryClient.setQueriesData<ListData>({ queryKey: tripKeys.lists() }, (data) => {
+    if (!data) return data
+    if ('pages' in data) return { ...data, pages: data.pages.map(editPage) }
+    return editPage(data)
+  })
+}
+
+export interface TripChange {
+  tripId: string
+  changes: PatchedTripUpdateRequest
+}
+
+export function updateTrip({ tripId, changes }: TripChange): Promise<Trip> {
+  return unwrap(
+    api.PATCH('/api/v1/trips/{trip_id}', { params: { path: { trip_id: tripId } }, body: changes }),
+  )
+}
+
+export function deleteTrip(tripId: string): Promise<null> {
+  return unwrapEmpty(
+    api.DELETE('/api/v1/trips/{trip_id}', { params: { path: { trip_id: tripId } } }),
+  )
+}
+
+/**
+ * Rename, save or share a trip. Its page and every list showing it update
+ * at once; lists are then fetched again, since a change can move a trip in
+ * or out of one (saving, under Saved).
+ */
+export function useUpdateTrip() {
+  const queryClient = useQueryClient()
+  return useMutation<Trip, ApiError, TripChange>({
+    mutationFn: updateTrip,
+    onSuccess: (trip) => {
+      queryClient.setQueryData(tripKeys.detail(trip.trip_id), trip)
+      editLists(queryClient, (row) =>
+        row.id === trip.trip_id
+          ? { ...row, name: trip.name, saved: trip.saved, shared: trip.shared }
+          : row,
+      )
+      void queryClient.invalidateQueries({ queryKey: tripKeys.lists() })
+    },
+  })
+}
+
+/** Delete a trip: gone from its page's cache and every list at once. */
+export function useDeleteTrip() {
+  const queryClient = useQueryClient()
+  return useMutation<null, ApiError, string>({
+    mutationFn: deleteTrip,
+    onSuccess: (_, tripId) => {
+      editLists(queryClient, (row) => (row.id === tripId ? null : row))
+      queryClient.removeQueries({ queryKey: tripKeys.detail(tripId) })
+      void queryClient.invalidateQueries({ queryKey: tripKeys.lists() })
+      void queryClient.invalidateQueries({ queryKey: meKeys.all })
+    },
   })
 }

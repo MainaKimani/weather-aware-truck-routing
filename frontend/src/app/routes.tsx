@@ -4,7 +4,9 @@ import type { RouteObject } from 'react-router'
 import { AuthPage } from '../features/account/AuthPage'
 import { PlannerHome } from '../features/planner/PlannerHome'
 import { NotFound } from '../features/shell/NotFound'
+import { RequireAccount } from '../features/shell/RequireAccount'
 import { TripPage } from '../features/trip/TripPage'
+import { TripsPage } from '../features/trips/TripsPage'
 import { PageLayout, PlannerLayout, Root } from './layouts'
 
 export const routes: RouteObject[] = [
@@ -23,6 +25,14 @@ export const routes: RouteObject[] = [
         children: [
           { path: 'login', element: <AuthPage mode="login" /> },
           { path: 'signup', element: <AuthPage mode="signup" /> },
+          {
+            path: 'trips',
+            element: (
+              <RequireAccount>
+                <TripsPage />
+              </RequireAccount>
+            ),
+          },
           { path: '*', element: <NotFound /> },
         ],
       },

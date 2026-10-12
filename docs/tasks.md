@@ -95,7 +95,7 @@ link to their sections instead of repeating them.
 | SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
 | SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | Done        |
 | SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
-| SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | To do       |
+| SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | Done        |
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | To do       |
 
@@ -3213,18 +3213,48 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P1 | To do | SPOT-123, SPOT-116 |
+| Frontend · 3 | P1 | Done | SPOT-123, SPOT-116 |
 
 **Sub-tasks**
-- [ ] List with saved star, name or route, departure, load, recommended route and worst level,
+- [x] List with saved star, name or route, departure, load, recommended route and worst level,
   planned date; All/Saved tabs; search; infinite scroll on the cursor.
-- [ ] Row actions: open, rename, share, delete (confirm).
+- [x] Row actions: open, rename, share, delete (confirm).
 
 **Acceptance criteria**
 - Works with 0, 1 and 200 trips; empty state links to the planner.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: My trips (`features/trips/TripsPage.tsx`, `useTripActions.ts`,
+  `features/shell/ConfirmDialog.tsx`, `api/trips.ts`).
+  - `/trips`, for signed-in users (others go to log in and come back). All / Saved, and a
+    search box (300 ms after typing stops) sent as `q`. Each row: a star (`aria-pressed`)
+    to save; the name or route as a link to the trip; departure, load, the recommended
+    route and its worst level; when it was planned; a Shared tag.
+  - **More trips** load when the end of the list scrolls into view (an
+    `IntersectionObserver`), or with **Load more**, which the keyboard reaches; the cursor
+    from each page's `next` asks for the following one.
+  - **Row actions**, each named with its trip for screen readers ("Delete: Weekly run"):
+    - Rename in place (Enter saves, Escape cancels).
+    - Share or Stop sharing, with a toast saying what it means for the link.
+    - Copy link (to the clipboard, or the link in the toast if that's refused).
+    - Delete, which asks first in an alert dialog: focus starts on Cancel and stays inside,
+      Escape cancels, and focus returns to the button.
+  - Changes show at once in the row, the trip's page and the header's list (the caches are
+    edited), then lists refetch, since saving can move a trip in or out of Saved. A
+    deleted trip leaves every list and its page's cache.
+  - Empty states: "No trips yet … Plan your first trip", or "No trips match." when filtered.
+    A failed load says so with Try again. The header has a My trips link for signed-in
+    users.
+- Verified (11 tests, 358 total):
+  - 0 trips (empty state and link), 1 trip (every field, link to its page), **200 trips**
+    in ten pages of 20, each once, Load more gone at the end.
+  - Saved alone (`saved=true`); one search request after typing stops; no matches.
+  - Star, rename by keyboard, share and copy (the clipboard holds the link).
+  - Delete: Escape keeps it and returns focus, focus stays in the dialog, and confirming
+    removes the row with a toast.
+  - A failed list retried; a visitor sent to log in.
+  - Loading on scroll uses `IntersectionObserver`, which jsdom lacks; checked in Chrome
+    with the rest of the pages.
 
 ### SPOT-125 · Trip actions UI
 
