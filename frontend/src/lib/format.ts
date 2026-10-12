@@ -44,6 +44,23 @@ export function formatClockTime(iso: string, timeZone: string, withZone = true):
   return withZone ? `${time} ${zoneAbbreviation(date, timeZone)}` : time
 }
 
+/** "Mon 12 Oct, 07:04 CDT": with the date, for times that may be days away. */
+export function formatDateTime(iso: string, timeZone: string): string {
+  const date = new Date(iso)
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value
+  const day = `${part('weekday') ?? ''} ${part('day') ?? ''} ${part('month') ?? ''}`
+  return `${day}, ${part('hour') ?? ''}:${part('minute') ?? ''} ${zoneAbbreviation(date, timeZone)}`
+}
+
 /** "0.25 / 4.0", or "No data" when every checkpoint is Unknown. */
 export function formatAvgRisk(avg: number | null): string {
   return avg === null ? 'No data' : `${avg.toFixed(2)} / 4.0`

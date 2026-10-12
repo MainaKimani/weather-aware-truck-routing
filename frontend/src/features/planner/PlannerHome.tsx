@@ -6,12 +6,14 @@ import type { Plan } from '../../api/schema'
 import { useUiStore } from '../../state/ui'
 import { ResultsArea } from '../plan/ResultsArea'
 import { TripForm } from '../trip-form/TripForm'
+import { useOpenTrip } from './useOpenTrip'
 
 const hasPlan = (plan: Plan) => plan.routes.length > 0
 
 /** `/`: a new trip. Whatever trip was on screen before is cleared. */
 export function PlannerHome() {
   useClearedPlan()
+  const openTrip = useOpenTrip()
   const planned = usePlan(hasPlan)
   const attempt = useLatestPlanAttempt()
   return (
@@ -28,8 +30,8 @@ export function PlannerHome() {
           </p>
         </section>
       )}
-      <TripForm />
-      <ResultsArea />
+      <TripForm onPlanned={openTrip} />
+      <ResultsArea onPlanned={openTrip} />
     </div>
   )
 }

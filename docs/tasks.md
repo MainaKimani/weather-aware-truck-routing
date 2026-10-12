@@ -92,7 +92,7 @@ link to their sections instead of repeating them.
 | SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | Done        |
 | SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
-| SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
+| SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
 | SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do       |
 | SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
 | SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | To do       |
@@ -3091,19 +3091,46 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-120, SPOT-113 |
+| Frontend · 2 | P0 | Done | SPOT-120, SPOT-113 |
 
 **Sub-tasks**
-- [ ] `/trips/:id` renders the planner view from the saved snapshot and stored heatmap; banner
+- [x] `/trips/:id` renders the planner view from the saved snapshot and stored heatmap; banner
   "Planned … · forecast as of then".
-- [ ] After planning, the URL changes to the new trip's page.
-- [ ] "Trip not found" page for 404s.
+- [x] After planning, the URL changes to the new trip's page.
+- [x] "Trip not found" page for 404s.
 
 **Acceptance criteria**
 - Reloading a trip page shows exactly the same routes, numbers and heatmap.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: trip page (`features/trip/TripPage.tsx`, `api/trips.ts`, `useOpenTrip`).
+  - `/trips/:id` loads `GET /api/v1/trips/{id}` and puts the trip on screen, so the map,
+    heatmap (the stored one), timeline, cards and table show it as planned. A banner says
+    "Planned Mon 12 Oct, 09:05 CDT, with the forecast as of then", with the trip's name if
+    it has one. The form starts collapsed to the trip's inputs.
+  - Planning, from `/` or a trip page, and a successful retry open the new trip's page, so
+    the address is always the trip's own link.
+  - A plan just made stays on screen while its saved copy loads (the same response), so
+    the routes don't blink to skeletons, and the selection is kept. Opening another trip
+    starts on its recommended route.
+  - 404: "Trip not found … deleted, or it's private to whoever planned it." Other errors:
+    the planner's failure panel with Try again.
+  - **Edit trip** on an older trip moves a past departure to the next whole hour, as
+    re-planning does; the summary still shows when it was planned for.
+  - `valuesFromInputs` and `hosFromInputs` turn saved inputs back into form values;
+    `formatDateTime` adds the date for times that may be days away.
+- Decisions:
+  - The plan on screen stays one cache entry (`['plan', 'current']`) that the trip page
+    fills, rather than every component learning about trip ids: the map, timeline and
+    results didn't change.
+- Verified (7 new tests, 323 total):
+  - A saved strong-storm trip opened directly (as on reload) shows the same routes (Route B
+    Not drivable), the dated banner, its inputs, and one request.
+  - The name in the banner; not found; a failed load retried.
+  - Planning from a trip's page opens and shows the new trip.
+  - Editing an older trip starts from the next hour, with no "in the past" error.
+  - Planner tests now wait for the trip page after a successful plan: acting during the
+    switch hit elements that had just been replaced.
 
 ### SPOT-122 · Recent trips menu (guest)
 

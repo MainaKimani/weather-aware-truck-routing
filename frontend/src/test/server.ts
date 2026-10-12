@@ -9,11 +9,13 @@ import { setupServer } from 'msw/node'
 import type { Me } from '../api/schema'
 import { demoHeatmap, demoHeatmapWithMetrics } from './fixtures/demoHeatmap'
 import { demoPlan } from './fixtures/demoPlan'
+import { savedTrip } from './fixtures/savedTrip'
 
 export const PLANS = '*/api/v1/plans'
 export const SUGGEST = '*/api/v1/geocode/suggest'
 export const HEATMAP = '*/api/v1/trips/:tripId/heatmap'
 export const ME = '*/api/v1/me'
+export const TRIP = '*/api/v1/trips/:tripId'
 export const AUTH = '*/api/auth/browser/v1/auth'
 
 /** Who /api/v1/me says the caller is. */
@@ -36,6 +38,10 @@ export const handlers = [
     ),
   ),
   http.get(ME, () => HttpResponse.json(visitor)),
+  // The demo plan, saved under whichever id is asked for.
+  http.get(TRIP, ({ params }) =>
+    HttpResponse.json(savedTrip({ ...demoPlan, trip_id: String(params.tripId) })),
+  ),
   http.get(SUGGEST, ({ request }) => {
     const q = new URL(request.url).searchParams.get('q') ?? ''
     const places = [

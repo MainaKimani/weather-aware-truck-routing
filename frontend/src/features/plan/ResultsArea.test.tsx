@@ -21,13 +21,20 @@ function respondWith(plan: Plan) {
   server.use(http.post(PLANS, () => HttpResponse.json(plan)))
 }
 
-async function planDemoTrip() {
+/** Plans the demo trip; by default waits until its trip page has opened. */
+async function planDemoTrip({ waitForTrip = true } = {}) {
   await userEvent.click(screen.getByRole('button', { name: 'Use the demo trip' }))
   await userEvent.click(screen.getByRole('button', { name: 'Plan trip' }))
+  if (waitForTrip) await tripPageOpened()
 }
 
 function renderApp() {
-  render(<App queryClient={freshClient()} />)
+  render(<App queryClient={freshClient()} initialPath="/" />)
+}
+
+/** A successful plan opens its trip page; it's settled once the saved trip's banner shows. */
+async function tripPageOpened() {
+  await screen.findByText(/with the forecast as of then/)
 }
 
 describe('planner states', () => {
@@ -49,7 +56,7 @@ describe('planner states', () => {
     )
     renderApp()
 
-    await planDemoTrip()
+    await planDemoTrip({ waitForTrip: false })
 
     expect(await screen.findByText('Evaluating weather along each route…')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Evaluating weather corridors…' })).toBeDisabled()
@@ -68,7 +75,7 @@ describe('planner states', () => {
       server.use(http.post(PLANS, () => apiError(status, code, 'Backend text.')))
       renderApp()
 
-      await planDemoTrip()
+      await planDemoTrip({ waitForTrip: false })
 
       const alert = await screen.findByRole('alert')
       expect(alert).toHaveTextContent(title)
@@ -84,7 +91,7 @@ describe('planner states', () => {
     server.use(http.post(PLANS, () => HttpResponse.error()))
     renderApp()
 
-    await planDemoTrip()
+    await planDemoTrip({ waitForTrip: false })
 
     expect(await screen.findByRole('alert')).toHaveTextContent("Can't reach the server")
   })
@@ -97,7 +104,7 @@ describe('planner states', () => {
     )
     renderApp()
 
-    await planDemoTrip()
+    await planDemoTrip({ waitForTrip: false })
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Too many requests')
@@ -117,7 +124,7 @@ describe('planner states', () => {
     )
     renderApp()
 
-    await planDemoTrip()
+    await planDemoTrip({ waitForTrip: false })
 
     expect(
       await screen.findByText('Ensure this value is less than or equal to 80000.'),
@@ -128,7 +135,6 @@ describe('planner states', () => {
   it('a failure after an earlier plan keeps it, dimmed and labelled', async () => {
     renderApp()
     await planDemoTrip()
-    await screen.findByRole('list', { name: 'Ranked routes' })
     server.use(http.post(PLANS, () => apiError(502, 'routing_unavailable', 'Down.')))
 
     await userEvent.click(screen.getByRole('button', { name: 'Edit trip' }))
