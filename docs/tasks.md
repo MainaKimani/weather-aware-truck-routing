@@ -91,7 +91,7 @@ link to their sections instead of repeating them.
 | SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | Done        |
 | SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | Done        |
-| SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
+| SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
 | SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
 | SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do       |
 | SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
@@ -3041,20 +3041,51 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-51 |
+| Frontend · 2 | P0 | Done | SPOT-51 |
 
 **Sub-tasks**
-- [ ] react-router routes: `/`, `/trips/:id`, `/trips`, `/login`, `/signup`, `/account`;
-  guard redirecting guests from `/trips` and `/account` to `/login?next=…`.
-- [ ] `me` query; API client sends `X-CSRFToken` and an `Idempotency-Key` per plan submission.
-- [ ] Vite dev proxy for `/api` (same origin as production).
+- [x] react-router routes: `/`, `/trips/:id`, `/trips`, `/login`, `/signup`, `/account`;
+  guard redirecting guests from `/trips` and `/account` to `/login?next=…`. _(the router,
+  `/`, a not-found page and the guard here; each page's route lands with its task)_
+- [x] `me` query; API client sends `X-CSRFToken` and an `Idempotency-Key` per plan submission.
+  _(the header and key since SPOT-51)_
+- [x] Vite dev proxy for `/api` (same origin as production). _(since SPOT-51; preview too, SPOT-90)_
 
 **Acceptance criteria**
 - Logging in or out refreshes the header and trip lists without a page reload.
 - Double-clicking Plan creates one trip.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: router and session (`app/routes.tsx`, `app/layouts.tsx`, `api/me.ts`,
+  `api/auth.ts`, `features/shell/RequireAccount.tsx`, `SessionMenu.tsx`).
+  - **react-router** 7.18.4 (pinned; 8 needs React 19 and Node 22). A root layout (header,
+    then the page) holds two layouts: the planner's (panel, map, timeline), shared by its
+    pages so the map stays mounted between them, and a plain page column for the rest.
+    Unknown paths get "Page not found" with a link back. `App` takes an initial path so
+    tests run on an in-memory router.
+  - `/` opens a new trip: it clears whatever plan was on screen and the selection.
+  - **`useMe`** reads `GET /api/v1/me`, which also sets the CSRF cookie before any unsafe
+    request. `useCurrentUser` is the signed-in user or null.
+  - **`api/auth.ts`**: sign-up, login and logout against allauth's headless API with the
+    CSRF header. Its responses parse into `AuthError` (messages by field, `has(code)`);
+    the API's own JSON 403, a 429, a proxy page and a dropped connection all read cleanly.
+    Logout's 401 counts as done. Afterwards `/me` and every trip query except heatmaps
+    refetch, so the header and lists change with no reload.
+  - **`RequireAccount`** sends anyone not signed in to `/login?next=<path and query>`. It
+    waits for `/me`, and says so if it can't be checked.
+  - **Header:** a signed-in user's email and Log out, which then returns to the planner.
+    The home link is a router link.
+- Verified (15 new tests, 316 total):
+  - Not found and back; `/` clears a plan left on screen.
+  - **Double-clicking Plan makes one request** (the button is disabled while planning).
+  - The signed-in header shows the email; Log out sends the token, the header empties and
+    the planner opens, with no reload.
+  - Guard: a visitor goes to `/login?next=%2Ftrips%3Fsaved%3Dtrue`; a user sees the page;
+    a failed `/me` says it couldn't check.
+  - Auth client: credentials and CSRF header; errors by field; CSRF, 429, proxy-page and
+    network failures; logout's 401; logging in invalidates `/me`.
+  - Logging in from the UI and the trip lists refreshing are exercised with those pages
+    (SPOT-122–124).
 
 ### SPOT-121 · Trip page
 

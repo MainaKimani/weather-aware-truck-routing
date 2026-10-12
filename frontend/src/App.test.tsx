@@ -15,7 +15,7 @@ import { demoPlan } from './test/fixtures/demoPlan'
 import { freshClient } from './test/render'
 import { PLANS, apiError, server } from './test/server'
 
-const renderApp = () => render(<App queryClient={freshClient()} />)
+const renderApp = () => render(<App queryClient={freshClient()} initialPath="/" />)
 
 async function planDemoTrip() {
   await userEvent.click(screen.getByRole('button', { name: 'Use the demo trip' }))

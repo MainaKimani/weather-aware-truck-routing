@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 
+import { SessionMenu } from './SessionMenu'
 import { ThemeToggle } from './ThemeToggle'
 
 interface HeaderProps {
@@ -12,17 +14,18 @@ export function Header({ badges }: HeaderProps) {
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-surface px-4">
       {/* The page's one level-one heading, on every screen. */}
       <h1>
-        <a
-          href="/"
+        <Link
+          to="/"
           className="flex items-center gap-2 rounded-md font-semibold"
           aria-label="Weather-Aware Truck Routing, home"
         >
           <LogoMark />
           <span className="hidden sm:inline">Weather-Aware Truck Routing</span>
-        </a>
+        </Link>
       </h1>
       {badges}
       <div className="ml-auto flex items-center gap-2">
+        <SessionMenu />
         <ThemeToggle />
       </div>
     </header>

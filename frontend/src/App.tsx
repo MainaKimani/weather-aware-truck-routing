@@ -1,56 +1,26 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { lazy, Suspense } from 'react'
+import { useState } from 'react'
+import { createBrowserRouter, createMemoryRouter, RouterProvider } from 'react-router'
 
 import { AppProviders } from './app/AppProviders'
-import { useLatestPlanAttempt, usePlan } from './api/plans'
-import type { Plan } from './api/schema'
-import { MapPlaceholder } from './features/map/MapPlaceholder'
-import { DemoBadge } from './features/plan/DemoBadge'
-import { ResultsArea } from './features/plan/ResultsArea'
-import { TripForm } from './features/trip-form/TripForm'
-import { AppShell } from './features/shell/AppShell'
-import { HourSlider } from './features/timeline/HourSlider'
+import { routes } from './app/routes'
 
-const MapView = lazy(() => import('./features/map/MapView'))
-
-export default function App({ queryClient }: { queryClient?: QueryClient }) {
-  return (
-    <AppProviders queryClient={queryClient}>
-      <AppShell
-        badges={<DemoBadge />}
-        panel={<Panel />}
-        map={
-          <Suspense fallback={<MapPlaceholder />}>
-            <MapView />
-          </Suspense>
-        }
-        timeline={<HourSlider />}
-      />
-    </AppProviders>
-  )
+interface AppProps {
+  /** Tests pass their own client so each starts with an empty cache. */
+  queryClient?: QueryClient
+  /** Tests start at a path in memory rather than the browser's address bar. */
+  initialPath?: string
 }
 
-const hasPlan = (plan: Plan) => plan.routes.length > 0
-
-function Panel() {
-  const planned = usePlan(hasPlan)
-  const attempt = useLatestPlanAttempt()
+export default function App({ queryClient, initialPath }: AppProps) {
+  const [router] = useState(() =>
+    initialPath
+      ? createMemoryRouter(routes, { initialEntries: [initialPath] })
+      : createBrowserRouter(routes),
+  )
   return (
-    <div className="space-y-5 p-5">
-      {!planned && attempt.status === 'idle' && (
-        <section aria-labelledby="empty-title">
-          <h2 id="empty-title" className="text-lg font-semibold">
-            Plan a weather-aware trip
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Enter an origin, destination, departure and load. You'll get up to three routes, each
-            rated for wind, rain and snow at the time the truck reaches every checkpoint, with a
-            recommendation and the reason for it.
-          </p>
-        </section>
-      )}
-      <TripForm />
-      <ResultsArea />
-    </div>
+    <AppProviders queryClient={queryClient}>
+      <RouterProvider router={router} />
+    </AppProviders>
   )
 }
