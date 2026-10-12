@@ -1,33 +1,30 @@
-import { useEffect, useState } from 'react'
+import { AppShell } from './features/shell/AppShell'
 
-type ApiStatus = 'checking' | 'ok' | 'down'
-
-// Placeholder shell for SPOT-10: proves the /api proxy reaches Django.
-// The real app shell arrives in SPOT-50.
 export default function App() {
-  const [status, setStatus] = useState<ApiStatus>('checking')
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/v1/healthz', { signal: controller.signal })
-      .then((res) => {
-        setStatus(res.ok ? 'ok' : 'down')
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === 'AbortError') return
-        setStatus('down')
-      })
-    return () => {
-      controller.abort()
-    }
-  }, [])
-
   return (
-    <main className="mx-auto max-w-xl p-8 font-sans">
-      <h1 className="text-2xl font-semibold">Weather-Aware Truck Routing</h1>
-      <p className="mt-4">
-        API: <span data-testid="api-status">{status}</span>
-      </p>
-    </main>
+    <AppShell
+      panel={
+        <section className="p-5" aria-labelledby="empty-title">
+          <h1 id="empty-title" className="text-lg font-semibold">
+            Plan a weather-aware trip
+          </h1>
+          <p className="mt-2 text-sm text-muted">
+            Enter an origin, destination, departure and load. You'll get up to three routes, each
+            rated for wind, rain and snow at the time the truck reaches every checkpoint, with a
+            recommendation and the reason for it.
+          </p>
+        </section>
+      }
+      map={
+        <div className="flex h-full items-center justify-center bg-canvas text-sm text-muted">
+          The map appears here once a trip is planned.
+        </div>
+      }
+      timeline={
+        <div className="flex h-12 items-center px-4 text-sm text-muted">
+          Forecast timeline: 0–48 h from now
+        </div>
+      }
+    />
   )
 }

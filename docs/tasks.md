@@ -58,7 +58,7 @@ link to their sections instead of repeating them.
 | SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | Done        |
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | Done        |
-| SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | To do       |
+| SPOT-50  | App shell, theme and design tokens                | E5 Frontend base     | Frontend · 2   | P0  | Done        |
 | SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | To do       |
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | To do       |
 | SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | To do       |
@@ -128,10 +128,9 @@ here when that task closes it.
 | SPOT-45 | Guest plan throttle counts by IP only; count by session `guest_id` too. | SPOT-112 |
 | SPOT-45 | Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite + host); point host checks at `/healthz` and `/readyz`. | SPOT-100 |
 | SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
-| SPOT-4 | Export the AI Studio project for reference (optional). | SPOT-50 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
-| Rule change | `frontend/src/App.tsx` comments still cite task ids; the placeholder page and `/api/v1/healthz` go when the real shell lands. | SPOT-50 |
+| SPOT-50 | Nothing calls `/api/v1/healthz` any more (hosts use `/healthz`); remove the route and its test. | Next backend change |
 
 ## Epics
 
@@ -1424,22 +1423,61 @@ Spec: RFC §12, §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 2 | P0 | To do | SPOT-4, SPOT-10 |
+| Frontend · 2 | P0 | Done | SPOT-4, SPOT-10 |
 
 **Sub-tasks**
-- [ ] Two-pane layout and header from the agreed design.
-- [ ] Tokens: risk palette, accent, spacing, type; light and dark themes.
-- [ ] `lib/risk.ts`: level → colour, label, score (single source for map and UI).
-- [ ] Replace the placeholder page; drop its `/api/v1/healthz` call and that route, and the
-  task ids in its comments (carried over from the no-ids rule).
-- [ ] Export the AI Studio project for reference, if it helps (left over from SPOT-4).
+- [x] Two-pane layout and header from the agreed design.
+- [x] Tokens: risk palette, accent, spacing, type; light and dark themes.
+- [x] `lib/risk.ts`: level → colour, label, score (single source for map and UI).
+- [x] Replace the placeholder page; drop its `/api/v1/healthz` call and that route, and the
+  task ids in its comments (carried over from the no-ids rule). _(frontend done; the backend
+  route goes in the next backend change, see Open items)_
+- [x] Export the AI Studio project for reference, if it helps (left over from SPOT-4).
+  _(not needed: design-review.md carried what the shell needed)_
 
 **Acceptance criteria**
 - Theme toggle switches every surface including map overlays.
 - Risk colours come only from `lib/risk.ts` (no hex codes elsewhere).
 
 **Progress log**
-- _Not started._
+- 2026-10-12: app shell, tokens and themes.
+  - **Layout** (`features/shell`): header, a scrollable 400 px planner panel beside a
+    full-height map region, and the timeline bar, as the design review keeps them. Each has a
+    landmark with a name (banner, "Trip planner", main, "Forecast timeline"). On narrow
+    screens the map stacks above the panel.
+  - The placeholder page and its `/api/v1/healthz` call are gone; the panel shows the empty
+    state's explainer until the trip form lands.
+  - **Tokens** (`index.css`, Tailwind 4 `@theme`): semantic colours (`canvas`, `surface`,
+    `surface-raised`, `line`, `ink`, `muted`, `accent`, `focus`, `danger`) with light and dark
+    values, system font stacks, a mono stack, `.tabular` numbers, card radius, overlay shadow,
+    a visible focus ring, and reduced motion honoured.
+  - **Themes** (`lib/theme.ts`): a light/dark/system preference via `useSyncExternalStore`.
+    The OS setting is followed live until the user picks one, which is stored in
+    localStorage (and still applies if storage is blocked). An inline script in `index.html`
+    applies the theme before first paint, so there is no flash. `ThemeToggle` sits in the
+    header with an accessible name ("Switch to dark theme").
+  - **Risk** (`lib/risk.ts`): label, score (0–4, null for Unknown), fill and ink colour per
+    level, keyed by the generated `RiskLevelEnum`, so a new API level fails the type-check.
+    `riskStyle(null)` is Unknown, never Low. The colours reach CSS as `--risk-*` variables set
+    from this file at startup, so stylesheets and future map layers share one source.
+- Decisions:
+  - The palette is sequential, as RFC §10.6 asks: `#fed976`, `#fd8d3c`, `#e31a1c` and
+    `#800026` from ColorBrewer's colour-blind-safe YlOrRd, then near-black for No travel.
+    Unknown is a neutral grey outside the scale.
+  - No web font: system stacks avoid a font request and layout shift.
+  - The AI Studio export wasn't needed; the design review carried the layout.
+- Verified (16 tests):
+  - Every API level has a style, in order, with distinct colours; null and undefined are
+    Unknown; the CSS variables are applied.
+  - The theme follows the system, stores an explicit choice, forgets it on "system", ignores
+    system changes once chosen, and survives blocked storage.
+  - The shell has all four landmarks, icon controls have names, and the toggle switches
+    `<html data-theme>`, which every surface keys on.
+  - A palette guard fails if a risk colour, or any hex colour in a `.ts`/`.tsx` file, appears
+    outside `lib/risk.ts`; checked by planting one.
+  - Checked in Chrome: dark on first paint with a dark OS setting, light after toggling, no
+    console errors. Production build is 47.6 KB of JS gzipped.
+- Left: removing the backend's `/api/v1/healthz` route goes with the next backend change.
 
 ### SPOT-51 · API client, query layer and UI state
 
