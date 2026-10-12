@@ -68,6 +68,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Me'
           description: ''
+    delete:
+      operationId: delete_me
+      description: |-
+        Delete the account and everything in it, then end the session.
+
+        Needs the password, so a session left open on a shared computer can't
+        be used to delete someone's account. The user's trips, their routes
+        and heatmaps, and allauth's email records all go with the user.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'invalid_input: wrong password'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: not_authenticated
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
   /api/v1/plans:
     post:
       operationId: create_plan

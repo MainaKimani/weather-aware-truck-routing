@@ -88,7 +88,7 @@ link to their sections instead of repeating them.
 | SPOT-114 | Accounts (sign up, log in, log out, session)      | E11 Trips & accounts | Backend · 3    | P1  | Done        |
 | SPOT-115 | Move guest trips into the account on sign-in      | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-116 | Trip actions API                                  | E11 Trips & accounts | Backend · 2    | P1  | Done        |
-| SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | To do       |
+| SPOT-117 | Delete account                                    | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-118 | Retention purge                                   | E11 Trips & accounts | Backend · 1    | P0  | To do       |
 | SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | To do       |
 | SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | To do       |
@@ -2931,17 +2931,30 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P1 | To do | SPOT-114 |
+| Backend · 1 | P1 | Done | SPOT-114 |
 
 **Sub-tasks**
-- [ ] `DELETE /api/v1/me` with password confirmation; cascade trips; end the session.
+- [x] `DELETE /api/v1/me` with password confirmation; cascade trips; end the session.
 
 **Acceptance criteria**
 - Wrong password → 400 and nothing deleted; right password → user, trips, routes and heatmaps
   gone, and the old session cookie no longer authenticates.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: account deletion (`MeView.delete`).
+  - `DELETE /api/v1/me` with `{"password"}`: signed-in users only (403
+    `not_authenticated` otherwise), CSRF enforced. A wrong password is a 400 on `password`
+    and nothing changes. The right one deletes the user in a transaction: trips, routes,
+    heatmaps and allauth's email records cascade. Then `logout()` ends the session; 204.
+  - Its own throttle scope, `delete_account`, 5 a minute per user, because it checks a
+    password (RFC §12 updated).
+- Verified (5 tests, 700 total):
+  - Wrong password: 400 with the field message; user and trip remain; still signed in.
+  - Right password: 204; the user, their trip, routes, heatmap and email record are gone,
+    another user's trip is not; `/me` is a visitor again, and a copy of the old session
+    cookie in another client no longer authenticates.
+  - Not signed in: 403 `not_authenticated`. Without the CSRF token: 403, nothing deleted.
+  - Six wrong passwords in a minute: five 400s, then 429.
 
 ### SPOT-118 · Retention purge
 

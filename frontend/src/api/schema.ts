@@ -37,7 +37,14 @@ export interface paths {
         get: operations["get_me"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * @description Delete the account and everything in it, then end the session.
+         *
+         *     Needs the password, so a session left open on a shared computer can't
+         *     be used to delete someone's account. The user's trips, their routes
+         *     and heatmaps, and allauth's email records all go with the user.
+         */
+        delete: operations["delete_me"];
         options?: never;
         head?: never;
         patch?: never;
@@ -663,6 +670,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    delete_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description invalid_input: wrong password */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_authenticated */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };

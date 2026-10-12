@@ -15,3 +15,9 @@ class MeSerializer(serializers.Serializer[Any]):
     recent_trip_count = serializers.IntegerField(
         help_text="Trips the caller owns: a guest's on this device, or a user's in total."
     )
+
+
+class DeleteAccountSerializer(serializers.Serializer[Any]):
+    password = serializers.CharField(
+        write_only=True, trim_whitespace=False, help_text="The account's current password."
+    )

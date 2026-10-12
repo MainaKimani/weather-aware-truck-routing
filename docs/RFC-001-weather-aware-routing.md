@@ -738,7 +738,7 @@ probed.
 |---|---|
 | `/api/auth/browser/v1/auth/signup`, `…/login`, `…/session` (GET, DELETE) | allauth headless: sign up, log in, current session, log out |
 | `GET /api/v1/me` | `{ "user": {"email": …} | null, "guest": bool, "recent_trip_count": n }` for the header |
-| `DELETE /api/v1/me` | Delete account and all its trips; requires `{"password": …}`; ends the session |
+| `DELETE /api/v1/me` | Delete account and all its trips; requires `{"password": …}` (wrong: 400, nothing deleted); ends the session; 204 |
 
 The client gets the CSRF token from the `csrftoken` cookie and sends it as `X-CSRFToken` on
 every unsafe request. DRF's `SessionAuthentication` enforces it. `GET /api/v1/me` sets the
@@ -912,7 +912,7 @@ Rule: **never show a missing value as safe.**
 
 - HERE key only in backend env vars; Open-Meteo needs no key.
 - DRF throttling: `plans` 10/min per guest session and IP, 30/min per signed-in user;
-  `geocode` 60/min; `heatmap` 20/min; `trips` (reading lists and trips) 120/min; login attempts limited by allauth. Until guest sessions
+  `geocode` 60/min; `heatmap` 20/min; `trips` (reading lists and trips) 120/min; `delete_account` 5/min per user (it checks a password); login attempts limited by allauth. Until guest sessions
   exist, guests are counted by IP. The client IP comes from `X-Forwarded-For` only
   as far as `NUM_PROXIES` trusted proxies allow (default 0), so a client can't choose its own
   throttle key.
