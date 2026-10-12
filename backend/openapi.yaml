@@ -51,7 +51,20 @@ paths:
   /api/v1/plans:
     post:
       operationId: create_plan
-      description: 'Plan a trip: three routes rated for weather risk, and a recommendation.'
+      description: |-
+        Plan a trip: three routes rated for weather risk, and a recommendation.
+
+        The plan is saved as a trip owned by the caller (a new guest on their
+        first plan) and the saved snapshot is returned. A repeat with the same
+        `Idempotency-Key` returns the trip that key created instead of planning
+        again.
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+          format: uuid
+        description: A UUID per form submission; a repeat returns the same trip.
       tags:
       - plans
       requestBody:
@@ -82,6 +95,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: 'invalid_input: a field is missing or out of range'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'idempotency_conflict: the key belongs to another caller''s
+            trip'
         '422':
           content:
             application/json:
@@ -100,6 +120,63 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: routing_unavailable or weather_unavailable
+  /api/v1/trips/{trip_id}/heatmap:
+    get:
+      operationId: trip_heatmap
+      description: |-
+        The trip's corridor heatmap: risk around its routes for each of the next 48 hours.
+
+        Computed from the saved routes and load on the first request, then kept,
+        so a reopened trip shows the heatmap as it was. Visible to whoever can see
+        the trip.
+      parameters:
+      - in: query
+        name: include
+        schema:
+          enum:
+          - metrics
+          type: string
+          minLength: 1
+        description: |-
+          `metrics` adds each condition's levels, for the map's metric switcher.
+
+          * `metrics` - metrics
+      - in: path
+        name: trip_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Heatmap'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'not_found: no such trip, or not yours and not shared'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: rate_limited
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: weather_unavailable
 components:
   schemas:
     Checkpoint:
@@ -213,6 +290,96 @@ components:
       - valid_hour
       - weather_code
       - wind_mph
+    Heatmap:
+      type: object
+      description: |-
+        The corridor grid (RFC §7.3).
+
+        `risk[i][h]` is point i's level (0-4) at hour h; null is Unknown.
+      properties:
+        start_hour:
+          type: string
+          format: date-time
+          description: The forecast hour shown at slider hour 0.
+        hours:
+          type: integer
+        cell_deg:
+          type: number
+          format: double
+        stale:
+          type: boolean
+        forecast_as_of:
+          type: string
+          format: date-time
+          nullable: true
+        points:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+              format: double
+          readOnly: true
+          description: '[lon, lat] per grid point.'
+        risk:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              nullable: true
+          readOnly: true
+        metrics:
+          allOf:
+          - $ref: '#/components/schemas/HeatmapMetrics'
+          nullable: true
+          description: Only with `?include=metrics`. Null for a heatmap kept before
+            conditions were.
+      required:
+      - cell_deg
+      - forecast_as_of
+      - hours
+      - points
+      - risk
+      - stale
+      - start_hour
+    HeatmapMetrics:
+      type: object
+      description: |-
+        Each condition's level (0-4; null for no data), indexed like `risk`.
+
+        The levels a checkpoint's rating shows for each condition, so whichever
+        one the map shows, it agrees with the checkpoint table.
+      properties:
+        wind:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              nullable: true
+          readOnly: true
+          description: Gusts, after the trip's load rules.
+        rain:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              nullable: true
+          readOnly: true
+        snow:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+              nullable: true
+          readOnly: true
+      required:
+      - rain
+      - snow
+      - wind
     Hos:
       type: object
       properties:
@@ -464,6 +631,8 @@ components:
       - lon
     Plan:
       type: object
+      description: 'A planned trip, as saved: what was asked, the ranked routes and
+        the recommendation.'
       properties:
         generated_at:
           type: string
@@ -499,6 +668,10 @@ components:
             $ref: '#/components/schemas/Route'
         corridor:
           $ref: '#/components/schemas/Corridor'
+        trip_id:
+          type: string
+          format: uuid
+          description: The saved trip; its heatmap is under /trips/{id}.
       required:
       - corridor
       - demo
@@ -512,6 +685,7 @@ components:
       - rules_version
       - settings
       - stale
+      - trip_id
       - warnings
     PlanRequest:
       type: object

@@ -84,6 +84,11 @@ AUTH_USER_MODEL = "accounts.User"
 # /api), so Lax is enough and no CORS is configured. The CSRF cookie is
 # readable by JavaScript on purpose: the client copies it into X-CSRFToken,
 # and Django's docs note an httpOnly CSRF cookie adds no protection.
+# Sessions are read on every request: the cache serves them, Postgres keeps
+# them. A guest's session holds the id their trips are filed under, so it
+# lasts as long as guest trips are kept (30 days, RFC §3.2).
+SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+SESSION_COOKIE_AGE = 30 * 24 * 60 * 60
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False

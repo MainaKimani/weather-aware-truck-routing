@@ -5,6 +5,7 @@ read domain objects directly, so there is one definition of the JSON shape
 and the OpenAPI schema is generated from it.
 """
 
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any, ClassVar, Final, get_args
@@ -394,7 +395,9 @@ class CorridorSerializer(serializers.Serializer[Plan]):
         ]
 
 
-class PlanSerializer(serializers.Serializer[Plan]):
+class PlanSnapshotSerializer(serializers.Serializer[Plan]):
+    """A plan as the API returns it, before it is saved; the trip stores this."""
+
     generated_at = UtcDateTimeField()
     rules_version = serializers.CharField()
     stale = serializers.BooleanField()
@@ -410,7 +413,40 @@ class PlanSerializer(serializers.Serializer[Plan]):
     corridor = CorridorSerializer(source="*")
 
 
+# Responses are read back from the saved trip (planner/repositories.py);
+# this class describes them for the OpenAPI schema, where its docstring shows.
+class PlanSerializer(PlanSnapshotSerializer):
+    """A planned trip, as saved: what was asked, the ranked routes and the recommendation."""
+
+    trip_id = serializers.UUIDField(help_text="The saved trip; its heatmap is under /trips/{id}.")
+
+
 # --- Heatmap -----------------------------------------------------------------
+
+
+def _levels(rows: Sequence[Sequence[Level | None]]) -> list[list[int | None]]:
+    return [[None if level is None else int(level) for level in row] for row in rows]
+
+
+class HeatmapMetricsSerializer(serializers.Serializer[HeatmapGrid]):
+    """Each condition's level (0-4; null for no data), indexed like `risk`.
+
+    The levels a checkpoint's rating shows for each condition, so whichever
+    one the map shows, it agrees with the checkpoint table.
+    """
+
+    wind = serializers.SerializerMethodField(help_text="Gusts, after the trip's load rules.")
+    rain = serializers.SerializerMethodField()
+    snow = serializers.SerializerMethodField()
+
+    def get_wind(self, grid: HeatmapGrid) -> list[list[int | None]]:
+        return _levels(grid.wind)
+
+    def get_rain(self, grid: HeatmapGrid) -> list[list[int | None]]:
+        return _levels(grid.rain)
+
+    def get_snow(self, grid: HeatmapGrid) -> list[list[int | None]]:
+        return _levels(grid.snow)
 
 
 class HeatmapSerializer(serializers.Serializer[HeatmapGrid]):
@@ -426,12 +462,32 @@ class HeatmapSerializer(serializers.Serializer[HeatmapGrid]):
     forecast_as_of = UtcDateTimeField(allow_null=True)
     points = serializers.SerializerMethodField(help_text="[lon, lat] per grid point.")
     risk = serializers.SerializerMethodField()
+    metrics = HeatmapMetricsSerializer(
+        source="*",
+        required=False,
+        allow_null=True,
+        help_text="Only with `?include=metrics`. Null for a heatmap kept before conditions were.",
+    )
 
     def get_points(self, grid: HeatmapGrid) -> list[list[float]]:
         return [[round(p.lon, 4), round(p.lat, 4)] for p in grid.points]
 
     def get_risk(self, grid: HeatmapGrid) -> list[list[int | None]]:
-        return [[None if level is None else int(level) for level in row] for row in grid.risk]
+        return _levels(grid.risk)
+
+    def to_representation(self, instance: HeatmapGrid) -> dict[str, Any]:
+        data: dict[str, Any] = super().to_representation(instance)
+        if not self.context.get("include_metrics"):
+            del data["metrics"]
+        return data
+
+
+class HeatmapQuerySerializer(serializers.Serializer[dict[str, str]]):
+    include = serializers.ChoiceField(
+        choices=["metrics"],
+        required=False,
+        help_text="`metrics` adds each condition's levels, for the map's metric switcher.",
+    )
 
 
 # --- Geocoding ---------------------------------------------------------------

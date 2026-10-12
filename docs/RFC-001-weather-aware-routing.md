@@ -188,11 +188,13 @@ for brevity.)
 on their own. As rows they'd be ~600 inserts per trip with no query that needs them. If we later
 want cross-trip analysis ("where do Severe miles cluster?"), that's the time to normalise.
 
-**Writes.** `plan_trip()` returns domain objects; `planner/repositories.py` maps them to
-models and saves the trip and its routes inside one `transaction.atomic()`. JSON fields are
-produced by versioned serializers (`snapshot_version`), never by dumping dataclasses directly,
-so old trips stay readable after the shape changes. The domain package still imports nothing
-from Django.
+**Writes.** `plan_trip()` returns domain objects; the API serializes them into the plan
+response, and `planner/repositories.py` saves that response as the trip and its routes inside
+one `transaction.atomic()`: columns for what is filtered or summarised, JSON for checkpoints
+and HOS stops. The stored shape is the versioned response (`snapshot_version`), never dumped
+dataclasses, so old trips stay readable after the domain changes, and reading a trip back
+gives exactly the response it was saved from. The domain package still imports nothing from
+Django.
 
 **Reads.** The trip list defers the heavy columns (`checkpoints`, `hos_stops`, `geometry`) and
 prefetches routes in one query, so listing 20 trips is 2 queries regardless of size, which is
@@ -697,7 +699,7 @@ Response:
   "cell_deg": 0.25,
   "points": [[-97.00, 32.75], [-96.75, 32.75], …],
   "risk": [[0,0,1,1,2, …49 values], …],
-  "metrics": {"gust_mph": [[…]], "rain_in_hr": [[…]], "snow_in_hr": [[…]]}
+  "metrics": {"wind": [[…]], "rain": [[…]], "snow": [[…]]}
 }
 ```
 
@@ -705,8 +707,15 @@ Response:
 `null` where there's no forecast (Unknown, never Low). Hours count from when the grid is
 computed (PRD A10): hour 0 is the hour in progress, and like a checkpoint whose ETA falls in it,
 it reads the record stamped at the end of that hour (`start_hour`, §6.3). The response also
-carries `stale` and `forecast_as_of`, as the plan does. Raw
-metrics are included only if the P1 metric switcher is built (`?include=metrics`). Size for
+carries `stale` and `forecast_as_of`, as the plan does. With
+`?include=metrics` (the P1 metric switcher) it adds `metrics`: each condition's level per
+point and hour, indexed like `risk`: wind (gusts after the load rules), rain and snow. These
+are the levels a checkpoint's rating shows for each condition, from the same `classify` call,
+so the rules stay on the server (§19) and the map agrees with the checkpoint table whichever
+condition it shows. Levels rather than raw values also keep one colour scale and legend. They
+are computed and kept with the grid on the first request, whether asked for or not, so a later
+`?include=metrics` reads the same copy (for the demo trip: 3.2 KB gzipped without, 5.7 KB
+with). Size for
 ~600 points × 49 hours of single-digit integers is about 60 KB raw, under 15 KB gzipped.
 
 ### 7.4 Trips

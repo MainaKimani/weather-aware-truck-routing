@@ -8,7 +8,9 @@
    coast-to-coast trips.
 3. Fetch forecasts cache-first and classify every point-hour with the same
    `classify` as the checkpoints, for the plan's load, so the map and the
-   route cards can't disagree.
+   route cards can't disagree. The levels of each condition (wind for the
+   load, rain, snow) are kept too, for the map's metric switcher; they are
+   the same levels a checkpoint's rating shows.
 
 Hours run from now (PRD A10), not from departure. Hour 0 is the hour in
 progress: like a checkpoint whose ETA falls in it, it reads the forecast
@@ -20,12 +22,15 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from itertools import repeat
+from operator import attrgetter
 from typing import Final
 
 from planner.domain.eta import ceil_to_hour
+from planner.domain.forecast import ForecastSeries
 from planner.domain.geo import lattice_near, simplify
 from planner.domain.risk import Level, classify
-from planner.domain.types import LatLon
+from planner.domain.types import Forecast, LatLon
 from planner.services.forecasts import ForecastStore
 
 BUFFER_MI: Final = 40.0
@@ -46,6 +51,10 @@ class HeatmapGrid:
     risk: tuple[tuple[Level | None, ...], ...]  # risk[i][h]; None is Unknown
     stale: bool
     forecast_as_of: datetime | None
+    # Each condition's level, indexed like `risk`: wind after the load rules.
+    wind: tuple[tuple[Level | None, ...], ...]
+    rain: tuple[tuple[Level | None, ...], ...]
+    snow: tuple[tuple[Level | None, ...], ...]
 
 
 def corridor_points(
@@ -72,11 +81,16 @@ def corridor_grid(
     weather_started = time.perf_counter()
     lookup = store.get(points, step)
     weather_ms = round((time.perf_counter() - weather_started) * 1000)
-    hours = [start + timedelta(hours=h) for h in range(HOURS)]
-    risk = []
+    risk, wind, rain, snow = [], [], [], []
     for p in points:
-        series = lookup.for_point(p)
-        risk.append(tuple(classify(series.at(t) if series else None, load_lb).level for t in hours))
+        # map and zip keep the per-hour loop in C: about 28,000 point-hours
+        # coast to coast, so only `classify` itself runs per hour.
+        ratings = map(classify, _window(lookup.for_point(p), start), repeat(load_lb))
+        point_risk, point_wind, point_rain, point_snow = zip(*map(_LEVELS, ratings), strict=True)
+        risk.append(point_risk)
+        wind.append(point_wind)
+        rain.append(point_rain)
+        snow.append(point_snow)
     logger.info(
         "heatmap %d points at %g deg",
         len(points),
@@ -99,4 +113,26 @@ def corridor_grid(
         risk=tuple(risk),
         stale=lookup.stale,
         forecast_as_of=lookup.oldest_fetch,
+        wind=tuple(wind),
+        rain=tuple(rain),
+        snow=tuple(snow),
     )
+
+
+# Overall level, then each condition's: wind after the load rules, rain, snow.
+_LEVELS: Final = attrgetter("level", "wind_adjusted", "rain", "snow")
+
+
+def _window(series: ForecastSeries | None, start: datetime) -> Sequence[Forecast | None]:
+    """The series' forecasts for the grid's hours, as `series.at` gives them hour by hour.
+
+    The offset is found once per point rather than once per point-hour.
+    """
+    if series is None:
+        return (None,) * HOURS
+    # Both are on the hour (ForecastSeries requires it; `start` is rounded up).
+    first = (start - series.start) // timedelta(hours=1)
+    available = series.hours
+    if first >= 0 and first + HOURS <= len(available):
+        return available[first : first + HOURS]
+    return [available[i] if 0 <= i < len(available) else None for i in range(first, first + HOURS)]

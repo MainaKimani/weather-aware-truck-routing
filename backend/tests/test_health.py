@@ -8,11 +8,14 @@ pytestmark = pytest.mark.django_db
 
 
 def test_healthz_returns_ok(client: Client) -> None:
-    for url in ("/healthz", "/api/v1/healthz"):
-        response = client.get(url)
+    response = client.get("/healthz")
 
-        assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_the_old_api_health_route_is_gone(client: Client) -> None:
+    assert client.get("/api/v1/healthz").status_code == 404
 
 
 def test_readyz_ok(client: Client) -> None:
