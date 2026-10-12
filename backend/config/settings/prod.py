@@ -23,3 +23,4 @@ if _missing:
     raise ImproperlyConfigured("Missing required production settings: " + ", ".join(_missing))
 
 DEBUG = False
+PROVIDERS = env.str("PROVIDERS", default="real")

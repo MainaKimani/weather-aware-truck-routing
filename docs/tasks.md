@@ -36,20 +36,20 @@ link to their sections instead of repeating them.
 | SPOT-12  | CI pipeline                                       | E1 Foundation        | DevOps · 2     | P0  | Done      |
 | SPOT-13  | Settings and configuration                        | E1 Foundation        | Backend · 1    | P0  | Done      |
 | SPOT-14  | Postgres and custom user model                    | E1 Foundation        | Backend · 1    | P0  | Done      |
-| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | In review |
-| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | To do     |
-| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | To do     |
-| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | To do     |
-| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | To do     |
-| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | To do     |
-| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | To do     |
-| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | To do     |
-| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | To do     |
-| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | To do     |
-| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | To do     |
-| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | To do     |
-| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | To do     |
-| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | To do     |
+| SPOT-20  | Units and geo utilities                           | E2 Domain            | Backend · 2    | P0  | Done      |
+| SPOT-21  | Checkpoint sampling and owned miles               | E2 Domain            | Backend · 2    | P0  | In review |
+| SPOT-22  | ETA interpolation                                 | E2 Domain            | Backend · 2    | P0  | In review |
+| SPOT-23  | Risk classification and load rules                | E2 Domain            | Backend · 3    | P0  | In review |
+| SPOT-24  | Hours of Service planner                          | E2 Domain            | Backend · 5    | P1  | In review |
+| SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | In review |
+| SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | In review |
+| SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | In review |
+| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | In review |
+| SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | In review |
+| SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | In review |
+| SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | In review |
+| SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | In review |
+| SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | In review |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | To do     |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | To do     |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | To do     |
@@ -415,7 +415,7 @@ rewriting migrations.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | In review | SPOT-10 |
+| Backend · 2 | P0 | Done | SPOT-10 |
 
 **Sub-tasks**
 - [x] `units.py`: km/h→mph, mm→in, cm→in, lb→kg, km→mi. Nothing else in the codebase
@@ -460,19 +460,20 @@ rewriting migrations.
     0.01 s and gives 1,126 points at 0.25°, over the ~700 cap, so SPOT-42 steps up to 0.5°
     (280 points).
 - Left: PR into `dev-backend`.
+- 2026-10-11: PR #1 merged into `dev-backend` with CI green, then into `main` (PR #2). Done.
 
 ### SPOT-21 · Checkpoint sampling and owned miles
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-20 |
 
 Spec: RFC §6.1, PRD §7.3, §7.5.
 
 **Sub-tasks**
-- [ ] Place checkpoints at 0, N, 2N … and always at the destination.
-- [ ] Owned miles (half-gap to each neighbour), scaled to the provider's reported distance.
-- [ ] Property tests with Hypothesis on random polylines.
+- [x] Place checkpoints at 0, N, 2N … and always at the destination.
+- [x] Owned miles (half-gap to each neighbour), scaled to the provider's reported distance.
+- [x] Property tests with Hypothesis on random polylines.
 
 **Acceptance criteria**
 - Owned miles sum to the route distance (to 0.01 mi) for every generated polyline.
@@ -480,20 +481,33 @@ Spec: RFC §6.1, PRD §7.3, §7.5.
 - Intervals 10, 25 and 50 all work; anything else is rejected.
 
 **Progress log**
-- _Not started._
+- 2026-10-11 (branch `feat/spot-21-36-domain-providers`): `domain/sampling.py`.
+  - `RouteGeometry` holds the polyline, its cumulative distances and a scale to the provider's
+    reported distance; `position_at(mile)` maps a reported mile to a point.
+  - `checkpoint_miles` gives 0, N, 2N, … then the destination, rejecting intervals other than
+    10/25/50. `owned_miles` gives half the gap to each neighbour. `sample_checkpoints` puts
+    them together.
+- Decision: spacing is in **reported** miles, mapped onto the geometry by the scale, so
+  checkpoint labels read 0, 25, 50 and line up with the route summary. RFC §6.1 spaces on the
+  polyline and scales owned miles afterwards; the difference is only the scale factor, and
+  this keeps labels round.
+- Verified (24 tests): a Hypothesis property over random polylines, every interval and reported
+  distances ±10% off the geometry, with owned miles summing to the reported distance within
+  0.01 mi, all positive, and miles strictly increasing. A route shorter than N gives exactly
+  two checkpoints. An exact multiple (50 mi every 25) doesn't duplicate the destination.
 
 ### SPOT-22 · ETA interpolation
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-20 |
 
 Spec: RFC §6.2.
 
 **Sub-tasks**
-- [ ] Drive time at distance `d` from per-span durations; fallback to whole-route interpolation.
-- [ ] Reverse lookup: distance at drive time `t` (needed for HOS stop locations).
-- [ ] Forecast-hour selection: `ceil_to_hour(eta)` (RFC §6.3).
+- [x] Drive time at distance `d` from per-span durations; fallback to whole-route interpolation.
+- [x] Reverse lookup: distance at drive time `t` (needed for HOS stop locations).
+- [x] Forecast-hour selection: `ceil_to_hour(eta)` (RFC §6.3).
 
 **Acceptance criteria**
 - ETAs are non-decreasing along a route (property test).
@@ -501,22 +515,36 @@ Spec: RFC §6.2.
 - An ETA exactly on the hour selects that hour; one second past selects the next.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/eta.py` and `types.Span`.
+  - `DriveProfile.build(spans, distance, duration)` gives cumulative miles against cumulative
+    seconds, scaled to the route's reported totals so the last ETA equals the reported
+    duration. Without spans it falls back to a single span with `estimated=True`.
+  - `drive_s_at(mile)` and `mile_at(seconds)` are piecewise-linear and clamped.
+  - `eta(departure, seconds)` returns UTC, and `ceil_to_hour(t)` picks the forecast hour.
+  - Naive datetimes are rejected.
+- Decision: where a span takes no time (or has no length), a lookup lands at its far end. It's
+  deterministic, and puts an HOS stop after a zero-time stretch rather than before it.
+- Verified (18 tests):
+  - Hypothesis: ETAs never decrease along random span lists, and forward then reverse returns
+    the original distance within 0.01 mi.
+  - An ETA exactly on the hour selects that hour; one second (or one microsecond) past selects
+    the next.
+  - Non-UTC and half-hour zones normalise to UTC hours.
 
 ### SPOT-23 · Risk classification and load rules
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-20 |
 
 Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
 
 **Sub-tasks**
-- [ ] `Level` enum, threshold tables, `band()` and `band_with_strict_top()`.
-- [ ] `apply_load_rules()` on gusts.
-- [ ] `classify()` returning `RiskResult` with every intermediate level, the driver and the
+- [x] `Level` enum, threshold tables, `band()` and `band_with_strict_top()`.
+- [x] `apply_load_rules()` on gusts.
+- [x] `classify()` returning `RiskResult` with every intermediate level, the driver and the
   load rule applied; missing forecast → `UNKNOWN`.
-- [ ] Table-driven tests written straight from the PRD table.
+- [x] Table-driven tests written straight from the PRD table.
 
 **Acceptance criteria**
 - Tests at and either side of **every** boundary: gust 24.99/25/34.99/35/44.99/45/54.99/55;
@@ -529,22 +557,38 @@ Spec: PRD §7.4, RFC §6.4. **The highest-weighted logic in the assessment.**
 - Sustained wind never changes the result (test with sustained 80, gust 10 → Low).
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/risk.py` and `types.Forecast`.
+  - `Level` (IntEnum 0–4) and the band tables `WIND_MPH`, `RAIN_IN_HR`, `SNOW_IN_HR` with
+    strict No Travel tops.
+  - `LOAD_RULES` as data (`LoadRuleSpec`), applied by `apply_load_rules`.
+  - `classify(forecast, load_lb)` returns a `RiskResult` with base and adjusted wind, rain,
+    snow, the load rule, the overall level and the driver (tie order wind, rain, snow).
+  - `UNKNOWN` is `level=None`. Missing, NaN, infinite or negative provider values count as
+    missing.
+- Decision (written into PRD §7.4): partial data is Unknown unless a known value is already
+  No Travel. A gust of 60 mph with rain missing is No Travel, not Unknown, so a missing field
+  can't make an undrivable point look drivable. Known values are still returned for display.
+- Verified (62 tests, written from the PRD table):
+  - Every acceptance boundary: gust 24.99–55, rain 0.0999–1.0001, snow 0.499–3.0001.
+  - Load rules at 30,000/30,001 lb (gust 45 and 54.99) and 40,000/40,001 lb (gust 35 and
+    44.99). Gust 55 is No Travel at 1 lb, and the 40 mph / 35,000 lb gap case stays High.
+  - Tie-breaks, and sustained wind 80 with gust 10 rating Low.
+  - Hypothesis: the level is the worst component, and a heavier load is never safer.
 
 ### SPOT-24 · Hours of Service planner
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 5 | P1 | To do | SPOT-22 |
 
 Spec: PRD §7.3.1, RFC §6.2.1.
 
 **Sub-tasks**
-- [ ] `HosRules`, `HosClocks`, `Cycle`, `Stop`, `HosPlan` types in integer seconds.
-- [ ] Simulation loop with longest-stop-first ordering and an iteration guard.
-- [ ] `clock_offset(drive_s)`.
-- [ ] Map stops to miles and coordinates with the reverse lookup from SPOT-22.
-- [ ] Table tests and Hypothesis invariants.
+- [x] `HosRules`, `HosClocks`, `Cycle`, `Stop`, `HosPlan` types in integer seconds.
+- [x] Simulation loop with longest-stop-first ordering and an iteration guard.
+- [x] `clock_offset(drive_s)`.
+- [x] Map stops to miles and coordinates with the reverse lookup from SPOT-22.
+- [x] Table tests and Hypothesis invariants.
 
 **Acceptance criteria**
 - Rested driver, 12 h drive: break at 8 h, rest at 11 h, arrival = 12 h + 0.5 h + 10 h.
@@ -556,18 +600,35 @@ Spec: PRD §7.3.1, RFC §6.2.1.
   overlap.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/hos.py`.
+  - Types: `HosRules` (`DEFAULT_RULES`), `Cycle`, `HosClocks` (range-validated, with
+    `rested()`), `StopKind`, `Stop` and `HosPlan`, with `clock_offset`, `trip_duration_s` and
+    `count`. All in integer seconds.
+  - `plan_hos` checks limits longest stop first, with a 1,000-iteration guard.
+  - `place_stops` maps each stop to a mile (reverse ETA lookup), a position and a start time.
+- Decision (written into RFC §6.2.1): if a 30 min break would use up the rest of the 14 h
+  window, the planner takes the 10 h rest instead. That rest also counts as the break. Taken
+  literally, the RFC loop scheduled a break and then a rest at the same point. As a result,
+  stops are strictly increasing in driving time.
+- Verified (23 tests):
+  - Every acceptance scenario: rested 12 h trip (break at 8 h, rest at 11 h, +10.5 h), window
+    exhausted at 3 h, cycle restart at 5 h, coinciding limits giving one stop, and a trip ending
+    on a limit adding none.
+  - Also: starting with no drive time, the 60 h cycle, and a 30 h trip.
+  - Hypothesis, up to 120 h with random clocks: an independent replay checks that no driving
+    stretch breaks any limit; stops are strictly ordered within the trip; `clock_offset` is
+    monotonic and ends at `trip_duration_s`.
 
 ### SPOT-25 · Route metrics
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-21, SPOT-23 |
 
 Spec: PRD §7.5, RFC §6.5.
 
 **Sub-tasks**
-- [ ] Miles by level including `UNKNOWN`; distance-weighted average risk excluding Unknown;
+- [x] Miles by level including `UNKNOWN`; distance-weighted average risk excluding Unknown;
   worst level and its mile; drivable flag.
 
 **Acceptance criteria**
@@ -576,21 +637,31 @@ Spec: PRD §7.5, RFC §6.5.
 - One No Travel checkpoint makes `drivable = false`.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/metrics.py`. `route_metrics(checkpoints)` returns a `RouteMetrics`:
+  - `miles_by_level`, over all six buckets including `UNKNOWN`;
+  - the distance-weighted `avg_risk`, excluding Unknown and `None` when every checkpoint is
+    Unknown;
+  - `worst` and `worst_at_mile` (the first occurrence);
+  - `drivable` (no No Travel checkpoint), `distance_mi`, `unknown_miles` and `unknown_share`
+    (for SPOT-26's warning).
+- Verified (8 tests): a hand-worked 75 mi route; Unknown is counted but kept out of the
+  average; an all-Unknown route has no average and no Low miles; one No Travel checkpoint makes
+  the route not drivable. Hypothesis: miles by level sum to the route distance, the average
+  stays within 0–4, and drivable means no No Travel.
 
 ### SPOT-26 · Ranking and recommendation reason
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-25 |
 
 Spec: PRD §7.6, RFC §6.6.
 
 **Sub-tasks**
-- [ ] Sort key: No Travel miles, Severe miles, High miles (rounded), quantised average risk,
+- [x] Sort key: No Travel miles, Severe miles, High miles (rounded), quantised average risk,
   duration (trip duration when HOS is on).
-- [ ] Reason sentence from the first differing key against the runner-up.
-- [ ] No recommendation when no route is drivable; warning when > 20% Unknown.
+- [x] Reason sentence from the first differing key against the runner-up.
+- [x] No recommendation when no route is drivable; warning when > 20% Unknown.
 
 **Acceptance criteria**
 - One test per criterion where all earlier criteria tie and that one decides.
@@ -599,7 +670,28 @@ Spec: PRD §7.6, RFC §6.6.
 - Reason text tested for each criterion.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `domain/ranking.py`. `rank_routes(candidates)` returns a `Ranking`:
+  - `ranked`, sorted by `rank_key`: No Travel, Severe and High miles (whole miles, half up),
+    `risk_step(avg)` in 0.05 bands, whole minutes of trip time, then route id;
+  - `recommended_id`, plus `reason_code` and a `reason` sentence taken from the first criterion
+    that differs against the runner-up;
+  - `high_unknown` warnings when more than 20% of a route has no forecast.
+  - No drivable route gives `no_drivable_route` with a "try a later departure" message; the
+    routes are still ranked. A single route gives `only_route`.
+- Decisions:
+  - Risk bands use `floor(avg / 0.05)`, so 1.02 and 1.04 share a band as the acceptance criteria
+    require. Rounding would split them (20 vs 21). An epsilon covers float error, since
+    0.15 / 0.05 is 2.999….
+  - Travel time compares in whole minutes, so a few seconds' difference falls through to
+    route id rather than giving "0 min faster".
+  - An all-Unknown average sorts after any known one: missing data never helps a route.
+  - Reason sentences: "Fewest No Travel / severe / high-risk miles (a vs b)", "Lowest average
+    risk (0.40 vs 1.20)", "Same risk, 25 min faster", "Same risk and travel time as the next
+    route", "Only route found".
+- Verified (27 tests): one test per criterion where every earlier one ties; 1.02 vs 1.04 ties
+  and time decides; 1.04 vs 1.06 doesn't tie; rounded miles; Unknown average; deterministic
+  order by id; no drivable route; single route; the 20% warning boundary; reason text for
+  each criterion.
 
 ---
 
@@ -607,15 +699,15 @@ Spec: PRD §7.6, RFC §6.6.
 
 ### SPOT-30 · Provider protocols, fakes and demo scenarios
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-20 |
 
 **Sub-tasks**
-- [ ] `RoutingProvider`, `WeatherProvider`, `Geocoder` protocols in `providers/base.py`.
-- [ ] Fakes: fixed Dallas → Denver routes and a deterministic moving-storm weather model
+- [x] `RoutingProvider`, `WeatherProvider`, `Geocoder` protocols in `providers/base.py`.
+- [x] Fakes: fixed Dallas → Denver routes and a deterministic moving-storm weather model
   (same story as the UI prototype prompts), plus the stronger "No Travel" scenario.
-- [ ] `PROVIDERS=fake|real` setting; responses flag `"demo": true` when fakes are used.
+- [x] `PROVIDERS=fake|real` setting; responses flag `"demo": true` when fakes are used.
 
 **Acceptance criteria**
 - The whole app runs with no API keys and no network in fake mode.
@@ -623,21 +715,47 @@ Spec: PRD §7.6, RFC §6.6.
   Route B not drivable.
 
 **Progress log**
-- _Not started._
+- 2026-10-11:
+  - **Protocols** (`providers/base.py`): `RoutingProvider`, `WeatherProvider` and `Geocoder`,
+    with `RouteRequest`, `Place` and a `ProviderError` family (`RoutingUnavailable`,
+    `WeatherUnavailable`, `GeocodingUnavailable`, `NoRoute`, each with its API error code).
+  - **Domain types:** `types.Route`, and `domain/forecast.ForecastSeries` (`at(hour)`,
+    `for_eta(t)`).
+  - **Fakes** (`providers/fakes.py`):
+    - `FakeRouting` gives three scripted Dallas–Denver routes (via Amarillo, Wichita and
+      Lubbock, as in the prototype), or a direct route plus two bowed ones for any other pair,
+      and honours via points.
+    - `FakeWeather` models storm cells as a pure function of place and time.
+    - `FakeGeocoder` holds 15 cities with time zones.
+  - **Selection:** `PROVIDERS=fake|real` (fake by default locally, real in prod) and
+    `FAKE_SCENARIO=demo|strong`. `providers/registry.get_providers()` returns them with
+    `demo=True` for fakes, and the API sets the response flag from that in SPOT-41.
+  - `tests/pipeline.py` chains the domain modules for provider tests. SPOT-40 builds the real
+    plan service.
+- Decision: storm cells **circle** their centres instead of drifting. With drift, the result
+  depended on exactly when the reviewer departed. Circling cells keep the heatmap moving and
+  the outcome fixed.
+- Verified: the scenario outcomes were checked by script over 19 departures in the 48 h window ×
+  3 intervals × 4 loads (1 lb to 80,000 lb). Demo always recommends Route A for "Fewest severe
+  miles"; strong always makes Route B not drivable. The tests keep a cross-section of that
+  (33 tests).
+- Fixed along the way: `geo.interpolate` returned the endpoints with float noise
+  (-96.79700000000001); it now returns them exactly.
+- Left: the `real` branch of the registry is wired in SPOT-31/33/34.
 
 ### SPOT-31 · HERE truck routing adapter
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-30 |
 
 Spec: RFC §5.1.
 
 **Sub-tasks**
-- [ ] Request with `transportMode=truck`, gross weight in kg, `departureTime`,
+- [x] Request with `transportMode=truck`, gross weight in kg, `departureTime`,
   `alternatives=4`, polyline, summary and duration/length spans.
-- [ ] Parse to domain `Route`; reject responses missing geometry or durations.
-- [ ] Recorded-fixture tests with `respx`.
+- [x] Parse to domain `Route`; reject responses missing geometry or durations.
+- [x] Recorded-fixture tests with `respx`.
 - [ ] Verify quota and free-tier terms; note result in progress log (PRD Q3).
 
 **Acceptance criteria**
@@ -645,20 +763,47 @@ Spec: RFC §5.1.
 - Changing load weight is passed through to the request (asserted in a test).
 
 **Progress log**
-- _Not started._
+- 2026-10-11:
+  - `providers/http.py` holds the shared `HttpClient`: 3 s connect / 10 s read timeouts, and
+    `HttpError` for transport failures, non-2xx responses and non-JSON bodies. SPOT-36 adds
+    retries and the breaker.
+  - `providers/here.py` holds `HereRouting`. It requests `transportMode=truck`, origin and
+    destination, an ISO `departureTime`, `vehicle[grossWeight]` in kg (via `units.lb_to_kg`),
+    `alternatives`, `return=polyline,summary,routeLabels`,
+    `spans=dynamicSpeedInfo,length,duration`, and pass-through `via` points.
+  - `parse_routes` decodes each section's flexible polyline, joins sections without repeating
+    the join point, converts metres to miles, and labels routes from `routeLabels`
+    ("via I-35, I-70"). Routes come back sorted fastest first.
+  - An empty `routes` list raises `NoRoute` with HERE's notice. Missing geometry or durations
+    raise `RoutingUnavailable`, never a zero-length route.
+- Decision (written into RFC §5.1): spans are split by `dynamicSpeedInfo`. HERE's docs say
+  `length` and `duration` never start a span on their own, so the original
+  `spans=length,duration` would have given one span per section and lost every speed change.
+- Verified (24 tests, respx): request parameters, load pass-through in kg (42,000 lb →
+  19,051 kg; 80,000 → 36,287), via points, parsing, section joins, sections without spans, and
+  malformed responses (no geometry, no duration, bad polyline, no sections). HTTP
+  401/429/500/503, timeouts and non-JSON bodies all become `RoutingUnavailable`.
+- **Not verified:** a real request. There's no HERE key, so the fixture is synthetic: shaped to
+  HERE's documented response and built with `flexpolyline.encode`. The acceptance check "a real
+  Dallas → Denver request returns ≥ 2 routes" is still open.
+- **PRD Q3 (free tier), what I could confirm:** HERE retired the no-payment "Limited" plan on
+  31 Aug 2025. The Base Plan needs a payment method at sign-up and has a monthly free
+  allocation per service, but HERE's plans page wouldn't load (TLS error). Third-party sites
+  quote ~30,000 transactions a month. Q3 stays open for the owner: a card on file with
+  usage inside the free allocation, or a different router.
 
 ### SPOT-32 · Route alternatives: dedupe and via-point fallback
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-31 |
 
 Spec: RFC §5.1.
 
 **Sub-tasks**
-- [ ] Overlap measure on resampled polylines; drop routes > 85% overlapping a better one.
-- [ ] Via-point fallback at ±10% of trip length perpendicular to the midpoint.
-- [ ] `only_n_routes_found` warning when still short.
+- [x] Overlap measure on resampled polylines; drop routes > 85% overlapping a better one.
+- [x] Via-point fallback at ±10% of trip length perpendicular to the midpoint.
+- [x] `only_n_routes_found` warning when still short.
 
 **Acceptance criteria**
 - Two identical routes are reduced to one.
@@ -666,57 +811,113 @@ Spec: RFC §5.1.
   routes or a warning.
 
 **Progress log**
-- _Not started._
+- 2026-10-11:
+  - `domain/alternatives.py`: `overlap(a, b)` is the share of route A within 0.3 mi of route B,
+    sampled every 2 mi. B's segments are bucketed in a 0.1° grid, so each sample checks only
+    nearby segments. `is_duplicate` means more than 85%.
+  - `services/routing.py`:
+    - `find_routes(provider, request)` asks for 4 alternatives and keeps the fastest
+      non-duplicates (at most 3).
+    - When short, it requests routes through via points 10% of the trip length either side of
+      the midpoint, then de-duplicates again.
+    - When still short, it returns what it has with an `only_n_routes_found` warning.
+    - A failed via request is skipped; a failed main request propagates.
+  - `geo.offset_from_midpoint` replaces the private helper in the fakes, so both share it.
+- Decision: overlap isn't symmetric. A detour that contains a whole short route overlaps it only
+  partly, which is correct, since the detour is a real alternative.
+- Verified (12 tests): identical and re-vertexed copies of a road overlap 100%; a road 10 mi
+  away 0%; a shared first half 30–60%. Overlap on a coast-to-coast route with 10k vertices runs
+  in under 2 s. Two identical routes reduce to one, the fallback fills the set to three, the
+  fastest three are kept, a failed fallback gives the warning, and via points sit 10% either
+  side of the midpoint.
 
 ### SPOT-33 · HERE autosuggest adapter
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 1 | P0 | To do | SPOT-30 |
 
 **Sub-tasks**
-- [ ] Autosuggest call biased to North America; return label, lat, lon, time zone.
-- [ ] Fixture tests.
+- [x] Autosuggest call biased to North America; return label, lat, lon, time zone.
+- [x] Fixture tests.
 
 **Acceptance criteria**
 - "dall" returns Dallas, TX first with coordinates and `America/Chicago`.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `providers/here_geocoder.py` holds `HereGeocoder.suggest(q, limit)`.
+  - It sends `at` (centre of the contiguous US) with `in=countryCode:USA,CAN,MEX`; HERE needs a
+    location focus alongside a country filter. It also sends `show=tz` and `lang=en-US`.
+  - Queries under 2 characters return `[]` without calling HERE.
+  - Results without a position (chain or category query suggestions) are skipped.
+  - Labels drop ", United States" ("Dallas, TX"), and `timeZone.name` gives the IANA zone.
+  - HTTP failures raise `GeocodingUnavailable`.
+- Checked in HERE's docs: `show=tz` works on every Geocoding & Search endpoint except
+  `/autocomplete`, so it works with Autosuggest.
+- Verified (12 tests, respx): "dall" gives Dallas, TX first with coordinates and
+  `America/Chicago`; request parameters; skipped query items; a missing time zone becomes
+  `None`; a short query makes no call; HTTP 401/429/503 and malformed bodies are handled.
+- **Not verified against the live API** (no key). The fixture is synthetic, shaped to HERE's
+  documented response.
 
 ### SPOT-34 · Open-Meteo forecast adapter
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-30 |
 
 Spec: RFC §5.2, §6.3.
 
 **Sub-tasks**
-- [ ] Multi-location requests, ≤ 100 locations per batch, metric units, `unixtime`.
-- [ ] Parse to `Forecast` per hour: gust/sustained mph, rain = rain + showers in/hr, snow in/hr.
-- [ ] `null`/`NaN` → missing; out-of-range hours → missing.
+- [x] Multi-location requests, ≤ 100 locations per batch, metric units, `unixtime`.
+- [x] Parse to `Forecast` per hour: gust/sustained mph, rain = rain + showers in/hr, snow in/hr.
+- [x] `null`/`NaN` → missing; out-of-range hours → missing.
 
 **Acceptance criteria**
 - Units converted only via `units.py` (asserted by a test on a fixture with known values).
 - A fixture with a `null` gust gives `UNKNOWN` downstream, never Low.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `providers/open_meteo.py`.
+  - Requests: `OpenMeteoWeather.hourly(points, start, hours)` batches at most 100 locations
+    per request and runs batches in parallel (8 workers). Each request asks for wind, gusts,
+    rain, showers, snowfall and weather code in km/h, mm and cm, with unixtime, GMT and
+    `start_hour`/`end_hour`.
+  - Parsing: `parse_forecasts` accepts a list or a single object (one location comes back
+    without the list).
+    - It checks `hourly_units` before converting with `units.py`.
+    - Rain is rain + showers, and is missing if either is missing.
+    - Null, NaN and boolean values, and hours outside the response, become missing, so they
+      rate Unknown.
+  - The `real` providers branch in the registry is now wired: HERE routing, HERE geocoder and
+    Open-Meteo, needing `HERE_API_KEY`.
+- Checked against the live API (no key needed):
+  - Snowfall comes back in **cm** even with `precipitation_unit=mm`, so it's converted with
+    `cm_to_in`.
+  - Several locations return a JSON array; one location returns a plain object.
+  - Errors are HTTP 400 `{"error": true, "reason": …}`.
+- Verified (15 tests on a **recorded** 3-point fixture):
+  - Unit conversion against known values (80.4672 km/h → 50 mph, 12.7 mm → 0.5 in,
+    5.08 cm → 2 in), and a structural test that no conversion factor appears outside
+    `units.py`.
+  - A null gust rates Unknown, never Low; hours beyond the response are missing.
+  - Changed units fail loudly, and a wrong location count is an error.
+  - 250 points go out as batches of 100, 100 and 50, kept in order.
+  - Live run: 120 points × 49 h in 1.2 s, with every point-hour rated.
 
 ### SPOT-35 · Forecast cache
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 3 | P0 | To do | SPOT-34, SPOT-13 |
 
 Spec: RFC §9, §18.2, §18.3, §18.4.
 
 **Sub-tasks**
-- [ ] Lattice snapping (0.1° checkpoints, 0.25° grid) and cache-first fetch of missing points.
-- [ ] Keys prefixed with `RULES_VERSION` and a payload schema version.
-- [ ] Single-flight: Redis `SET NX` lock per key, others wait up to 2 s for the value.
-- [ ] Stale-while-revalidate: keep entries 3 h past freshness; serve stale with a `stale` flag
+- [x] Lattice snapping (0.1° checkpoints, 0.25° grid) and cache-first fetch of missing points.
+- [x] Keys prefixed with `RULES_VERSION` and a payload schema version.
+- [x] Single-flight: Redis `SET NX` lock per key, others wait up to 2 s for the value.
+- [x] Stale-while-revalidate: keep entries 3 h past freshness; serve stale with a `stale` flag
   when the provider fails.
 
 **Acceptance criteria**
@@ -726,28 +927,78 @@ Spec: RFC §9, §18.2, §18.3, §18.4.
 - Bumping `RULES_VERSION` misses every old key.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `services/forecasts.py`. `ForecastStore(weather).get(points, step_deg)` returns a
+  `ForecastLookup` (series by snapped point, `for_point`, `stale`, `oldest_fetch`).
+  - **Snapping:** `CHECKPOINT_STEP_DEG` 0.1 and `GRID_STEP_DEG` 0.25.
+  - **Keys:** `v{RULES_VERSION}:fc{SCHEMA_VERSION}:{lat:.2f}:{lon:.2f}:{YYYYMMDDHH}`, with -0.0
+    normalised.
+  - **Window:** each entry runs from an hour ago to ten days ahead (241 h), so any departure up
+    to 7 days out plus a multi-day trip, and the heatmap's 0–48 h, share one entry.
+  - **Lifetime:** fresh until the next hour, then kept 3 h more as a fallback.
+  - **Single-flight:** a lock per key via `cache.add` (Redis `SET NX`), with waiters polling
+    for up to 2 s. If the holder never delivers, a waiter fetches itself, and locks are released
+    after a failure.
+  - **Stale:** if the provider fails, the newest entry from the last 3 h is used and the result
+    is flagged `stale`. With nothing to fall back on, it raises `WeatherUnavailable`.
+  - Gaps (`None` series) aren't cached.
+- Decision: if Redis is unreachable, django-redis with `IGNORE_EXCEPTIONS` returns `None` from
+  `add()`. That's treated as "no lock to wait for", so a Redis outage doesn't add 2 s to every
+  plan.
+- Verified (14 tests on the local-memory cache):
+  - A second identical request makes zero provider calls (counting fake), and 10 concurrent
+    requests for a cold key make one.
+  - Provider down with an entry two hours old gives `stale` and the same data; at 5 hours old,
+    or with nothing cached, it raises `WeatherUnavailable`.
+  - A new hour refetches, and bumping `RULES_VERSION` misses every old key.
+  - Locks are released after failure, a waiter falls back to fetching, gaps aren't cached, and
+    an unreachable cache doesn't wait.
+- Left: the plan-level criterion "plan succeeds with `stale: true`" gets its end-to-end check
+  in SPOT-40/41, which put `stale` in the response. Running against real Redis: SPOT-100
+  (Docker isn't available here).
 
 ### SPOT-36 · Provider resilience
 
-| Effort | Priority | Status | Depends on |
+| Effort | Priority | In review | Depends on |
 |---|---|---|---|
 | Backend · 2 | P0 | To do | SPOT-31, SPOT-34 |
 
 Spec: RFC §18.3.
 
 **Sub-tasks**
-- [ ] Shared `httpx` client with 3 s connect / 10 s read timeouts.
-- [ ] One retry with jitter on timeout and 5xx, GET only.
-- [ ] Per-provider circuit breaker (5 failures → open 30 s → half-open).
-- [ ] Map failures to `routing_unavailable` / `weather_unavailable`.
+- [x] Shared `httpx` client with 3 s connect / 10 s read timeouts.
+- [x] One retry with jitter on timeout and 5xx, GET only.
+- [x] Per-provider circuit breaker (5 failures → open 30 s → half-open).
+- [x] Map failures to `routing_unavailable` / `weather_unavailable`.
 
 **Acceptance criteria**
 - Tests: timeout retried once; 4xx not retried; breaker opens after 5 failures and fails fast;
   closes after a successful half-open call.
 
 **Progress log**
-- _Not started._
+- 2026-10-11: `providers/http.py`.
+  - **Timeouts:** 3 s connect / 10 s read on the shared `HttpClient`.
+  - **Retries:** one retry after a 0.1–0.4 s random pause, only on timeouts, transport errors
+    and 5xx (every provider call is a GET). 4xx responses and bad JSON aren't retried.
+  - **Breaker:** a `CircuitBreaker` per provider name, shared through `breaker_for`, since
+    adapters are created per request. Five failed calls in a row open it for 30 s; then one
+    trial call at a time is allowed (half-open). Success closes it; failure reopens it.
+    `CircuitOpen` fails fast without a request.
+  - **Error mapping:** adapters already turn `HttpError` into `routing_unavailable`,
+    `weather_unavailable` or `geocoding_unavailable`, and `CircuitOpen` is an `HttpError`, so
+    an open breaker surfaces with the same code.
+- Decisions:
+  - A 4xx counts as a success for the breaker. The provider answered; the request was wrong,
+    and opening the breaker would block good requests.
+  - A failed call counts once, even though it made two attempts.
+  - The breaker is the API's only in-process state (RFC §18.2), so each worker trips on its own.
+- Verified (17 tests): a timeout is retried once and gives up; 5xx then success; a connection
+  error is retried; 400/401/404/429 and bad JSON make one call each. The breaker opens after 5
+  failures with no request going out, stays open before 30 s, closes after a successful
+  half-open call, reopens after a failed one, allows one trial at a time, isn't opened by 4xx,
+  and resets its count on success. Open-Meteo surfaces an open breaker as
+  `weather_unavailable`.
+- Tests zero the retry pause (`tests/providers/conftest.py`), so the suite stays at about 10 s;
+  one test checks the real jitter range.
 
 ---
 

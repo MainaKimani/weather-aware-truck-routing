@@ -261,6 +261,9 @@ per hour.
 
 **Missing forecast** (ETA beyond the forecast horizon, or provider gap) gives the checkpoint a
 risk of **Unknown**. It is never counted as Low. Unknown miles are shown in the route summary.
+If only some values are missing (say rain is present but gusts aren't), the checkpoint is still
+Unknown, because a missing value could make it worse. The one exception is when a known value
+is already No Travel: nothing missing could change that, so the checkpoint is No Travel.
 
 ### 7.5 Route metrics
 
