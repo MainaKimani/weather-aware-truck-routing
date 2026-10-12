@@ -399,3 +399,16 @@ class HeatmapSerializer(serializers.Serializer[HeatmapGrid]):
 
     def get_risk(self, grid: HeatmapGrid) -> list[list[int | None]]:
         return [[None if level is None else int(level) for level in row] for row in grid.risk]
+
+
+# --- Geocoding ---------------------------------------------------------------
+
+MAX_QUERY: Final = 100
+
+
+class SuggestQuerySerializer(serializers.Serializer[dict[str, str]]):
+    q = serializers.CharField(max_length=MAX_QUERY, allow_blank=True, trim_whitespace=True)
+
+
+class SuggestionSerializer(PlaceOutSerializer):
+    """A place to plan from or to: label, position and IANA time zone (null if unknown)."""

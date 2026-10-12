@@ -571,7 +571,10 @@ generated from it with `openapi-typescript`, so the contract can't drift silentl
 ### 7.1 `GET /api/v1/geocode/suggest?q=…`
 
 Proxies HERE autosuggest (hides the key, applies throttling, caches by query for 24 h).
-Returns `[{label, lat, lon}]`. The client debounces input by 250 ms.
+Returns up to five `[{label, lat, lon, tz}]`, where `tz` is the IANA zone or null. Queries are
+trimmed, lower-cased and whitespace-collapsed before the lookup and the cache key, so "Dallas"
+and " dallas " share an entry. Under 2 characters returns `[]` without calling HERE; over 100
+is `invalid_input`. The client debounces input by 250 ms.
 
 ### 7.2 `POST /api/v1/plans`
 

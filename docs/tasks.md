@@ -54,7 +54,7 @@ link to their sections instead of repeating them.
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | In review |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | In review |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | In progress|
-| SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | To do     |
+| SPOT-43  | Geocode suggest endpoint                          | E4 API               | Backend · 1    | P0  | In review |
 | SPOT-44  | OpenAPI schema and TS type generation             | E4 API               | Full stack · 1 | P0  | To do     |
 | SPOT-45  | Security settings, throttling, health checks      | E4 API               | Backend · 2    | P0  | To do     |
 | SPOT-46  | Structured logging and request ids                | E4 API               | Backend · 1    | P0  | To do     |
@@ -1187,16 +1187,28 @@ Spec: RFC §7.3, §8.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 1 | P0 | To do | SPOT-33 |
+| Backend · 1 | P0 | In review | SPOT-33 |
 
 **Sub-tasks**
-- [ ] `GET /api/v1/geocode/suggest?q=`; min 2 characters; 24 h cache.
+- [x] `GET /api/v1/geocode/suggest?q=`; min 2 characters; 24 h cache.
 
 **Acceptance criteria**
 - Query under 2 characters returns an empty list without calling the provider.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: `GET /api/v1/geocode/suggest?q=` (`GeocodeSuggestView`, `services/geocoding.py`).
+  - Queries are trimmed, lower-cased and whitespace-collapsed. Under 2 characters returns `[]`
+    without calling the geocoder; `q` is required, and over 100 characters is
+    `invalid_input`.
+  - Up to five places as `{label, lat, lon, tz}`. `tz` was added to RFC §7.1, since the form's
+    time-zone chip needs it.
+  - Results are cached for 24 h under `geo1:<sha256 of the normalised query>`, because cache
+    keys can't hold arbitrary user text. Failures aren't cached, and a geocoder failure is
+    502 `geocoding_unavailable`.
+- Verified (13 tests): "dall" gives Dallas, TX first with coordinates and `America/Chicago`.
+  "", "d", " d " and whitespace return `[]` with no provider call. "Den", "  den " and "DEN"
+  make one provider call. No matches is `[]`. A failure is 502 and the next request retries.
+  The cache TTL is 24 h, and keys are ASCII for any input.
 
 ### SPOT-44 · OpenAPI schema and TS type generation
 
