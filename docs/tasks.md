@@ -2404,6 +2404,10 @@ Spec: RFC §10.4.
     (the legend only appears when the map starts). The servers stop afterwards.
   - The workflows pass actionlint. The first CI run will be on the PR.
 - Left: the second flow needs accounts, My trips and sharing; moved to SPOT-125.
+- 2026-10-12: with accounts, the specs plan about twenty trips a minute from one address,
+  past the guest limit of 10. Local settings take `THROTTLE_GENEROUS=1`, which lifts every
+  API limit (allauth's login-failure limits stay), and `playwright.config.ts` sets it for
+  its backend. Production settings don't read it.
 
 ### SPOT-91 · Accessibility pass
 
