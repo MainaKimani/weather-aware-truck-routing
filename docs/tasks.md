@@ -62,7 +62,7 @@ link to their sections instead of repeating them.
 | SPOT-51  | API client, query layer and UI state              | E5 Frontend base     | Frontend · 2   | P0  | In progress |
 | SPOT-60  | Trip form with autosuggest                        | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-61  | Hours of Service fields                           | E6 Planning UI       | Frontend · 2   | P1  | Done        |
-| SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | To do       |
+| SPOT-62  | Route cards and recommendation                    | E6 Planning UI       | Frontend · 3   | P0  | Done        |
 | SPOT-63  | Checkpoint table                                  | E6 Planning UI       | Frontend · 2   | P0  | To do       |
 | SPOT-64  | Empty, loading, partial and error states          | E6 Planning UI       | Frontend · 2   | P0  | To do       |
 | SPOT-70  | Map view, basemap and camera                      | E7 Map               | Frontend · 2   | P0  | To do       |
@@ -1681,21 +1681,62 @@ Spec: PRD §7.3.1.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 3 | P0 | To do | SPOT-51 |
+| Frontend · 3 | P0 | Done | SPOT-51 |
 
 **Sub-tasks**
-- [ ] Ranked cards: badge and reason, distance, drive time, arrival with zone, average risk,
+- [x] Ranked cards: badge and reason, distance, drive time, arrival with zone, average risk,
   worst level pill, stacked miles-by-level bar with tooltips.
-- [ ] Not drivable tag; no-safe-route alert; warnings banner; stale forecast banner.
-- [ ] HOS summary and expandable stop list when HOS is on.
-- [ ] Card ↔ map selection and hover sync.
+- [x] Not drivable tag; no-safe-route alert; warnings banner; stale forecast banner.
+- [x] HOS summary and expandable stop list when HOS is on.
+- [x] Card ↔ map selection and hover sync.
 
 **Acceptance criteria**
 - Every number on a card matches the API response (component tests on the demo fixture).
 - Selecting a card selects the route on the map and vice versa.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: route cards (`features/routes-panel`), replacing the placeholder list.
+  - **Cards** are in rank order. Each shows "Route A · via Amarillo", the Recommended or Not
+    drivable badges, and the reason on the recommended card. Its stats are distance, drive
+    time, arrival in the destination's zone ("Mon 23:53 MDT"), average risk "x / 4.0" ("No
+    data" when all Unknown), and the worst level as a coloured pill with its mile.
+  - **Risk strip** (design review fix 2): each checkpoint's owned miles, in order along the
+    route, in its level's colour, with a hover title per stretch. A text line and the
+    accessible name give the miles by level ("655 mi Low · 75 mi Moderate · …").
+  - **HOS on:** "Trip 22 h 14 min (incl. 1 break, 1 rest)" opens to the stops with kind,
+    length in its natural unit ("Rest 10 h", "Break 30 min", design review fix 6), mile, start
+    time on the origin's clock and the rule that caused it. The panel says "ETAs include Hours
+    of Service stops."
+  - **Plan notices:**
+    - "No safe route right now" (an alert) when nothing is recommended.
+    - A stale-forecast status with the forecast's age.
+    - Warnings, naming their route.
+  - **Sync:** cards read and write selection and hover through the UI store (click, hover,
+    keyboard focus), so the map will need no extra wiring. Each card is memoised and subscribes
+    only to its own selected and hovered state.
+  - `lib/format.ts` is the single place for miles, durations, stop lengths, clock times with
+    zone, average risk, forecast age and weather values. A missing value reads "No data",
+    never blank or zero.
+- Decisions:
+  - The design's "stacked miles-by-level bar" became a positional strip with the totals as
+    text: it shows where the risk is as well as how much, and the design review asked for
+    per-span colour.
+  - Arrival is on the destination's clock and HOS stops on the origin's, each with its zone
+    abbreviation, so mixed zones are never ambiguous.
+- Verified (23 new tests, 145 total), using two real backend fixtures: the demo plan, and a
+  strong storm with HOS on (Route B not drivable, a break and a rest per route).
+  - **Numbers:** every distance, drive time, arrival, average risk and worst level on every
+    card equals the fixture's value through the formatters. "742 mi", "11 h 44 min" and
+    "0.00 / 4.0" are also checked literally.
+  - **Ordering:** cards follow rank, with one Recommended badge.
+  - **Strip:** one segment per checkpoint, widths summing to 100%, and an accessible
+    summary.
+  - **States:** Not drivable only on Route B; HOS summary and stops with "Rest 10 h" and
+    never "600 min"; the no-safe-route alert; stale age and route-named warnings.
+  - **Sync:** card click → store, store → card (as the map will), hover set and cleared.
+  - Formatters: 13 cases.
+- Left: the map side of "selecting a card selects the route on the map and vice versa" is
+  SPOT-71's, which now has a sub-task to use the same store.
 
 ### SPOT-63 · Checkpoint table
 
@@ -1764,6 +1805,9 @@ Spec: PRD §9, RFC §11.
 - [ ] Unselected routes grey; selected route split into segments coloured by checkpoint risk,
   with casing.
 - [ ] Selection and hover via filters/paint expressions, not new data.
+- [ ] Read and write selection and hover through `state/ui.ts` (`selectedRouteId`,
+  `hoveredRouteId`), the same store the route cards use, so card ↔ map sync needs no other
+  wiring (carried over from SPOT-62).
 
 **Acceptance criteria**
 - Changing selection doesn't call `setData` (asserted in a test with a mocked map).
