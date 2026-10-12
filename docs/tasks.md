@@ -93,7 +93,7 @@ link to their sections instead of repeating them.
 | SPOT-119 | Demo account seed                                 | E11 Trips & accounts | Backend · 1    | P1  | Done        |
 | SPOT-120 | Routing and session handling                      | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
 | SPOT-121 | Trip page                                         | E11 Trips & accounts | Frontend · 2   | P0  | Done        |
-| SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | To do       |
+| SPOT-122 | Recent trips menu (guest)                         | E11 Trips & accounts | Frontend · 1   | P0  | Done        |
 | SPOT-123 | Log in and sign-up pages                          | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
 | SPOT-124 | My trips page                                     | E11 Trips & accounts | Frontend · 3   | P1  | To do       |
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | To do       |
@@ -3136,16 +3136,37 @@ core features, per PRD §5.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Frontend · 1 | P0 | To do | SPOT-121 |
+| Frontend · 1 | P0 | Done | SPOT-121 |
 
 **Sub-tasks**
-- [ ] Header dropdown with the last 20 trips and the "Sign up to keep these" prompt.
+- [x] Header dropdown with the last 20 trips and the "Sign up to keep these" prompt.
 
 **Acceptance criteria**
 - A new trip appears at the top immediately after planning.
 
 **Progress log**
-- _Not started._
+- 2026-10-12: recent trips (`features/shell/RecentTripsMenu.tsx`, `api/trips.ts`).
+  - A **Recent trips** button with the count, for guests who have planned (from `/me`);
+    signed-in users get My trips instead (SPOT-124). It opens a panel listing their last 20
+    trips (`GET /api/v1/trips`), each a link to its page: name or route, departure and
+    load, and the recommended route with its worst level. Below: "Trips you plan as a guest
+    stay on this device for 30 days. Sign up to keep these".
+  - **A new trip is at the top at once:** on a successful plan its summary is built from
+    the response and put first in the cached list, then the lists and `/me` refetch behind
+    it.
+  - Escape closes it and returns focus to the button; so does a press outside, or
+    following a link. A disclosure (button and region), not an ARIA menu: it holds links.
+  - `TripSummaryLine`, `RiskChip` and `tripTitle` are shared with My trips.
+- Decisions:
+  - Departures in lists show in the viewer's time zone, with its abbreviation: a summary
+    carries no time zone, and adding one wasn't worth another API change.
+- Verified (4 tests, 327 total):
+  - Not shown to a visitor or a signed-in user.
+  - A guest's list: count, link to the trip, load, the sign-up link; following a trip
+    opens its page and closes the panel.
+  - **A new plan is first in the list while the refetch is still pending**; with the
+    prepend removed, this test fails.
+  - Escape closes and returns focus; a press outside closes.
 
 ### SPOT-123 · Log in and sign-up pages
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
+import { RecentTripsMenu } from './RecentTripsMenu'
 import { SessionMenu } from './SessionMenu'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -25,6 +26,7 @@ export function Header({ badges }: HeaderProps) {
       </h1>
       {badges}
       <div className="ml-auto flex items-center gap-2">
+        <RecentTripsMenu />
         <SessionMenu />
         <ThemeToggle />
       </div>
