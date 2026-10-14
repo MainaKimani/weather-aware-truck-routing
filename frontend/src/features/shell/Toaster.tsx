@@ -1,36 +1,50 @@
 import { useEffect } from 'react'
 
-import { useToastStore, type Toast } from '../../state/toasts'
+import { useToastStore, type Toast, type ToastPlacement } from '../../state/toasts'
 
-/** How long a message stays: long enough to read twice. */
-export const TOAST_MS = 6000
+export { TOAST_MS } from '../../state/toasts'
 
-/** Messages along the bottom of the window, announced politely, each with a close button. */
+const PLACEMENT: Record<ToastPlacement, string> = {
+  // Above the forecast timeline.
+  bottom: 'inset-x-0 bottom-16 items-center px-4',
+  // Under the header, over the map's corner, left of its zoom buttons.
+  'top-right': 'top-16 right-14 left-4 items-end sm:left-auto',
+}
+
+/** Messages along the bottom and in the top right, announced politely, each with a close button. */
 export function Toaster() {
   const toasts = useToastStore((s) => s.toasts)
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-16 z-50 flex flex-col items-center gap-2 px-4"
-    >
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} />
+    <>
+      {(Object.keys(PLACEMENT) as ToastPlacement[]).map((placement) => (
+        <div
+          key={placement}
+          role="status"
+          aria-live="polite"
+          className={`pointer-events-none fixed z-50 flex flex-col gap-2 ${PLACEMENT[placement]}`}
+        >
+          {toasts
+            .filter((toast) => toast.placement === placement)
+            .map((toast) => (
+              <ToastItem key={toast.id} toast={toast} />
+            ))}
+        </div>
       ))}
-    </div>
+    </>
   )
 }
 
 function ToastItem({ toast }: { toast: Toast }) {
   const dismiss = useToastStore((s) => s.dismiss)
   useEffect(() => {
+    if (toast.durationMs === null) return
     const timer = setTimeout(() => {
       dismiss(toast.id)
-    }, TOAST_MS)
+    }, toast.durationMs)
     return () => {
       clearTimeout(timer)
     }
-  }, [toast.id, dismiss])
+  }, [toast.id, toast.durationMs, dismiss])
   return (
     <div className="pointer-events-auto flex max-w-md items-start gap-3 rounded-card border border-line bg-surface px-3 py-2 text-sm shadow-overlay">
       <p>{toast.message}</p>

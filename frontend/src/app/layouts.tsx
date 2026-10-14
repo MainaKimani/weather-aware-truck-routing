@@ -7,6 +7,7 @@ import { Outlet } from 'react-router'
 
 import { MapPlaceholder } from '../features/map/MapPlaceholder'
 import { DemoBadge } from '../features/plan/DemoBadge'
+import { HeatmapNotice } from '../features/plan/HeatmapNotice'
 import { AppShell } from '../features/shell/AppShell'
 import { PageShell } from '../features/shell/PageShell'
 import { PlannerShell } from '../features/shell/PlannerShell'
@@ -31,7 +32,12 @@ export function PlannerLayout() {
           <MapView />
         </Suspense>
       }
-      timeline={<HourSlider />}
+      timeline={
+        <>
+          <HourSlider />
+          <HeatmapNotice />
+        </>
+      }
     />
   )
 }
