@@ -82,7 +82,7 @@ link to their sections instead of repeating them.
 | SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | In progress |
 | SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | In progress |
 | SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | In progress |
-| SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do       |
+| SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | In review   |
 | SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
 | SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
@@ -2730,18 +2730,25 @@ Runbook: `docs/deploy.md`.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Docs · 2 | P0 | To do | SPOT-101 |
+| Docs · 2 | P0 | In review | SPOT-101 |
 
 **Sub-tasks**
-- [ ] What it does, hosted link, screenshots/GIF, quick start (`make dev`), tests, architecture
+- [x] What it does, hosted link, screenshots/GIF, quick start (`make dev`), tests, architecture
   diagram, key decisions with links to PRD/RFC, known limitations, demo account credentials.
-- [ ] Choose and add a licence (left over from SPOT-10).
+- [x] Choose and add a licence (left over from SPOT-10): MIT (owner, 2026-10-14).
+- [x] The demo password in the README (supplied by the owner, checked by signing in on the
+  live site).
 
 **Acceptance criteria**
 - A new developer runs the app locally from the README in under 10 minutes.
 
 **Progress log**
-- _Not started._
+- 2026-10-14: `README.md` at the root: what it does, the live link with a note that the free
+  tier makes planning slow and the heatmap lag, screenshots of the live app (desktop, phone),
+  the demo account, a Mermaid architecture diagram, local quick start (no keys: fake
+  providers), tests, key decisions linked to the PRD and RFC, measured free-tier limits, and
+  the docs index. `LICENSE`: MIT. The owner chose to publish the demo account's credentials,
+  and signing in with them on the live site works (4 trips).
 
 ### SPOT-103 · Loom walkthrough
 
