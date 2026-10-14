@@ -122,6 +122,21 @@ CI runs the same on every push and PR (`.github/workflows/ci.yml`), plus a depen
 a check that the committed OpenAPI schema and generated TypeScript types are current. Tests
 never call HERE or Open-Meteo, whatever `backend/.env` says.
 
+## Design
+
+The interface started as a clickable prototype built in Google AI Studio from
+[a prompt written from the PRD](docs/ai-studio-prompt.md):
+**<https://spotter-weather-routing.ai.studio>** (mock data only).
+
+![The AI Studio prototype: a dark interface with three route cards on the left, the recommended route drawn with checkpoints on the map, a risk legend, and the corridor heat toggle and forecast timeline along the bottom](docs/images/ai-studio-prototype.png)
+
+The [design review](docs/design-review.md) checked it against the PRD and set what to keep: the
+layout (trip form and route cards beside a full-height map, timeline along the bottom), the
+route cards, checkpoint table, legend and trip page. It also listed what to fix in the real
+build, the biggest being the heatmap, which the prototype drew as loose blobs; the app draws it
+as a grid of forecast points around the routes that follows the slider. Later changes, such
+as the traffic-light risk colours, are the app's own.
+
 ## Key decisions
 
 | Decision | Why | More |
@@ -173,7 +188,7 @@ backend/    Django API: config/ (settings, health, logging), accounts/, planner/
             planner/providers/  HERE, Open-Meteo, fakes, HTTP client, budgets
             planner/services/   plan orchestration, forecast cache, corridor heatmap
 frontend/   React app: src/features/ (trip form, routes, map, timeline, trips, account)
-docs/       PRD, RFC, task tracker, deploy runbook
+docs/       PRD, RFC, task tracker, design prototype prompts and review
 ```
 
 ## Documentation

@@ -1,7 +1,8 @@
 # Scheduled and on-demand management commands against the production
-# database (docs/deploy.md). Render's free plan has no scheduled jobs, so the
-# daily retention purge runs here; seed_demo is run by hand after a deploy
-# or a reviewer's changes. Both need only the database.
+# database. Render's free plan has no scheduled jobs, so the daily retention
+# purge runs here; seed_demo is run by hand after a deploy or a reviewer's
+# changes. Both need only the database: the DATABASE_URL and DEMO_PASSWORD
+# repository secrets.
 name: Ops
 
 on:

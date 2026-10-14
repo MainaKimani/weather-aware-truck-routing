@@ -1,6 +1,6 @@
-# Render blueprint for the API (docs/deploy.md). Render reads this from the
-# repo root when the service is created with "New > Blueprint", and redeploys
-# on every push to main.
+# Render blueprint for the API. Render reads this from the repo root when the
+# service is created with "New > Blueprint", and redeploys on every push to
+# main. The secrets marked sync: false are set in Render's dashboard.
 services:
   - type: web
     name: weather-aware-truck-routing-api

@@ -82,7 +82,7 @@ link to their sections instead of repeating them.
 | SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | In progress |
 | SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | Done        |
 | SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | Done        |
-| SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | In review   |
+| SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | Done        |
 | SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
 | SPOT-111 | Save plans as trips                               | E11 Trips & accounts | Backend · 2    | P0  | Done        |
@@ -102,7 +102,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 70 (145 points).
+**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 71 (147 points).
 
 ## Open items
 
@@ -2672,7 +2672,8 @@ Spec: PRD §8.
 |---|---|---|---|
 | DevOps · 2 | P0 | Done | SPOT-45 |
 
-Runbook: `docs/deploy.md`.
+The step-by-step runbook (`docs/deploy.md`) was removed by the owner on 2026-10-14; the setup
+is in `render.yaml`, `frontend/vercel.json`, `.github/workflows/ops.yml` and the log below.
 
 **Sub-tasks**
 - [x] Dockerfile (gunicorn, non-root user); Render service (`render.yaml`) with Neon Postgres
@@ -2745,7 +2746,7 @@ Runbook: `docs/deploy.md`.
 **Sub-tasks**
 - [x] Vercel build; rewrite `/api/*` to the Django service (one origin, first-party cookies);
   SPA fallback routing (`frontend/vercel.json`).
-- [x] Create the Vercel project (owner, `docs/deploy.md` step 4) and set its host in Render.
+- [x] Create the Vercel project (owner) and set its host in Render.
 
 **Acceptance criteria**
 - Hosted URL plans a real trip from a clean browser profile, in Safari as well as Chrome
@@ -2766,7 +2767,7 @@ Runbook: `docs/deploy.md`.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Docs · 2 | P0 | In review | SPOT-101 |
+| Docs · 2 | P0 | Done | SPOT-101 |
 
 **Sub-tasks**
 - [x] What it does, hosted link, screenshots/GIF, quick start (`make dev`), tests, architecture
@@ -2785,6 +2786,9 @@ Runbook: `docs/deploy.md`.
   providers), tests, key decisions linked to the PRD and RFC, measured free-tier limits, and
   the docs index. `LICENSE`: MIT. The owner chose to publish the demo account's credentials,
   and signing in with them on the live site works (4 trips).
+- 2026-10-14: PR #29 merged into `dev-frontend` and on to `main`. The owner then removed the
+  deploy runbook and its README link; the remaining references to it are gone. Added a Design
+  section with a screenshot of the AI Studio prototype (SPOT-4) and its link. Done.
 
 ### SPOT-103 · Loom walkthrough
 
