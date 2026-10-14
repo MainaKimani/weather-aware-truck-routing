@@ -10,6 +10,7 @@ export type KnownErrorCode =
   | 'no_route'
   | 'routing_unavailable'
   | 'weather_unavailable'
+  | 'weather_busy'
   | 'geocoding_unavailable'
   | 'quota_reached'
   | 'rate_limited'
@@ -49,10 +50,12 @@ export class ApiError extends Error {
 
   /**
    * Worth retrying automatically: the request may succeed unchanged. A spent
-   * monthly allowance (quota_reached, a 503) won't come back until next month.
+   * monthly allowance (quota_reached, a 503) won't come back until next month,
+   * and a busy weather service (weather_busy, a 503) says when to retry in
+   * Retry-After, so neither is retried straight away.
    */
   get transient(): boolean {
-    if (this.code === 'quota_reached') return false
+    if (this.code === 'quota_reached' || this.code === 'weather_busy') return false
     return this.code === 'network_error' || this.status === 502 || this.status === 503
   }
 }

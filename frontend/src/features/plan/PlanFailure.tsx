@@ -11,11 +11,12 @@ interface PlanFailureProps {
 
 /**
  * Why the plan failed and what to do, with a retry (held back while rate
- * limited, and left out when the month's routing allowance is spent).
+ * limited or the weather service is busy, and left out when the month's
+ * routing allowance is spent).
  */
 export function PlanFailure({ error, onRetry, retrying }: PlanFailureProps) {
   const { title, detail } = failureCopy(error)
-  const wait = useCountdown(error.code === 'rate_limited' ? (error.retryAfterS ?? 60) : 0, error)
+  const wait = useCountdown(heldFor(error), error)
 
   return (
     <div role="alert" className="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm">
@@ -38,6 +39,13 @@ export function PlanFailure({ error, onRetry, retrying }: PlanFailureProps) {
       )}
     </div>
   )
+}
+
+/** How long the retry is held back: Retry-After while rate limited or the weather is busy. */
+function heldFor(error: ApiError): number {
+  if (error.code === 'rate_limited') return error.retryAfterS ?? 60
+  if (error.code === 'weather_busy') return error.retryAfterS ?? 60
+  return 0
 }
 
 /** Seconds left of `seconds`, ticking down once a second; restarts for a new `key`. */

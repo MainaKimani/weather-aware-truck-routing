@@ -100,6 +100,25 @@ describe('planner states', () => {
     expect(within(alert).queryByRole('button', { name: 'Try again' })).toBeNull()
   })
 
+  it('weather busy: holds the retry for Retry-After and keeps what was fetched', async () => {
+    server.use(
+      http.post(PLANS, () =>
+        apiError(503, 'weather_busy', 'Busy.', { headers: { 'Retry-After': '1' } }),
+      ),
+    )
+    renderApp()
+
+    await planDemoTrip({ waitForTrip: false })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('The weather service is busy')
+    expect(alert).toHaveTextContent('Open-Meteo')
+    expect(within(alert).getByRole('button', { name: 'Try again in 1 s' })).toBeDisabled()
+    expect(
+      await within(alert).findByRole('button', { name: 'Try again' }, { timeout: 2500 }),
+    ).toBeEnabled()
+  })
+
   it('error: a network failure says the server is unreachable', async () => {
     server.use(http.post(PLANS, () => HttpResponse.error()))
     renderApp()

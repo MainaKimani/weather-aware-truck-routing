@@ -799,7 +799,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description quota_reached: live routing has used this month's allowance */
+            /** @description quota_reached: live routing has used this month's allowance; weather_busy: the weather service's rate limit, with Retry-After */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1047,6 +1047,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description weather_busy: the weather service's rate limit, with Retry-After */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     replan_trip: {
@@ -1125,7 +1134,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description quota_reached: live routing has used this month's allowance */
+            /** @description quota_reached: live routing has used this month's allowance; weather_busy: the weather service's rate limit, with Retry-After */
             503: {
                 headers: {
                     [name: string]: unknown;

@@ -17,13 +17,14 @@ from planner.providers.registry import Providers
 from planner.services import corridor
 from planner.services.corridor import (
     BUFFER_MI,
+    DEMO_POINT_CAP,
     HOURS,
     POINT_CAP,
     STEPS_DEG,
     corridor_grid,
     corridor_points,
 )
-from planner.services.forecasts import ForecastStore
+from planner.services.forecasts import FRESH_HOURS, ForecastStore
 from planner.services.plan import PlanRequest, plan_trip
 
 NOW = datetime(2026, 10, 12, 10, 20, tzinfo=UTC)
@@ -75,14 +76,24 @@ class TestCorridorPoints:
         assert step > 0.25  # the lattice had to step up
 
     def test_a_regional_trip_keeps_the_fine_lattice(self) -> None:
-        step, points = corridor_points(lines(DALLAS, DENVER))
+        step, points = corridor_points(lines(DALLAS, DENVER), DEMO_POINT_CAP)
 
         assert step == 0.25
-        assert 300 < len(points) <= POINT_CAP
+        assert 300 < len(points) <= DEMO_POINT_CAP
+
+    @pytest.mark.parametrize(
+        ("origin", "destination"), [(DALLAS, DENVER), (LOS_ANGELES, NEW_YORK), (SEATTLE, MIAMI)]
+    )
+    def test_a_cold_heatmap_fits_one_minute_of_open_meteos_free_tier(
+        self, origin: LatLon, destination: LatLon
+    ) -> None:
+        _, points = corridor_points(lines(origin, destination))
+
+        assert len(points) <= POINT_CAP <= 540  # 90% of 600 calls a minute
 
     def test_points_are_within_the_buffer_of_some_route(self) -> None:
         route_lines = lines(DALLAS, DENVER)
-        _, points = corridor_points(route_lines)
+        _, points = corridor_points(route_lines, DEMO_POINT_CAP)
 
         # Simplification moves the line by at most ~1 km.
         assert all(
@@ -90,7 +101,7 @@ class TestCorridorPoints:
             for p in points
         )
         # And the buffer is covered: every route vertex has a grid point within a cell.
-        _, coarse = corridor_points(route_lines)
+        _, coarse = corridor_points(route_lines, DEMO_POINT_CAP)
         for line in route_lines:
             for v in line[::25]:
                 assert min(abs(p.lat - v.lat) + abs(p.lon - v.lon) for p in coarse) <= 0.25
@@ -117,7 +128,11 @@ class TestCorridorPoints:
 class TestCorridorGrid:
     def test_shape_and_hours_from_now(self) -> None:
         grid = corridor_grid(
-            lines(DALLAS, DENVER), 42_000, store(FakeWeather(anchor=NOW)), lambda: NOW
+            lines(DALLAS, DENVER),
+            42_000,
+            store(FakeWeather(anchor=NOW)),
+            lambda: NOW,
+            DEMO_POINT_CAP,
         )
 
         assert grid.hours == HOURS == 49
@@ -186,7 +201,7 @@ class TestCorridorGrid:
     def test_stale_forecasts_are_flagged(self) -> None:
         weather = StripedWeather()
         corridor_grid(lines(DALLAS, DENVER), 42_000, store(weather), lambda: NOW)
-        later = NOW + timedelta(hours=1)
+        later = NOW + timedelta(hours=FRESH_HOURS)
         weather.down = True
 
         grid = corridor_grid(lines(DALLAS, DENVER), 42_000, store(weather, later), lambda: later)
@@ -216,18 +231,24 @@ def test_a_grid_point_on_a_checkpoint_has_the_checkpoints_level() -> None:
     assert checked >= 2  # the shared origin, at least; the destination too if within 48 h
 
 
-def test_payload_for_about_600_points_is_under_20_kb_gzipped() -> None:
+def test_payload_for_about_550_points_is_under_20_kb_gzipped() -> None:
     grid = corridor_grid(
-        lines(DALLAS, DENVER), 42_000, store(FakeWeather("strong", anchor=NOW)), lambda: NOW
+        lines(DALLAS, DENVER),
+        42_000,
+        store(FakeWeather("strong", anchor=NOW)),
+        lambda: NOW,
+        DEMO_POINT_CAP,
     )
     payload = json.dumps(HeatmapSerializer(grid).data, separators=(",", ":")).encode()
 
-    assert 550 <= len(grid.points) <= POINT_CAP
+    assert 500 <= len(grid.points) <= DEMO_POINT_CAP
     assert len(gzip.compress(payload)) < 20_000
 
 
 def test_serialized_shape() -> None:
-    grid = corridor_grid(lines(DALLAS, DENVER), 42_000, store(StripedWeather()), lambda: NOW)
+    grid = corridor_grid(
+        lines(DALLAS, DENVER), 42_000, store(StripedWeather()), lambda: NOW, DEMO_POINT_CAP
+    )
     data = HeatmapSerializer(grid).data
 
     assert data["start_hour"] == "2026-10-12T11:00:00Z"

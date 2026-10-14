@@ -1,11 +1,15 @@
 """The corridor heatmap: risk on a lattice around the routes, hour by hour (RFC §8).
 
 1. Simplify each route (Douglas-Peucker, ~1 km) and take lattice points
-   within 40 miles of any of them. A fixed global lattice means plans in the
-   same region share grid points and so share cached forecasts.
-2. If that gives more than ~700 points, step the lattice up (0.25 deg, then
-   0.5, then 1) until it doesn't, which bounds latency and quota on
-   coast-to-coast trips.
+   within 30 miles of any of them. A fixed global lattice means plans in the
+   same region share grid points and so share cached forecasts, including
+   the checkpoints' (services/forecasts.py).
+2. If that gives more than 500 points, step the lattice up (0.25 deg, then
+   0.5, then 1) until it doesn't. Every point is an Open-Meteo call, and the
+   free tier allows 600 a minute (540 after our margin), so a cold heatmap
+   fits in one minute's budget. Dallas -> Denver at 0.25 deg is 453 points
+   at 30 miles; at the earlier 40 miles it was 603. Demo data costs nothing,
+   so its cap stays at 700 and the demo trip keeps the 0.25 deg lattice.
 3. Fetch forecasts cache-first and classify every point-hour with the same
    `classify` as the checkpoints, for the plan's load, so the map and the
    route cards can't disagree. The levels of each condition (wind for the
@@ -33,9 +37,10 @@ from planner.domain.risk import Level, classify
 from planner.domain.types import Forecast, LatLon
 from planner.services.forecasts import ForecastStore
 
-BUFFER_MI: Final = 40.0
+BUFFER_MI: Final = 30.0
 SIMPLIFY_MI: Final = 0.62  # about 1 km
-POINT_CAP: Final = 700
+POINT_CAP: Final = 500
+DEMO_POINT_CAP: Final = 700
 STEPS_DEG: Final = (0.25, 0.5, 1.0)
 HOURS: Final = 49  # 0..48
 
@@ -74,9 +79,10 @@ def corridor_grid(
     load_lb: int,
     store: ForecastStore,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    cap: int = POINT_CAP,
 ) -> HeatmapGrid:
     started = time.perf_counter()
-    step, points = corridor_points(lines)
+    step, points = corridor_points(lines, cap)
     start = ceil_to_hour(clock())
     weather_started = time.perf_counter()
     lookup = store.get(points, step)

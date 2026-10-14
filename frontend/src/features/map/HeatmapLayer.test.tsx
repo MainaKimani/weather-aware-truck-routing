@@ -182,6 +182,43 @@ describe('heatmap layer', () => {
     expect(fake.sources.has(SOURCE.heatmap)).toBe(false)
     expect(fake.sources.has(SOURCE.routes)).toBe(true)
   })
+
+  it('retries a busy weather service until the heatmap completes', async () => {
+    let requests = 0
+    server.use(
+      http.get(HEATMAP, () => {
+        requests += 1
+        if (requests <= 2) {
+          return apiError(503, 'weather_busy', 'Busy.', { headers: { 'Retry-After': '40' } })
+        }
+        return HttpResponse.json(demoHeatmap)
+      }),
+    )
+    renderMap(demoPlan)
+
+    await waitFor(() => {
+      expect(fake.sources.has(SOURCE.heatmap)).toBe(true)
+    })
+    expect(requests).toBe(3)
+  })
+
+  it('gives up when the weather allowance is out for longer than a couple of minutes', async () => {
+    let requests = 0
+    server.use(
+      http.get(HEATMAP, () => {
+        requests += 1
+        return apiError(503, 'weather_busy', 'Busy.', { headers: { 'Retry-After': '1800' } })
+      }),
+    )
+    renderMap(demoPlan)
+
+    await waitFor(() => {
+      expect(requests).toBe(1)
+    })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(requests).toBe(1)
+    expect(fake.sources.has(SOURCE.routes)).toBe(true)
+  })
 })
 
 describe('heatmap metric', () => {

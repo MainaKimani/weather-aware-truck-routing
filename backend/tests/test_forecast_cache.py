@@ -8,12 +8,14 @@ from django.core.cache import cache
 
 from planner.domain.forecast import ForecastSeries
 from planner.domain.types import LatLon
-from planner.providers.base import WeatherUnavailable
+from planner.providers.base import WeatherBusy, WeatherUnavailable
 from planner.providers.fakes import FakeWeather
 from planner.services import forecasts
 from planner.services.forecasts import (
     CHECKPOINT_STEP_DEG,
     FORECAST_HOURS,
+    FRESH_HOURS,
+    STALE_HOURS,
     ForecastStore,
     cache_key,
 )
@@ -83,8 +85,8 @@ def test_nearby_points_share_one_lattice_entry() -> None:
 
     lookup = store(weather).get(near, CHECKPOINT_STEP_DEG)
 
-    assert weather.calls == [[LatLon(32.8, -96.8)]]
-    assert all(lookup.for_point(p) is lookup.series[LatLon(32.8, -96.8)] for p in near)
+    assert weather.calls == [[LatLon(32.75, -96.75)]]
+    assert all(lookup.for_point(p) is lookup.series[LatLon(32.75, -96.75)] for p in near)
 
 
 def test_concurrent_requests_for_a_cold_key_make_one_upstream_call() -> None:
@@ -113,7 +115,7 @@ def test_provider_down_serves_stale_entry_flagged() -> None:
     s = store(weather, clock)
     fresh = s.get(POINTS, CHECKPOINT_STEP_DEG)
 
-    clock.t = NOW + timedelta(hours=2)  # past freshness, within the stale window
+    clock.t = NOW + timedelta(hours=FRESH_HOURS)  # past freshness, within the stale window
     weather.down = True
     lookup = s.get(POINTS, CHECKPOINT_STEP_DEG)
 
@@ -130,26 +132,30 @@ def test_provider_down_with_nothing_cached_is_an_error() -> None:
         store(weather).get(POINTS, CHECKPOINT_STEP_DEG)
 
 
-def test_stale_window_ends_after_three_hours() -> None:
+def test_stale_window_ends_three_hours_after_freshness() -> None:
     weather, clock = CountingWeather(), Clock()
     s = store(weather, clock)
     s.get(POINTS, CHECKPOINT_STEP_DEG)
 
-    clock.t = NOW + timedelta(hours=5)
+    clock.t = NOW + timedelta(hours=FRESH_HOURS + STALE_HOURS)
     weather.down = True
 
     with pytest.raises(WeatherUnavailable):
         s.get(POINTS, CHECKPOINT_STEP_DEG)
 
 
-def test_new_hour_refetches() -> None:
+def test_entries_are_fresh_for_three_hours_then_refetched() -> None:
     weather, clock = CountingWeather(), Clock()
     s = store(weather, clock)
     s.get(POINTS, CHECKPOINT_STEP_DEG)
 
-    clock.t = NOW + timedelta(hours=1)
-    s.get(POINTS, CHECKPOINT_STEP_DEG)
+    clock.t = NOW + timedelta(hours=FRESH_HOURS - 1)
+    lookup = s.get(POINTS, CHECKPOINT_STEP_DEG)
+    assert len(weather.calls) == 1
+    assert not lookup.stale and lookup.oldest_fetch == NOW
 
+    clock.t = NOW + timedelta(hours=FRESH_HOURS)
+    s.get(POINTS, CHECKPOINT_STEP_DEG)
     assert len(weather.calls) == 2
 
 
@@ -197,7 +203,7 @@ def test_waiter_whose_own_fetch_fails_serves_stale_or_raises() -> None:
     fresh = stocked.get([point], 0.1)
 
     # Past freshness; someone else holds the lock and never delivers; the provider is down.
-    clock.t = NOW + timedelta(hours=2)
+    clock.t = NOW + timedelta(hours=FRESH_HOURS)
     cache.add(f"lock:{cache_key(point, clock.t.replace(minute=0))}", 1, 30)
     weather.down = True
     lookup = stocked.get([point], 0.1)
@@ -263,3 +269,57 @@ def test_a_cached_series_reads_back_exactly(hours: int) -> None:
 
     assert decoded == series
     assert fetched_at == NOW
+
+
+class BusyAfter(CountingWeather):
+    """Answers the first `room` points of a call, then is busy for the rest."""
+
+    def __init__(self, room: int) -> None:
+        super().__init__()
+        self.room = room
+
+    def hourly(
+        self, points: Sequence[LatLon], start: datetime, hours: int
+    ) -> list[ForecastSeries | None]:
+        series = super().hourly(points, start, hours)
+        if len(points) <= self.room:
+            return series
+        fetched = dict(enumerate(series[: self.room]))
+        raise WeatherBusy("Open-Meteo: rate budget full", 42, fetched)
+
+
+class TestBusy:
+    def test_what_came_back_is_kept_and_a_retry_fetches_only_the_rest(self) -> None:
+        weather, clock = BusyAfter(room=2), Clock()
+        s = store(weather, clock)
+
+        with pytest.raises(WeatherBusy) as raised:
+            s.get(POINTS, CHECKPOINT_STEP_DEG)
+        assert raised.value.retry_after_s == 42
+
+        weather.room = 10
+        lookup = s.get(POINTS, CHECKPOINT_STEP_DEG)
+
+        assert len(weather.calls[-1]) == 1  # only the point that didn't come back
+        assert all(lookup.for_point(p) is not None for p in POINTS)
+        assert not lookup.stale
+
+    def test_stale_entries_cover_a_busy_provider(self) -> None:
+        weather, clock = BusyAfter(room=10), Clock()
+        s = store(weather, clock)
+        fresh = s.get(POINTS, CHECKPOINT_STEP_DEG)
+
+        clock.t = NOW + timedelta(hours=FRESH_HOURS)  # past freshness
+        weather.room = 0
+        lookup = s.get(POINTS, CHECKPOINT_STEP_DEG)
+
+        assert lookup.stale
+        assert lookup.series == fresh.series
+
+    def test_busy_is_never_shown_as_unknown(self) -> None:
+        # Two of three points come back; the third has nothing stale: the lookup
+        # raises rather than returning it as missing (which would rate Unknown).
+        s = store(BusyAfter(room=2))
+
+        with pytest.raises(WeatherBusy):
+            s.get(POINTS, CHECKPOINT_STEP_DEG)
