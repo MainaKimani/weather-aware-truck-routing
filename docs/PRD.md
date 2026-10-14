@@ -309,7 +309,8 @@ the routes, and suggests a later departure.
   mile marker, wind and gust, rain, snow, risk level, the condition that set it, and any load rule
   that applied.
 - Legend for risk colours. Colours must also be told apart by people with colour-blind vision
-  (we use a sequential palette plus labels, not just hue).
+  (green, yellow, amber, red and near-black differ in lightness as well as hue, and every colour
+  has a label).
 - Map fits to the routes after each plan.
 
 ### 7.8 Corridor heatmap
