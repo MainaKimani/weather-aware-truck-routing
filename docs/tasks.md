@@ -2723,6 +2723,8 @@ Runbook: `docs/deploy.md`.
   `https://weather-aware-truck-routing-api.onrender.com/api/*`; every other path falls back to
   `index.html` for the router. If Render names the service differently, the destination
   changes with it.
+- 2026-10-14: Render named the service `weather-aware-truck-routing-api-xnow.onrender.com`
+  (the plain name was taken); the rewrite and the runbook point there now.
 
 ### SPOT-102 · README
 

@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://weather-aware-truck-routing-api.onrender.com/api/:path*"
+      "destination": "https://weather-aware-truck-routing-api-xnow.onrender.com/api/:path*"
     },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
