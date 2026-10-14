@@ -1,6 +1,9 @@
 /**
  * One ranked route. Subscribes only to its own selection and hover state, so
  * selecting another route re-renders the two cards that change, nothing else.
+ *
+ * A click anywhere on the card selects the route, which the map follows. The
+ * title row is the card's button, for the keyboard and screen readers.
  */
 import { memo } from 'react'
 
@@ -28,14 +31,22 @@ export const RouteCard = memo(function RouteCard({ route, context }: RouteCardPr
   return (
     <li
       aria-labelledby={titleId}
+      // The button inside is the keyboard's way in; this widens the mouse target.
+      onClick={() => {
+        selectRoute(route.id)
+      }}
       onMouseEnter={() => {
         hoverRoute(route.id)
       }}
       onMouseLeave={() => {
         hoverRoute(null)
       }}
-      className={`rounded-card border bg-surface p-3 transition-colors ${
-        selected ? 'border-accent ring-1 ring-accent' : hovered ? 'border-muted' : 'border-line'
+      className={`cursor-pointer rounded-card border bg-surface p-3 transition-colors ${
+        selected
+          ? 'border-accent ring-1 ring-accent'
+          : hovered
+            ? 'border-muted bg-surface-raised'
+            : 'border-line'
       }`}
     >
       <button

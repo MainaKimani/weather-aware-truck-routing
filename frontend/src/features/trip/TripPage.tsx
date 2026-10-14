@@ -2,11 +2,12 @@
  * `/trips/:id`: a saved trip, exactly as it was planned (RFC §7.4). The
  * routes, checkpoints and heatmap are the stored ones, not today's weather,
  * and a banner says so. Opening it puts the trip on screen for the map and
- * timeline; planning from here opens the new trip's page.
+ * timeline; planning from here opens the new trip's page. "Plan a New Trip"
+ * goes to the empty planner, which clears this trip from the map.
  */
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 
 import { planKeys, usePlan } from '../../api/plans'
 import type { Plan, Trip } from '../../api/schema'
@@ -66,6 +67,12 @@ export function TripPage() {
         onPlanned={openTrip}
         readOnly={trip.data ? !trip.data.is_owner : false}
       />
+      <Link
+        to="/"
+        className="block w-full rounded-md bg-accent px-3 py-2 text-center text-sm font-semibold text-accent-ink hover:opacity-90"
+      >
+        Plan a New Trip
+      </Link>
       <ResultsArea onPlanned={openTrip} />
     </div>
   )

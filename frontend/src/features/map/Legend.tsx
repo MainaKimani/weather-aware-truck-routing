@@ -31,14 +31,18 @@ const SWITCHES: readonly { layer: Layer; label: string }[] = [
   { layer: 'alternatives', label: 'Other routes' },
 ]
 
+/** Phones, where the map is short: the legend starts collapsed so it doesn't hide the map. */
+const NARROW = '(max-width: 767px)'
+
 export function Legend() {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(() => !window.matchMedia(NARROW).matches)
   const id = useId()
 
   return (
     <section
       aria-labelledby={`${id}-title`}
-      className="absolute bottom-8 left-3 w-44 rounded-card border border-line bg-surface/95 text-xs shadow-overlay"
+      // Never taller than the map, which it would otherwise overflow, covering the header.
+      className="absolute bottom-8 left-3 max-h-[calc(100%-2.5rem)] w-44 overflow-y-auto rounded-card border border-line bg-surface/95 text-xs shadow-overlay"
     >
       <h2 id={`${id}-title`}>
         <button

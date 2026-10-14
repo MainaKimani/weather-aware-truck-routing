@@ -99,7 +99,7 @@ export function readRouteInk(root: HTMLElement = document.documentElement): Rout
 // The grid is uniform, so with the right kernel the heatmap's density at a
 // cell equals that cell's weight, and the colour can be read straight from
 // it. Each level gets a fifth of the density scale, Low included (it is a
-// level, and shows pale yellow as on the checkpoints); Unknown weighs
+// level, and shows soft green as on the checkpoints); Unknown weighs
 // nothing, so missing data is left uncoloured rather than shown as Low.
 
 /** Density of each level of `metric` at `hour`: Low 0.2 … No travel 1.0; Unknown 0. */

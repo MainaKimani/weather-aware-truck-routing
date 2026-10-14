@@ -45,7 +45,9 @@ export function RecentTripsMenu() {
         <section
           id={panelId}
           aria-label="Recent trips"
-          className="absolute top-full right-0 z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-card border border-line bg-surface p-2 shadow-overlay"
+          // On phones the trigger isn't at the screen's edge, so a panel hung off it
+          // would run off the left; it sits centred under the header instead.
+          className="fixed top-16 left-1/2 z-30 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 rounded-card border border-line bg-surface p-2 shadow-overlay sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-80 sm:translate-x-0"
         >
           {recent.isPending && <p className="p-2 text-sm text-muted">Loading…</p>}
           {recent.isError && (

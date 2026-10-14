@@ -2,10 +2,12 @@
  * Risk levels as the UI and the map show them: the one place risk colours,
  * labels and scores are defined (RFC §10.6).
  *
- * The palette is sequential (pale yellow → dark red → near-black for No
- * travel), so the order reads without relying on hue alone, and every use
- * pairs the colour with its label. Unknown is a neutral grey, outside the
- * scale, because missing data must never look like a level.
+ * The palette runs soft green → yellow → amber → red, then near-black for No
+ * travel: the traffic-light order drivers already read. Red and green alone
+ * are hard to tell apart for many colour-blind people, so the steps also
+ * differ in lightness (light green and yellow, mid amber, dark red, near-black)
+ * and every use pairs the colour with its label. Unknown is a neutral grey,
+ * outside the scale, because missing data must never look like a level.
  */
 import { riskLevelEnumValues, type RiskLevelEnum } from '../api/schema'
 
@@ -26,10 +28,10 @@ const DARK_INK = '#1c1917'
 const LIGHT_INK = '#ffffff'
 
 export const RISK: Readonly<Record<RiskBucket, RiskStyle>> = {
-  LOW: { label: 'Low', score: 0, color: '#fed976', ink: DARK_INK },
-  MODERATE: { label: 'Moderate', score: 1, color: '#fd8d3c', ink: DARK_INK },
-  HIGH: { label: 'High', score: 2, color: '#e31a1c', ink: LIGHT_INK },
-  SEVERE: { label: 'Severe', score: 3, color: '#800026', ink: LIGHT_INK },
+  LOW: { label: 'Low', score: 0, color: '#9fd8a6', ink: DARK_INK },
+  MODERATE: { label: 'Moderate', score: 1, color: '#fcd34d', ink: DARK_INK },
+  HIGH: { label: 'High', score: 2, color: '#f59e0b', ink: DARK_INK },
+  SEVERE: { label: 'Severe', score: 3, color: '#dc2626', ink: LIGHT_INK },
   NO_TRAVEL: { label: 'No travel', score: 4, color: '#1c1917', ink: LIGHT_INK },
   UNKNOWN: { label: 'Unknown', score: null, color: '#9ca3af', ink: DARK_INK },
 }

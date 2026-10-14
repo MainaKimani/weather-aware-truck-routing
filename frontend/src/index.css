@@ -21,6 +21,9 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-stripe: var(--stripe);
+  --color-row-highlight: var(--row-highlight);
   --color-focus: var(--focus);
   --color-danger: var(--danger);
 
@@ -46,6 +49,10 @@
   --accent-ink: #ffffff;
   --focus: #2563eb;
   --danger: #b91c1c;
+  /* Opaque tints of the accent, for table headers, stripes and the row in hand. */
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  --stripe: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  --row-highlight: color-mix(in srgb, var(--accent) 12%, var(--surface));
 
   /* Map lines, read by the map at runtime (features/map/layers.ts). */
   --map-route: #8a94a3;
@@ -64,6 +71,9 @@
   --accent-ink: #0b0f14;
   --focus: #93c5fd;
   --danger: #f87171;
+  --accent-soft: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  --stripe: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  --row-highlight: color-mix(in srgb, var(--accent) 16%, var(--surface));
 
   --map-route: #5b6472;
   --map-route-hover: #98a2b3;
