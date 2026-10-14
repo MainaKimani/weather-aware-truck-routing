@@ -862,7 +862,7 @@ map.setPaintProperty("corridor-heat", "heatmap-weight",
   ["/", ["+", ["coalesce", ["get", `h${hour}`], -1], 1], 5]);
 ```
 
-Each level gets a fifth of the weight scale, Low included (0.2, so Low shows pale yellow as on
+Each level gets a fifth of the weight scale, Low included (0.2, so Low shows soft green as on
 the checkpoints, rather than nothing). An hour with no forecast has no property and weighs 0, so
 Unknown is left uncoloured rather than drawn as Low.
 
@@ -905,9 +905,12 @@ Play mode steps one hour every 250 ms.
 
 ### 10.6 Accessibility and colour
 
-Risk ramp: a 5-step sequential palette (pale yellow → dark red → near-black for No Travel),
-checked for colour-blind contrast, always paired with a text label in cards, popups and the
-legend. Slider is a native `<input type="range">` with `aria-valuetext` like "+14 h,
+Risk ramp (changed 2026-10-14 at the owner's request): soft green → yellow → amber → red, then
+near-black for No Travel, the traffic-light order drivers read at a glance. It replaces
+ColorBrewer's YlOrRd. Red and green alone are hard to tell apart with the commonest colour
+blindness, so the steps also differ in lightness (light green and yellow, mid amber, dark red,
+near-black), and every colour is paired with a text label in cards, popups and the legend.
+Unknown stays a neutral grey outside the scale. Slider is a native `<input type="range">` with `aria-valuetext` like "+14 h,
 Saturday 20:00".
 
 ## 11. Error handling

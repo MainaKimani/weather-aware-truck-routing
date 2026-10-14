@@ -3,6 +3,10 @@
  * and the rating it gave (PRD §7.4). Rows are virtualised so a coast-to-coast
  * route at 10 mi spacing (300+ rows) scrolls smoothly; spacer rows above and
  * below the visible ones keep it a real table for assistive technology.
+ *
+ * The header is a soft tint of the accent blue; rows are striped by their
+ * index (not :nth-child, which the spacer rows would throw off), and the row
+ * under the pointer or keyboard focus is highlighted as the list scrolls.
  */
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { memo, useCallback, useRef } from 'react'
@@ -83,7 +87,7 @@ function Rows({ routeId, checkpoints, zone }: RowsProps) {
       style={{ maxHeight: VIEWPORT_HEIGHT }}
     >
       <table className="tabular w-full text-xs" aria-rowcount={checkpoints.length + 1}>
-        <thead className="sticky top-0 z-10 bg-surface-raised text-left text-muted">
+        <thead className="sticky top-0 z-10 bg-accent-soft text-left text-ink">
           <tr aria-rowindex={1}>
             <th scope="col" className="px-1.5 py-1.5 text-right font-medium">
               Mile
@@ -179,7 +183,9 @@ const Row = memo(function Row({ routeId, index, cp, zone, headerZone }: RowProps
         hoverCheckpoint(null)
       }}
       style={{ height: ROW_HEIGHT }}
-      className="cursor-pointer border-t border-line hover:bg-surface-raised aria-selected:bg-accent/15"
+      className={`cursor-pointer border-t border-line outline-none hover:bg-row-highlight focus-visible:bg-row-highlight focus-visible:shadow-[inset_3px_0_0_var(--color-focus)] aria-selected:bg-accent/15 aria-selected:shadow-[inset_3px_0_0_var(--color-accent)] ${
+        index % 2 === 1 ? 'bg-stripe' : 'bg-surface'
+      }`}
     >
       <td className="px-1.5 text-right">{Math.round(cp.mile)}</td>
       <td className="px-1.5 whitespace-nowrap">

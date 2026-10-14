@@ -43,6 +43,20 @@ describe('trip page', () => {
     expect(requests).toEqual([strongHosPlan.trip_id])
   })
 
+  it('offers a new trip, which opens the empty form and clears this one', async () => {
+    serveTrip(demoPlan)
+    const { client } = renderApp(`/trips/${demoPlan.trip_id}`)
+    await banner()
+
+    await userEvent.click(screen.getByRole('link', { name: 'Plan a New Trip' }))
+
+    expect(await screen.findByRole('combobox', { name: 'Origin' })).toHaveValue('')
+    expect(screen.queryByRole('list', { name: 'Ranked routes' })).toBeNull()
+    await waitFor(() => {
+      expect(client.getQueryData(planKeys.current())).toBeUndefined()
+    })
+  })
+
   it('shows the name the owner gave it', async () => {
     serveTrip(demoPlan, { name: 'Weekly run' })
 
