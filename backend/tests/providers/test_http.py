@@ -283,3 +283,15 @@ class TestMeter:
         meter.left = left
         route.mock(return_value=httpx.Response(200, json={"ok": True}))
         assert client.get_json(URL, {}) == {"ok": True}
+
+
+@respx.mock
+def test_a_4xx_message_carries_the_providers_reason_for_the_logs(client: HttpClient) -> None:
+    respx.get(URL).mock(
+        return_value=httpx.Response(429, json={"error": True, "reason": "Hourly limit exceeded"})
+    )
+
+    with pytest.raises(HttpError, match="HTTP 429: Hourly limit exceeded") as raised:
+        client.get_json(URL, {})
+
+    assert raised.value.status == 429

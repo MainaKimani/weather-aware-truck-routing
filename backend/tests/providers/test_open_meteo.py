@@ -12,8 +12,9 @@ import respx
 
 from planner.domain.risk import classify
 from planner.domain.types import LatLon
-from planner.providers.base import WeatherUnavailable
+from planner.providers.base import WeatherBusy, WeatherUnavailable
 from planner.providers.open_meteo import FORECAST_URL, OpenMeteoWeather, parse_forecasts
+from planner.providers.rate_budget import RateBudget
 
 # Recorded from api.open-meteo.com: Dallas, Wichita, Denver; 6 hours.
 FIXTURE = Path(__file__).parent / "fixtures" / "open_meteo_3_points.json"
@@ -164,6 +165,55 @@ class TestRequests:
     def test_hours_must_be_positive(self) -> None:
         with pytest.raises(ValueError, match="hours"):
             OpenMeteoWeather().hourly(POINTS, START, 0)
+
+
+class TestRateLimits:
+    def budget(self, per_minute: int) -> RateBudget:
+        return RateBudget("om-test", [(60, per_minute)], clock=lambda: 60 * 1000.0 + 5)
+
+    @respx.mock
+    def test_each_batch_reserves_its_points_before_going_out(self) -> None:
+        respx.get(FORECAST_URL).mock(side_effect=fake_open_meteo)
+        budget = self.budget(1000)  # 900 a minute
+        points = [LatLon(30 + i * 0.01, -100.0) for i in range(250)]
+
+        OpenMeteoWeather(budget=budget).hourly(points, START, 6)
+
+        budget.reserve(650)  # 250 taken: exactly 650 left
+        with pytest.raises(Exception, match="rate budget full"):
+            budget.reserve(1)
+
+    @respx.mock
+    def test_a_full_budget_keeps_the_batches_that_fit_and_says_when_to_retry(self) -> None:
+        route = respx.get(FORECAST_URL).mock(side_effect=fake_open_meteo)
+        points = [LatLon(30 + i * 0.01, -100.0) for i in range(250)]
+        # 150 a minute; one worker sends the batches in order: 100 fits, 100 doesn't, 50 does.
+        weather = OpenMeteoWeather(workers=1, budget=self.budget(167))
+
+        with pytest.raises(WeatherBusy) as raised:
+            weather.hourly(points, START, 6)
+
+        assert route.call_count == 2
+        assert sorted(raised.value.fetched) == [*range(100), *range(200, 250)]
+        assert all(s is not None for s in raised.value.fetched.values())
+        # 55 s to the next minute, then 30 s more until this minute's 100 has decayed
+        # enough for another 100 (the 50 that fitted is taken after the refusal).
+        assert raised.value.retry_after_s == 85
+        assert raised.value.code == "weather_busy"
+
+    @respx.mock
+    def test_a_429_is_busy_for_a_minute_and_keeps_open_meteos_reason(self) -> None:
+        respx.get(FORECAST_URL).mock(
+            return_value=httpx.Response(
+                429, json={"error": True, "reason": "Minutely API request limit exceeded"}
+            )
+        )
+
+        with pytest.raises(WeatherBusy, match="Minutely API request limit exceeded") as raised:
+            OpenMeteoWeather().hourly(POINTS, START, 6)
+
+        assert raised.value.retry_after_s == 60
+        assert raised.value.fetched == {}
 
 
 def test_unit_factors_appear_only_in_units_module() -> None:

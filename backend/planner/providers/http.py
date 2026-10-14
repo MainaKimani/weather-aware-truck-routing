@@ -224,8 +224,23 @@ class HttpClient:
                 f"{self.name}: HTTP {response.status_code}", response.status_code, retryable=True
             )
         if response.status_code >= 400:
-            raise HttpError(f"{self.name}: HTTP {response.status_code}", response.status_code)
+            reason = _reason(response)
+            detail = f": {reason}" if reason else ""
+            raise HttpError(
+                f"{self.name}: HTTP {response.status_code}{detail}", response.status_code
+            )
         try:
             return response.json()
         except ValueError as exc:
             raise HttpError(f"{self.name}: response is not JSON") from exc
+
+
+def _reason(response: httpx.Response) -> str | None:
+    """A provider's own explanation of a 4xx, e.g. Open-Meteo's "Minutely API request limit
+    exceeded". For the logs; it never reaches the client."""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    reason = body.get("reason") if isinstance(body, dict) else None
+    return reason[:200] if isinstance(reason, str) else None

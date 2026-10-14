@@ -342,10 +342,20 @@ different routes, which is the sort of thing a truck-focused reviewer will notic
   assumption hides in a query string: km/h → mph, mm → in for rain, cm → in for snowfall.
   Times come back as Unix timestamps in UTC (`timeformat=unixtime`).
 - Rain rate = `rain + showers` for the hour; snow rate = `snowfall` for the hour.
-- **Quota:** the free tier is non-commercial with a daily call limit, and each location in a
-  multi-location request counts. Grid snapping and caching (§9) keep a cold plan to a few hundred
-  location-calls and a warm plan to near zero. Fine for an assessment; a commercial key is a
-  config change.
+- **Quota (checked 2026-10-14):** the free tier is non-commercial and allows 600 calls a
+  minute, 5,000 an hour and 10,000 a day from one address, so from the whole deployment. A
+  multi-location request weighs `locations × max(1, days / 14) × max(1, variables / 10)`
+  calls; our 10-day, 6-variable requests cost one call per location. Past a limit it answers
+  429 with a reason ("Minutely API request limit exceeded").
+- **Staying under it:** every point is snapped to the 0.25° lattice the heatmap uses (§9), so a
+  trip's heatmap reuses its checkpoints' forecasts; entries stay fresh for 3 h; the heatmap
+  corridor is 30 mi and capped at 500 points (§8). A cold 10 mi Dallas → Denver plan is 131
+  calls and its heatmap 453 including those. Before each batch goes out, its weight is reserved
+  against 90% of each limit (540 a minute, 4,500 an hour, 9,000 a day), counted in Redis with a
+  sliding window (`providers/rate_budget.py`). When a window is full, the batches that fit are
+  fetched and cached, and the request fails with 503 `weather_busy` and `Retry-After`; stale
+  forecasts cover it when they can (§11). A 429 from Open-Meteo itself is treated the same way.
+  The free tier covers about 15 cold trips a day; a commercial key would lift the limits.
 
 Alternatives considered: NWS API (US-only, one gridpoint per request, slow fan-out),
 Tomorrow.io / OpenWeather (keys and tighter free quotas, no real advantage).
@@ -774,7 +784,7 @@ errors: [{code, message, param}]}`), which the client reads separately from the 
    A fixed lattice means two plans in the same region share grid points, so the forecast cache
    hits.
 4. **Point cap:** if more than 500 points, step the lattice up (0.25° → 0.5° → 1°) until under
-   the cap, which keeps a cold heatmap under the free tier's 600 calls a minute. Demo data costs
+   the cap, which keeps a cold heatmap under the 540-a-minute budget (§5.2). Demo data costs
    nothing, so its cap stays at 700 and the demo trip keeps the 0.25° lattice.
 5. Batch-fetch hourly forecasts for hours 0–48 (cache-first, §9), classify every point-hour with
    `domain.risk.classify` using the plan's load, and return.
@@ -800,7 +810,9 @@ with the route summary.
   before. `forecast_as_of` in responses says how old the data is.
 - **Batching:** missing points are fetched in batches of ≤ 100 locations per Open-Meteo request,
   run in parallel on a bounded thread pool (8 workers) using `httpx` with timeouts (connect 3 s,
-  read 10 s) and one retry with jitter on 5xx or timeout.
+  read 10 s) and one retry with jitter on 5xx or timeout. Each batch first reserves its weight
+  in the rate budget (§5.2); a busy budget keeps the batches that came back and raises
+  `weather_busy`, so a retry fetches only the rest.
 - **One forecast window per point:** each cached entry covers now − 1 h to now + 7 days + trip
   length, so checkpoints at any ETA and the heatmap's 0–48 h share the same cache entry.
 - Cache backend: Redis via `django-redis`; `LocMemCache` fallback for local dev without
@@ -930,6 +942,7 @@ Saturday 20:00".
 | Weather down for some points | 200, those checkpoints `UNKNOWN`, warning | Unknown shown in grey, note on route |
 | Weather down, stale cache available | 200 with `stale: true` | "Forecast from N h ago" banner |
 | Weather down entirely | 502 `weather_unavailable` | Error with retry; no risk shown as Low |
+| Weather rate limit reached, no stale copy | 503 `weather_busy` with `Retry-After`; what was fetched is kept | Plan: "The weather service is busy", retry held for Retry-After. Heatmap: retried automatically up to 3 times when the wait is ≤ 2 min. Never shown as Unknown |
 | Heatmap fails | heatmap 502 | Routes stay usable; heatmap toggle shows error |
 | Rate limited | 429 `rate_limited` | "Too many requests, try again in a minute" |
 

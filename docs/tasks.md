@@ -53,7 +53,7 @@ link to their sections instead of repeating them.
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-37  | HERE monthly budget guard                         | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-38  | Fewer HERE calls: route cache, place search       | E3 Providers         | Full stack · 2 | P0  | Done        |
-| SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Backend · 2    | P0  | To do       |
+| SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Full stack · 3 | P0  | In progress |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | Done        |
@@ -102,7 +102,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 73 tasks · P0 122 points, P1 28 points. Done: 67 (139 points).
+**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 67 (139 points).
 
 ## Open items
 
@@ -111,8 +111,9 @@ of the task it came from, and as a sub-task on the task that will pick it up. Re
 here when that task closes it.
 
 **Needs doing before the hosted check**
-- **SPOT-39: Open-Meteo rejects real plans with HTTP 429.** Found on the first plan with real
-  providers; every earlier test used fake weather. It blocks the hosted half of SPOT-92.
+- **SPOT-39: the live check of real plans and heatmaps.** The rate budget and its handling are
+  built and tested; the back-to-back real run is waiting on Open-Meteo's forecast API, which
+  was timing out on 2026-10-14. It blocks the hosted half of SPOT-92.
 
 **Carried over to a later task**
 
@@ -1140,17 +1141,19 @@ Spec: RFC §7.1, §9.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | To do | SPOT-34, SPOT-35 |
+| Full stack · 3 | P0 | In progress | SPOT-34, SPOT-35 |
 
-Spec: RFC §5.2, §9.
+Spec: RFC §5.2, §8, §9, §11.
 
 **Sub-tasks**
-- [ ] Confirm how Open-Meteo's free tier counts calls (per location? does the 241-hour window
+- [x] Confirm how Open-Meteo's free tier counts calls (per location? does the 241-hour window
   weigh more?).
-- [ ] Bring a plan's burst under the limit: fewer hours per point, batches in sequence rather
-  than in parallel, or both.
-- [ ] Retry 429 with a back-off, or serve stale forecasts.
-- [ ] Decide whether the paid API key is needed.
+- [x] Bring a plan's burst under the limit: fewer points (one 0.25° lattice for checkpoints and
+  heatmap, a 30 mi corridor capped at 500 points), longer freshness, and a rate budget.
+- [x] Handle 429 and a full budget: keep what was fetched, serve stale, else 503 `weather_busy`
+  with `Retry-After`; the UI waits and retries.
+- [x] Decide whether the paid API key is needed: no, stay on the free tier (owner, 2026-10-14).
+- [ ] Live check: real plans and heatmaps back to back.
 
 **Acceptance criteria**
 - Real-provider plans for Dallas → Denver and Los Angeles → New York, and their heatmaps,
@@ -1161,6 +1164,42 @@ Spec: RFC §5.2, §9.
   in 3 batches of up to 100, sent in parallel, and Open-Meteo answered 429 on two plans in a
   row. A single 100-point batch succeeds on its own. `HttpClient` doesn't retry 4xx, so a 429
   fails the plan unless a stale copy is cached.
+- 2026-10-14: limits and weights.
+  - **Free tier:** 600 calls a minute, 5,000 an hour, 10,000 a day, non-commercial. Open-Meteo's
+    multi-location announcement gives the weight: `locations × max(1, days / 14) ×
+    max(1, variables / 10)`. Our 10-day, 6-variable requests cost one call per point; the
+    241-hour window doesn't add weight.
+  - **Measured** on the real Dallas → Denver routes: a 10 mi plan was 217 points, its heatmap
+    603. A cold plan plus heatmap (820) was over the minute's limit on its own.
+- Decisions (owner, 2026-10-14):
+  - Checkpoints use the heatmap's 0.25° lattice instead of 0.1°: the plan drops to 131 points
+    and the heatmap reuses them. Some of HRRR's 3 km detail is lost.
+  - Cached forecasts stay fresh for 3 h instead of until the end of the hour.
+  - Heatmap corridor 30 mi instead of 40 (453 points for Dallas → Denver); I set the cap to 500
+    so a cold heatmap fits the minute's budget. Demo data keeps the 700 cap: it costs nothing,
+    and the fake routes spread wider (550 points at 30 mi).
+  - Free tier only.
+- Built:
+  - `providers/rate_budget.py`: reserves each batch's weight against 90% of every window
+    (540 a minute, 4,500 an hour, 9,000 a day) in Redis, with a sliding-window estimate and
+    increment-then-check so concurrent workers can't overshoot. Refusals say how long to wait,
+    allowing for the previous window's share. An unreachable cache lets calls through: the
+    worst case is a 429, not a bill.
+  - `OpenMeteoWeather`: a refused batch, or a 429 from Open-Meteo, raises `WeatherBusy` with
+    the batches that did come back. `HttpClient` now logs a 4xx's `reason`.
+  - `ForecastStore`: caches what came back, serves stale entries for the rest when it has
+    them, and otherwise raises `WeatherBusy`; busy never becomes Unknown ratings.
+  - API: 503 `weather_busy` with `Retry-After`. Frontend: the plan failure holds the retry for
+    Retry-After; the heatmap retries itself up to 3 times when the wait is 2 minutes or less.
+- The demo plan's ranking changed with the lattice: Route A is still recommended (0 vs 75
+  severe miles), and C now ranks above B on fewer high miles. Golden file regenerated; the
+  e2e stories still pass (28).
+- Verified: 758 backend tests (rate budget weights, caps, rollback, sliding window, waits,
+  20+ threads, cache outage; adapter partial results and 429; store partial, stale and
+  never-Unknown; 503 with Retry-After), 379 frontend tests, 28 e2e.
+- **Left: the live check.** Open-Meteo's forecast API was degraded during the run: an HTTP 503,
+  then 10 s read timeouts on 100-point batches; a single point took 15 s and 50 points over
+  60 s, while its homepage and geocoding API answered in 2 s. To rerun once it recovers.
 
 ---
 

@@ -8,7 +8,7 @@ from django.core.cache import cache
 
 from planner.domain.forecast import ForecastSeries
 from planner.domain.types import LatLon
-from planner.providers.base import WeatherUnavailable
+from planner.providers.base import WeatherBusy, WeatherUnavailable
 from planner.providers.fakes import FakeWeather
 from planner.services import forecasts
 from planner.services.forecasts import (
@@ -269,3 +269,57 @@ def test_a_cached_series_reads_back_exactly(hours: int) -> None:
 
     assert decoded == series
     assert fetched_at == NOW
+
+
+class BusyAfter(CountingWeather):
+    """Answers the first `room` points of a call, then is busy for the rest."""
+
+    def __init__(self, room: int) -> None:
+        super().__init__()
+        self.room = room
+
+    def hourly(
+        self, points: Sequence[LatLon], start: datetime, hours: int
+    ) -> list[ForecastSeries | None]:
+        series = super().hourly(points, start, hours)
+        if len(points) <= self.room:
+            return series
+        fetched = dict(enumerate(series[: self.room]))
+        raise WeatherBusy("Open-Meteo: rate budget full", 42, fetched)
+
+
+class TestBusy:
+    def test_what_came_back_is_kept_and_a_retry_fetches_only_the_rest(self) -> None:
+        weather, clock = BusyAfter(room=2), Clock()
+        s = store(weather, clock)
+
+        with pytest.raises(WeatherBusy) as raised:
+            s.get(POINTS, CHECKPOINT_STEP_DEG)
+        assert raised.value.retry_after_s == 42
+
+        weather.room = 10
+        lookup = s.get(POINTS, CHECKPOINT_STEP_DEG)
+
+        assert len(weather.calls[-1]) == 1  # only the point that didn't come back
+        assert all(lookup.for_point(p) is not None for p in POINTS)
+        assert not lookup.stale
+
+    def test_stale_entries_cover_a_busy_provider(self) -> None:
+        weather, clock = BusyAfter(room=10), Clock()
+        s = store(weather, clock)
+        fresh = s.get(POINTS, CHECKPOINT_STEP_DEG)
+
+        clock.t = NOW + timedelta(hours=FRESH_HOURS)  # past freshness
+        weather.room = 0
+        lookup = s.get(POINTS, CHECKPOINT_STEP_DEG)
+
+        assert lookup.stale
+        assert lookup.series == fresh.series
+
+    def test_busy_is_never_shown_as_unknown(self) -> None:
+        # Two of three points come back; the third has nothing stale: the lookup
+        # raises rather than returning it as missing (which would rate Unknown).
+        s = store(BusyAfter(room=2))
+
+        with pytest.raises(WeatherBusy):
+            s.get(POINTS, CHECKPOINT_STEP_DEG)

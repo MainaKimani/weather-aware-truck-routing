@@ -6,7 +6,7 @@
    the checkpoints' (services/forecasts.py).
 2. If that gives more than 500 points, step the lattice up (0.25 deg, then
    0.5, then 1) until it doesn't. Every point is an Open-Meteo call, and the
-   free tier allows 600 a minute, so a cold heatmap
+   free tier allows 600 a minute (540 after our margin), so a cold heatmap
    fits in one minute's budget. Dallas -> Denver at 0.25 deg is 453 points
    at 30 miles; at the earlier 40 miles it was 603. Demo data costs nothing,
    so its cap stays at 700 and the demo trip keeps the 0.25 deg lattice.

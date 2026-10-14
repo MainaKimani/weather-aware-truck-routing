@@ -5,6 +5,12 @@ batch, with batches fetched in parallel. Values come back in metric units,
 which the response states in `hourly_units`; the parser checks them before
 converting with `units.py`, so a silent unit change upstream fails loudly
 instead of skewing every rating.
+
+Each batch reserves its cost in the rate budget (providers/rate_budget.py)
+before it goes out. When the budget is full, or Open-Meteo answers 429
+anyway, the call raises `WeatherBusy` with how long to wait and the batches
+that did come back, so the forecast store can keep those and a retry only
+fetches the rest.
 """
 
 import math
@@ -17,12 +23,14 @@ from typing import Any, Final
 from planner.domain.forecast import ForecastSeries
 from planner.domain.types import Forecast, LatLon
 from planner.domain.units import cm_to_in, kmh_to_mph, mm_to_in
-from planner.providers.base import WeatherUnavailable
+from planner.providers.base import WeatherBusy, WeatherUnavailable
 from planner.providers.http import HttpClient, HttpError
+from planner.providers.rate_budget import OverRate, RateBudget, open_meteo_weight
 
 FORECAST_URL: Final = "https://api.open-meteo.com/v1/forecast"
 BATCH_SIZE: Final = 100
 WORKERS: Final = 8
+RATE_LIMITED_RETRY_S: Final = 60  # after a 429 from Open-Meteo itself
 VARIABLES: Final = (
     "wind_speed_10m",
     "wind_gusts_10m",
@@ -46,9 +54,15 @@ def _hour(t: datetime) -> datetime:
 
 
 class OpenMeteoWeather:
-    def __init__(self, http: HttpClient | None = None, workers: int = WORKERS) -> None:
+    def __init__(
+        self,
+        http: HttpClient | None = None,
+        workers: int = WORKERS,
+        budget: RateBudget | None = None,
+    ) -> None:
         self._http = http or HttpClient("Open-Meteo")
         self._workers = workers
+        self._budget = budget
 
     def params(self, points: Sequence[LatLon], start: datetime, hours: int) -> dict[str, str]:
         end = start + timedelta(hours=hours - 1)
@@ -74,23 +88,50 @@ class OpenMeteoWeather:
         start = _hour(start)
         batches = [points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)]
         if len(batches) == 1:
-            results = [self._fetch(batches[0], start, hours)]
+            results = [self._fetch_or_busy(batches[0], start, hours)]
         else:
             with ThreadPoolExecutor(max_workers=min(self._workers, len(batches))) as pool:
                 # Each task runs in a copy of the caller's context, so its log
                 # lines carry the request id.
                 futures = [
-                    pool.submit(copy_context().run, self._fetch, b, start, hours) for b in batches
+                    pool.submit(copy_context().run, self._fetch_or_busy, b, start, hours)
+                    for b in batches
                 ]
                 results = [f.result() for f in futures]
-        return [series for batch in results for series in batch]
+        busy = [r for r in results if isinstance(r, WeatherBusy)]
+        if busy:
+            fetched: dict[int, ForecastSeries | None] = {}
+            offset = 0
+            for batch, result in zip(batches, results, strict=True):
+                if not isinstance(result, WeatherBusy):
+                    fetched.update(enumerate(result, start=offset))
+                offset += len(batch)
+            wait = max(b.retry_after_s for b in busy)
+            raise WeatherBusy(f"{busy[0]} ({len(busy)} of {len(batches)} batches)", wait, fetched)
+        return [s for batch in results if not isinstance(batch, WeatherBusy) for s in batch]
+
+    def _fetch_or_busy(
+        self, points: Sequence[LatLon], start: datetime, hours: int
+    ) -> list[ForecastSeries | None] | WeatherBusy:
+        """A batch's series, or the WeatherBusy that stopped it; other errors raise."""
+        try:
+            return self._fetch(points, start, hours)
+        except WeatherBusy as exc:
+            return exc
 
     def _fetch(
         self, points: Sequence[LatLon], start: datetime, hours: int
     ) -> list[ForecastSeries | None]:
+        if self._budget is not None:
+            try:
+                self._budget.reserve(open_meteo_weight(len(points), hours / 24, len(VARIABLES)))
+            except OverRate as exc:
+                raise WeatherBusy("Open-Meteo: rate budget full", exc.retry_after_s) from exc
         try:
             body = self._http.get_json(FORECAST_URL, self.params(points, start, hours))
         except HttpError as exc:
+            if exc.status == 429:
+                raise WeatherBusy(str(exc), RATE_LIMITED_RETRY_S) from exc
             raise WeatherUnavailable(str(exc)) from exc
         return parse_forecasts(body, len(points), start, hours)
 

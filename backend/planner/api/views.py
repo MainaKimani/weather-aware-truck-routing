@@ -87,7 +87,10 @@ class PlanView(APIView):
             422: _error("no_route: no truck route between the places"),
             429: _error("rate_limited"),
             502: _error("routing_unavailable or weather_unavailable"),
-            503: _error("quota_reached: live routing has used this month's allowance"),
+            503: _error(
+                "quota_reached: live routing has used this month's allowance; "
+                "weather_busy: the weather service's rate limit, with Retry-After"
+            ),
         },
     )
     def post(self, request: Request) -> Response:
@@ -267,7 +270,10 @@ class TripReplanView(APIView):
             422: _error("no_route: no truck route between the places"),
             429: _error("rate_limited"),
             502: _error("routing_unavailable or weather_unavailable"),
-            503: _error("quota_reached: live routing has used this month's allowance"),
+            503: _error(
+                "quota_reached: live routing has used this month's allowance; "
+                "weather_busy: the weather service's rate limit, with Retry-After"
+            ),
         },
     )
     def post(self, request: Request, trip_id: str) -> Response:
@@ -301,6 +307,7 @@ class TripHeatmapView(APIView):
             404: _error("not_found: no such trip, or not yours and not shared"),
             429: _error("rate_limited"),
             502: _error("weather_unavailable"),
+            503: _error("weather_busy: the weather service's rate limit, with Retry-After"),
         },
     )
     def get(self, request: Request, trip_id: str) -> Response:
