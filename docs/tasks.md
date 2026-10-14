@@ -51,8 +51,8 @@ link to their sections instead of repeating them.
 | SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | Done        |
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done        |
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
-| SPOT-37  | HERE monthly budget guard                         | E3 Providers         | Backend · 2    | P0  | In review   |
-| SPOT-38  | Fewer HERE calls: route cache, place search       | E3 Providers         | Full stack · 2 | P0  | In review   |
+| SPOT-37  | HERE monthly budget guard                         | E3 Providers         | Backend · 2    | P0  | Done        |
+| SPOT-38  | Fewer HERE calls: route cache, place search       | E3 Providers         | Full stack · 2 | P0  | Done        |
 | SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Backend · 2    | P0  | To do       |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
@@ -102,7 +102,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 73 tasks · P0 122 points, P1 28 points. Done: 65 (135 points).
+**Totals:** 73 tasks · P0 122 points, P1 28 points. Done: 67 (139 points).
 
 ## Open items
 
@@ -1062,7 +1062,7 @@ Spec: RFC §18.3.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 2 | P0 | In review | SPOT-36 |
+| Backend · 2 | P0 | Done | SPOT-36 |
 
 Spec: RFC §5.1, §9, §11.
 
@@ -1104,12 +1104,13 @@ so going over is billed rather than refused.
 - Verified: 8 budget tests (cap, separate services, month rollover, UTC months, 20 threads
   racing for 5 calls, real providers charging and stopping), 4 meter tests, error mapping,
   and frontend tests for the plan failure, the dropdown and `transient`.
+- 2026-10-14: PR #17 merged into `dev-backend` and PR #18 into `main`, with CI green. Done.
 
 ### SPOT-38 · Fewer HERE calls: route cache, place search
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 2 | P0 | In review | SPOT-37 |
+| Full stack · 2 | P0 | Done | SPOT-37 |
 
 Spec: RFC §7.1, §9.
 
@@ -1133,6 +1134,7 @@ Spec: RFC §7.1, §9.
     (service and adapter) and the frontend; debounce 300 ms.
 - Verified: cache hit within the hour, exact round trip, new key for another hour, load or
   place, failures not cached, and plan-level caching for real providers only.
+- 2026-10-14: PR #17 merged into `dev-backend` and PR #18 into `main`, with CI green. Done.
 
 ### SPOT-39 · Open-Meteo rate limits on real plans
 
