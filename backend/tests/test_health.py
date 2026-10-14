@@ -1,6 +1,7 @@
 import pytest
 from django.db import OperationalError, connection
 from django.test import Client, override_settings
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from config import health
 
@@ -45,6 +46,19 @@ def test_readyz_is_503_when_redis_is_down(client: Client) -> None:
     assert response.json()["status"] == "fail"
     assert response.json()["checks"]["cache"] == "fail"
     assert response.json()["checks"]["database"] == "ok"
+
+
+def test_an_unreachable_redis_is_logged_as_the_connection_error(
+    client: Client, caplog: pytest.LogCaptureFixture
+) -> None:
+    # The check pings Redis, so the log says why it failed, rather than a
+    # write and read that IGNORE_EXCEPTIONS turns into a silent miss.
+    with override_settings(CACHES=UNREACHABLE_REDIS), caplog.at_level("ERROR", "config.health"):
+        client.get("/readyz")
+
+    (record,) = [r for r in caplog.records if "readiness check failed: cache" in r.getMessage()]
+    assert record.exc_info is not None
+    assert isinstance(record.exc_info[1], RedisConnectionError)
 
 
 def test_readyz_is_503_when_the_database_is_down(
