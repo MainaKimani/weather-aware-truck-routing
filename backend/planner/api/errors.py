@@ -15,7 +15,7 @@ from rest_framework import exceptions, status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
-from planner.providers.base import NoRoute, ProviderError, QuotaReached
+from planner.providers.base import NoRoute, ProviderError, QuotaReached, WeatherBusy
 
 
 class IdempotencyConflict(exceptions.APIException):
@@ -35,6 +35,7 @@ class AccountRequired(exceptions.APIException):
 PROVIDER_STATUS: dict[type[ProviderError], int] = {
     NoRoute: status.HTTP_422_UNPROCESSABLE_ENTITY,
     QuotaReached: status.HTTP_503_SERVICE_UNAVAILABLE,
+    WeatherBusy: status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 _CODES: Mapping[type[exceptions.APIException], str] = {
@@ -87,7 +88,10 @@ def exception_handler(exc: Exception, context: Mapping[str, Any]) -> Response | 
     if isinstance(exc, ProviderError):
         code = getattr(exc, "code", "provider_error")
         http_status = PROVIDER_STATUS.get(type(exc), status.HTTP_502_BAD_GATEWAY)
-        return Response(error_body(code, _provider_message(exc)), status=http_status)
+        failed = Response(error_body(code, _provider_message(exc)), status=http_status)
+        if isinstance(exc, WeatherBusy):
+            failed["Retry-After"] = str(exc.retry_after_s)
+        return failed
 
     if isinstance(exc, Http404):
         exc = exceptions.NotFound()
@@ -112,6 +116,8 @@ def _provider_message(exc: ProviderError) -> str:
     """User-facing text. The provider's own message goes to the logs, not the client."""
     if isinstance(exc, NoRoute):
         return "No truck route was found between these places."
+    if isinstance(exc, WeatherBusy):
+        return "The weather service is busy. Try again shortly."
     if isinstance(exc, QuotaReached):
         return (
             f"Live {exc.service} has used this month's allowance. "

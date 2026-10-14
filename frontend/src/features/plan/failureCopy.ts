@@ -34,6 +34,11 @@ export function failureCopy(error: ApiError): FailureCopy {
         detail:
           "We couldn't get forecasts from Open-Meteo and have no recent copy, so no risk is shown rather than guessed. Try again in a moment.",
       }
+    case 'weather_busy':
+      return {
+        title: 'The weather service is busy',
+        detail: busyDetail(error.retryAfterS),
+      }
     case 'rate_limited':
       return {
         title: 'Too many requests',
@@ -50,4 +55,14 @@ export function failureCopy(error: ApiError): FailureCopy {
         detail: 'Try again in a moment.',
       }
   }
+}
+
+/** Open-Meteo's free tier limits forecasts a minute, an hour and a day. */
+function busyDetail(retryAfterS: number | null): string {
+  const lead = 'Our free weather service (Open-Meteo) allows only so many forecasts at a time.'
+  if (retryAfterS === null || retryAfterS <= 120) {
+    return `${lead} Try again in a minute; forecasts fetched so far are kept.`
+  }
+  const minutes = Math.ceil(retryAfterS / 60)
+  return `${lead} Its allowance is used up for now; try again in about ${String(minutes)} minutes.`
 }

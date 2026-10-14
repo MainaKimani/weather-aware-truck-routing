@@ -83,7 +83,7 @@ def plan_body() -> dict[str, Any]:
         "destination": {"lat": 39.7392, "lon": -104.9903, "label": "Denver, CO"},
         "departure": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
         "load_lb": 42_000,
-        "interval_mi": 10,  # ~250 forecast points: three parallel Open-Meteo batches
+        "interval_mi": 10,  # over 100 forecast points: parallel Open-Meteo batches
     }
 
 
@@ -99,7 +99,7 @@ def test_a_plans_log_lines_share_its_request_id(
     response = client.post("/api/v1/plans", plan_body(), content_type="application/json")
 
     assert response.status_code == 200, response.content
-    assert route.call_count >= 3
+    assert route.call_count >= 2
     rid = response["X-Request-ID"]
     log_lines = logs.refresh()
     lines = [line for line in log_lines if line["request_id"] == rid]

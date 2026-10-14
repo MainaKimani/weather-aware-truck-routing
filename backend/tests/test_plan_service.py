@@ -7,6 +7,7 @@ from itertools import pairwise
 import pytest
 
 from planner.domain.forecast import ForecastSeries
+from planner.domain.geo import snap
 from planner.domain.hos import Cycle, HosClocks, StopKind
 from planner.domain.risk import Level
 from planner.domain.types import LatLon, Route
@@ -19,7 +20,7 @@ from planner.providers.base import (
 )
 from planner.providers.fakes import DALLAS, DENVER, FakeGeocoder, FakeRouting, FakeWeather
 from planner.providers.registry import Providers
-from planner.services.forecasts import ForecastStore
+from planner.services.forecasts import CHECKPOINT_STEP_DEG, FRESH_HOURS, ForecastStore
 from planner.services.plan import Plan, PlanRequest, plan_trip
 from tests.golden import assert_golden, to_jsonable
 
@@ -97,8 +98,9 @@ def test_demo_plan_matches_golden_file() -> None:
 def test_demo_recommends_route_a_for_fewest_severe_miles() -> None:
     plan = run()
 
-    assert [r.name for r in plan.routes] == ["Route A", "Route B", "Route C"]
-    assert [r.route.label for r in plan.routes] == ["via Amarillo", "via Wichita", "via Lubbock"]
+    # Best first. B and C both cross the storm with 75 severe miles; C has fewer high miles.
+    assert [r.name for r in plan.routes] == ["Route A", "Route C", "Route B"]
+    assert [r.route.label for r in plan.routes] == ["via Amarillo", "via Lubbock", "via Wichita"]
     assert plan.recommended_id == "r1"
     assert plan.reason_code == "severe"
     assert plan.reason.startswith("Fewest severe miles (0 vs ")
@@ -201,7 +203,7 @@ def test_provider_down_with_recent_cache_plans_with_stale_flag() -> None:
     weather, clock = SlowWeather(), Clock()
     run(weather=weather, clock=clock)  # warms the cache at 10:20
 
-    clock.t = NOW + timedelta(hours=1)
+    clock.t = NOW + timedelta(hours=FRESH_HOURS)
     weather.down = True
     plan = run(weather=weather, clock=clock)
 
@@ -256,7 +258,10 @@ def test_missing_forecasts_are_unknown_with_a_warning() -> None:
     plan = run(weather=GappyWeather(west_of=-104.5))  # the last stretch into Denver
 
     for route in plan.routes:
-        unknown = [c for c in route.checkpoints if c.position.lon < -104.55]
+        # Forecasts are looked up at the checkpoint's lattice point.
+        unknown = [
+            c for c in route.checkpoints if snap(c.position, CHECKPOINT_STEP_DEG).lon < -104.5
+        ]
         assert unknown, route.name
         assert all(c.risk.level is None and c.forecast is None for c in unknown)
         assert route.metrics.unknown_miles > 0

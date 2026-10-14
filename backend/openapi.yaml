@@ -184,7 +184,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: 'quota_reached: live routing has used this month''s allowance'
+          description: 'quota_reached: live routing has used this month''s allowance;
+            weather_busy: the weather service''s rate limit, with Retry-After'
   /api/v1/trips:
     get:
       operationId: list_trips
@@ -421,6 +422,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: weather_unavailable
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'weather_busy: the weather service''s rate limit, with Retry-After'
   /api/v1/trips/{trip_id}/replan:
     post:
       operationId: replan_trip
@@ -497,7 +504,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: 'quota_reached: live routing has used this month''s allowance'
+          description: 'quota_reached: live routing has used this month''s allowance;
+            weather_busy: the weather service''s rate limit, with Retry-After'
 components:
   schemas:
     Checkpoint:

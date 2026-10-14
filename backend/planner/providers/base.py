@@ -65,6 +65,27 @@ class WeatherUnavailable(ProviderError):
     code = "weather_unavailable"
 
 
+class WeatherBusy(WeatherUnavailable):
+    """The weather provider's rate limits are reached for now; worth retrying later.
+
+    `retry_after_s` says when. `fetched` holds what was fetched before the
+    limit was reached (by point index), so the caller can keep it and a retry
+    only fetches the rest.
+    """
+
+    code = "weather_busy"
+
+    def __init__(
+        self,
+        message: str,
+        retry_after_s: int,
+        fetched: dict[int, ForecastSeries | None] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
+        self.fetched = fetched or {}
+
+
 class GeocodingUnavailable(ProviderError):
     code = "geocoding_unavailable"
 

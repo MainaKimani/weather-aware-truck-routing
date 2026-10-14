@@ -12,6 +12,7 @@ from planner.providers.fakes import FakeGeocoder, FakeRouting, FakeWeather, Scen
 from planner.providers.here import HereRouting
 from planner.providers.here_geocoder import HereGeocoder
 from planner.providers.open_meteo import OpenMeteoWeather
+from planner.providers.rate_budget import RateBudget
 
 
 @dataclass(frozen=True)
@@ -41,7 +42,7 @@ def get_providers() -> Providers:
         )
         return Providers(
             HereRouting(key, meter=routing.spend),
-            OpenMeteoWeather(),
+            OpenMeteoWeather(budget=RateBudget("open-meteo")),
             HereGeocoder(key, meter=autosuggest.spend),
             demo=False,
         )
