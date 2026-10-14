@@ -1,0 +1,51 @@
+# Scheduled and on-demand management commands against the production
+# database (docs/deploy.md). Render's free plan has no scheduled jobs, so the
+# daily retention purge runs here; seed_demo is run by hand after a deploy
+# or a reviewer's changes. Both need only the database.
+name: Ops
+
+on:
+  schedule:
+    - cron: "17 4 * * *" # daily, 04:17 UTC
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Management command to run
+        type: choice
+        options:
+          - purge_trips
+          - seed_demo
+        default: purge_trips
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops
+  cancel-in-progress: false
+
+jobs:
+  manage:
+    name: ${{ inputs.command || 'purge_trips' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --frozen --no-dev
+      - name: Run the command
+        env:
+          # The command's name comes from the fixed list above; it's passed
+          # through the environment, never pasted into the script.
+          COMMAND: ${{ inputs.command || 'purge_trips' }}
+          DJANGO_SETTINGS_MODULE: config.settings.local
+          DJANGO_DEBUG: "false"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+        run: |
+          case "$COMMAND" in
+            purge_trips|seed_demo) uv run python manage.py "$COMMAND" ;;
+            *) echo "Unknown command: $COMMAND" >&2; exit 1 ;;
+          esac

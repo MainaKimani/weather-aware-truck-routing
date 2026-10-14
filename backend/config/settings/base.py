@@ -42,6 +42,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     # First, so every later log line (including errors) carries the request id.
     "config.observability.RequestIdMiddleware",
+    # Answers the host's liveness check before anything looks at the Host
+    # header, which the host's checker may not set to an allowed name.
+    "config.health.HealthCheckMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -198,6 +201,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
@@ -223,6 +227,9 @@ REST_FRAMEWORK = {
     # production sets it to match the host's proxy chain.
     "NUM_PROXIES": env.int("NUM_PROXIES", default=0),
 }
+# allauth finds the client address itself (for its login rate limits), the
+# same way: the address that many entries from the end of X-Forwarded-For.
+ALLAUTH_TRUSTED_PROXY_COUNT = REST_FRAMEWORK["NUM_PROXIES"]
 
 # The OpenAPI schema is generated from the serializers and committed as
 # backend/openapi.yaml; the frontend's types are generated from that file.

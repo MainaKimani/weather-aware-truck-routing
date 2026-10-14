@@ -18,9 +18,11 @@ import uuid
 from collections.abc import Callable
 from contextvars import ContextVar
 from datetime import UTC, datetime
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from django.http import HttpRequest, HttpResponse
+from rest_framework.request import Request
+from rest_framework.throttling import BaseThrottle
 
 HEADER: Final = "X-Request-ID"
 _VALID_ID: Final = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
@@ -90,6 +92,10 @@ class RequestIdMiddleware:
                     "path": request.path,
                     "status": response.status_code,
                     "duration_ms": round((time.perf_counter() - started) * 1000),
+                    # The address rate limits key on (NUM_PROXIES): in production it
+                    # should be the visitor's, not a proxy's. get_ident reads only the
+                    # headers and META, which a plain HttpRequest has.
+                    "client": BaseThrottle().get_ident(cast(Request, request)),
                 },
             )
             return response

@@ -90,3 +90,13 @@ def test_health_checks_are_not_redirected_to_https(client: Client) -> None:
     assert client.get("/healthz").status_code == 200
     assert client.get("/readyz").status_code == 200
     assert client.get("/api/v1/schema").status_code == 301
+
+
+def test_healthz_answers_whatever_host_the_checker_sends(client: Client) -> None:
+    # A host's checker may call the container by its internal address.
+    response = client.get("/healthz", HTTP_HOST="10.0.0.7:10000")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    # Everything else still checks the Host header.
+    assert client.get("/readyz", HTTP_HOST="10.0.0.7:10000").status_code == 400

@@ -7,6 +7,10 @@
   so a deploy doesn't route traffic to an instance that would fail.
 
 Details of a failure go to the logs, not the response.
+
+`/healthz` is answered by `HealthCheckMiddleware`, ahead of the rest: the
+host's checker may send a Host header that isn't in ALLOWED_HOSTS, or plain
+HTTP, and liveness shouldn't depend on either.
 """
 
 import logging
@@ -14,12 +18,22 @@ from collections.abc import Callable
 
 from django.core.cache import cache
 from django.db import connection
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET
 
 from planner.providers.registry import get_providers
 
 logger = logging.getLogger(__name__)
+
+
+class HealthCheckMiddleware:
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        if request.path == "/healthz" and request.method in ("GET", "HEAD"):
+            return JsonResponse({"status": "ok"})
+        return self.get_response(request)
 
 
 @require_GET
