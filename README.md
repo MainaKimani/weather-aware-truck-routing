@@ -181,7 +181,6 @@ docs/       PRD, RFC, task tracker, deploy runbook
 - [PRD](docs/PRD.md): users, scope, rules and requirements
 - [RFC-001](docs/RFC-001-weather-aware-routing.md): technical design
 - [Tasks](docs/tasks.md): the task board and each task's progress log
-- [Deploying](docs/deploy.md): the free-tier setup, step by step
 
 ## Licence
 
