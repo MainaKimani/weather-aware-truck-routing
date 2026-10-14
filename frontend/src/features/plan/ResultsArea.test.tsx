@@ -88,6 +88,18 @@ describe('planner states', () => {
     },
   )
 
+  it('quota reached: says routing is paused until next month, with no retry', async () => {
+    server.use(http.post(PLANS, () => apiError(503, 'quota_reached', 'Used up.')))
+    renderApp()
+
+    await planDemoTrip({ waitForTrip: false })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Live routing is paused until next month')
+    expect(alert).toHaveTextContent('HERE')
+    expect(within(alert).queryByRole('button', { name: 'Try again' })).toBeNull()
+  })
+
   it('error: a network failure says the server is unreachable', async () => {
     server.use(http.post(PLANS, () => HttpResponse.error()))
     renderApp()

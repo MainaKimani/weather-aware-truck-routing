@@ -65,6 +65,7 @@ def test_short_query_makes_no_call(here: HereGeocoder) -> None:
     route = respx.get(AUTOSUGGEST_URL)
 
     assert here.suggest("d") == []
+    assert here.suggest("da") == []
     assert not route.called
 
 

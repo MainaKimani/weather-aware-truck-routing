@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from planner.providers.base import Geocoder, RoutingProvider, WeatherProvider
+from planner.providers.budget import MonthlyBudget
 from planner.providers.fakes import FakeGeocoder, FakeRouting, FakeWeather, Scenario
 from planner.providers.here import HereRouting
 from planner.providers.here_geocoder import HereGeocoder
@@ -34,5 +35,14 @@ def get_providers() -> Providers:
         key = settings.HERE_API_KEY
         if not key:
             raise ImproperlyConfigured("PROVIDERS=real needs HERE_API_KEY")
-        return Providers(HereRouting(key), OpenMeteoWeather(), HereGeocoder(key), demo=False)
+        routing = MonthlyBudget("here_routing", "routing", settings.HERE_ROUTING_MONTHLY_ALLOWANCE)
+        autosuggest = MonthlyBudget(
+            "here_autosuggest", "place search", settings.HERE_AUTOSUGGEST_MONTHLY_ALLOWANCE
+        )
+        return Providers(
+            HereRouting(key, meter=routing.spend),
+            OpenMeteoWeather(),
+            HereGeocoder(key, meter=autosuggest.spend),
+            demo=False,
+        )
     raise ImproperlyConfigured(f"PROVIDERS must be fake or real, not {mode!r}")

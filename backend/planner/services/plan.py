@@ -32,7 +32,7 @@ from planner.domain.version import RULES_VERSION
 from planner.providers.base import Place, RouteRequest
 from planner.providers.registry import Providers
 from planner.services.forecasts import CHECKPOINT_STEP_DEG, ForecastStore
-from planner.services.routing import RouteWarning, find_routes
+from planner.services.routing import RouteWarning, cached_find_routes, find_routes
 
 ROUTE_LETTERS: Final = "ABC"
 
@@ -140,12 +140,13 @@ def plan_trip(
     store = forecasts or ForecastStore(providers.weather, clock=clock)
 
     started = time.perf_counter()
-    options = find_routes(
-        providers.routing,
-        RouteRequest(
-            request.origin.position, request.destination.position, departure, request.load_lb
-        ),
+    route_request = RouteRequest(
+        request.origin.position, request.destination.position, departure, request.load_lb
     )
+    # Real routing is metered, so it's cached; the fakes are free and their
+    # geometry isn't on the polyline grid the cache stores.
+    route = find_routes if providers.demo else cached_find_routes
+    options = route(providers.routing, route_request)
     routed = time.perf_counter()
     prepared = [_prepare(i, r, request) for i, r in enumerate(options.routes)]
 

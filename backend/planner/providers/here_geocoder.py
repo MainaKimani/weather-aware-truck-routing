@@ -6,7 +6,7 @@ location focus alongside a country filter. `show=tz` adds each place's IANA
 time zone, so the form can show departure times in the origin's zone.
 """
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any, Final
 
 from planner.domain.types import LatLon
@@ -16,20 +16,26 @@ from planner.providers.http import HttpClient, HttpError
 AUTOSUGGEST_URL: Final = "https://autosuggest.search.hereapi.com/v1/autosuggest"
 US_CENTRE: Final = "39.8283,-98.5795"
 COUNTRIES: Final = "countryCode:USA,CAN,MEX"
-MIN_QUERY: Final = 2
+MIN_QUERY: Final = 3
 
 
 class HereGeocoder:
-    def __init__(self, api_key: str, http: HttpClient | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        http: HttpClient | None = None,
+        meter: Callable[[], None] | None = None,
+    ) -> None:
+        """`meter` is charged before each request (see providers/budget.py); unused with `http`."""
         if not api_key:
             raise ValueError("HERE_API_KEY is required for real geocoding")
         self._key = api_key
-        self._http = http or HttpClient("HERE autosuggest")
+        self._http = http or HttpClient("HERE autosuggest", meter=meter)
 
     def suggest(self, query: str, limit: int = 5) -> list[Place]:
         q = query.strip()
         if len(q) < MIN_QUERY:
-            return []  # no provider call for one character
+            return []  # no provider call for one or two characters
         params = {
             "q": q,
             "at": US_CENTRE,

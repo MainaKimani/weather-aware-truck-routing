@@ -51,6 +51,7 @@ describe('API client', () => {
     [422, 'no_route', false],
     [502, 'routing_unavailable', true],
     [502, 'weather_unavailable', true],
+    [503, 'quota_reached', false],
   ])('maps %i %s (transient: %s)', async (status, code, transient) => {
     server.use(http.post(PLANS, () => apiError(status, code, 'Nope.')))
 

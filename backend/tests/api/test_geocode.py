@@ -51,8 +51,8 @@ def test_dall_gives_dallas_first(client: Client, geocoder: CountingGeocoder) -> 
     }
 
 
-@pytest.mark.parametrize("q", ["", "d", " d ", "  "])
-def test_under_two_characters_returns_nothing_without_calling_the_provider(
+@pytest.mark.parametrize("q", ["", "d", " d ", "  ", "da", " DA "])
+def test_under_three_characters_returns_nothing_without_calling_the_provider(
     client: Client, geocoder: CountingGeocoder, q: str
 ) -> None:
     response = get(client, q)
@@ -123,11 +123,11 @@ class RecordingCache(LocMemCache):
         super().set(key, value, timeout, version)
 
 
-def test_cache_entries_last_a_day() -> None:
+def test_cache_entries_last_a_week() -> None:
     backend = RecordingCache()
     suggest(CountingGeocoder(), "dall", backend)
 
-    assert backend.timeouts == [24 * 3600]
+    assert backend.timeouts == [7 * 24 * 3600]
 
 
 def test_keys_are_safe_for_any_text() -> None:

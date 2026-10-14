@@ -87,6 +87,7 @@ class PlanView(APIView):
             422: _error("no_route: no truck route between the places"),
             429: _error("rate_limited"),
             502: _error("routing_unavailable or weather_unavailable"),
+            503: _error("quota_reached: live routing has used this month's allowance"),
         },
     )
     def post(self, request: Request) -> Response:
@@ -266,6 +267,7 @@ class TripReplanView(APIView):
             422: _error("no_route: no truck route between the places"),
             429: _error("rate_limited"),
             502: _error("routing_unavailable or weather_unavailable"),
+            503: _error("quota_reached: live routing has used this month's allowance"),
         },
     )
     def post(self, request: Request, trip_id: str) -> Response:
@@ -330,7 +332,7 @@ class GeocodeSuggestView(APIView):
                 "q",
                 str,
                 required=True,
-                description="Partial place name; under 2 characters gives [].",
+                description="Partial place name; under 3 characters gives [].",
             )
         ],
         responses={
@@ -338,6 +340,7 @@ class GeocodeSuggestView(APIView):
             400: _error("invalid_input: q missing or over 100 characters"),
             429: _error("rate_limited"),
             502: _error("geocoding_unavailable"),
+            503: _error("quota_reached: place search has used this month's allowance"),
         },
     )
     def get(self, request: Request) -> Response:

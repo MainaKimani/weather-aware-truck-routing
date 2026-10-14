@@ -7,7 +7,7 @@ import respx
 
 from planner.domain.types import LatLon
 from planner.providers import http
-from planner.providers.base import RoutingUnavailable, WeatherUnavailable
+from planner.providers.base import QuotaReached, RoutingUnavailable, WeatherUnavailable
 from planner.providers.http import (
     FAILURE_THRESHOLD,
     CircuitBreaker,
@@ -213,3 +213,73 @@ def test_retry_pause_is_jittered_between_100_and_400_ms(monkeypatch: pytest.Monk
     assert len(pauses) == 4
     assert all(0.1 <= p <= 0.4 for p in pauses)
     assert len(set(pauses)) > 1
+
+
+class Meter:
+    """Allows `left` charges, then refuses as a spent budget does."""
+
+    def __init__(self, left: int) -> None:
+        self.left = left
+        self.charged = 0
+
+    def __call__(self) -> None:
+        if self.left == 0:
+            raise QuotaReached("budget spent", "routing")
+        self.left -= 1
+        self.charged += 1
+
+
+class TestMeter:
+    def metered(self, meter: Meter, clock: FakeClock, pauses: list[float]) -> HttpClient:
+        breaker = CircuitBreaker(clock=clock)
+        return HttpClient("Test", breaker=breaker, sleep=pauses.append, meter=meter)
+
+    @respx.mock
+    def test_every_request_is_charged_the_retry_included(
+        self, clock: FakeClock, pauses: list[float]
+    ) -> None:
+        meter = Meter(left=10)
+        respx.get(URL).mock(side_effect=[httpx.Response(503), httpx.Response(200, json={})])
+
+        self.metered(meter, clock, pauses).get_json(URL, {})
+
+        assert meter.charged == 2
+
+    @respx.mock
+    def test_a_spent_budget_makes_no_request(self, clock: FakeClock, pauses: list[float]) -> None:
+        route = respx.get(URL).mock(return_value=httpx.Response(200, json={}))
+
+        with pytest.raises(QuotaReached):
+            self.metered(Meter(left=0), clock, pauses).get_json(URL, {})
+
+        assert not route.called
+
+    @respx.mock
+    def test_no_retry_once_the_budget_is_spent(self, clock: FakeClock, pauses: list[float]) -> None:
+        route = respx.get(URL).mock(return_value=httpx.Response(503))
+
+        with pytest.raises(HttpError, match="HTTP 503"):
+            self.metered(Meter(left=1), clock, pauses).get_json(URL, {})
+
+        assert route.call_count == 1
+        assert pauses == []
+
+    @respx.mock
+    def test_a_refused_half_open_trial_lets_the_next_call_try(
+        self, clock: FakeClock, pauses: list[float]
+    ) -> None:
+        meter = Meter(left=100)
+        client = self.metered(meter, clock, pauses)
+        route = respx.get(URL).mock(return_value=httpx.Response(500))
+        for _ in range(FAILURE_THRESHOLD):
+            with pytest.raises(HttpError):
+                client.get_json(URL, {})
+        clock.t += 31  # half-open
+        left, meter.left = meter.left, 0
+
+        with pytest.raises(QuotaReached):
+            client.get_json(URL, {})
+
+        meter.left = left
+        route.mock(return_value=httpx.Response(200, json={"ok": True}))
+        assert client.get_json(URL, {}) == {"ok": True}
