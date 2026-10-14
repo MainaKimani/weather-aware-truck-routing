@@ -172,3 +172,26 @@ class TripHeatmap(models.Model):
 
     def __str__(self) -> str:
         return f"Heatmap for {self.trip_id}"
+
+
+class ProviderUsage(models.Model):
+    """Calls made to a metered provider service in one calendar month (UTC).
+
+    The monthly budget (planner/providers/budget.py) counts here, in Postgres,
+    rather than in the cache: Redis may evict or lose a key, and a lost
+    counter would start the month again and spend past the free allowance.
+    """
+
+    service = models.CharField(max_length=32)
+    month = models.DateField()  # the first day of the month
+    count = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints: ClassVar = [
+            UniqueConstraint(fields=["service", "month"], name="provider_usage_one_row_a_month"),
+        ]
+        verbose_name_plural = "provider usage"
+
+    def __str__(self) -> str:
+        return f"{self.service} {self.month:%Y-%m}: {self.count}"

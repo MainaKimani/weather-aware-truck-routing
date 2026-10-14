@@ -15,7 +15,7 @@ from rest_framework import exceptions, status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
-from planner.providers.base import NoRoute, ProviderError
+from planner.providers.base import NoRoute, ProviderError, QuotaReached
 
 
 class IdempotencyConflict(exceptions.APIException):
@@ -32,7 +32,10 @@ class AccountRequired(exceptions.APIException):
     default_detail = "Create an account or log in to save trips."
 
 
-PROVIDER_STATUS: dict[type[ProviderError], int] = {NoRoute: status.HTTP_422_UNPROCESSABLE_ENTITY}
+PROVIDER_STATUS: dict[type[ProviderError], int] = {
+    NoRoute: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    QuotaReached: status.HTTP_503_SERVICE_UNAVAILABLE,
+}
 
 _CODES: Mapping[type[exceptions.APIException], str] = {
     IdempotencyConflict: "idempotency_conflict",
@@ -109,6 +112,11 @@ def _provider_message(exc: ProviderError) -> str:
     """User-facing text. The provider's own message goes to the logs, not the client."""
     if isinstance(exc, NoRoute):
         return "No truck route was found between these places."
+    if isinstance(exc, QuotaReached):
+        return (
+            f"Live {exc.service} has used this month's allowance. "
+            "It's available again on the 1st (UTC)."
+        )
     messages = {
         "routing_unavailable": "The routing service is unavailable. Try again shortly.",
         "weather_unavailable": "The weather service is unavailable. Try again shortly.",

@@ -1,14 +1,14 @@
 import itertools
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from planner.domain.geo import haversine_mi, interpolate
-from planner.domain.types import LatLon, Route
+from planner.domain.types import LatLon, Route, Span
 from planner.providers.base import NoRoute, RouteRequest
 from planner.providers.fakes import DALLAS, DENVER, FakeRouting
-from planner.services.routing import find_routes
+from planner.services.routing import cache_key, cached_find_routes, find_routes
 
 DEPARTURE = datetime(2026, 10, 12, 11, tzinfo=UTC)
 REQUEST = RouteRequest(DALLAS, DENVER, DEPARTURE, 42_000)
@@ -96,3 +96,58 @@ def test_via_points_sit_either_side_of_the_midpoint() -> None:
     for v in vias:
         assert haversine_mi(v, mid) == pytest.approx(0.10 * trip, rel=0.01)
     assert haversine_mi(vias[0], vias[1]) == pytest.approx(0.20 * trip, rel=0.01)
+
+
+class TestCache:
+    def here_like(self) -> Route:
+        """A route on HERE's precision-6 grid, with spans and a label."""
+        r = straight(DALLAS, DENVER, 40_000)
+        geometry = tuple(LatLon(round(p.lat, 6), round(p.lon, 6)) for p in r.geometry)
+        spans = (Span(400.123456789, 20_000.5), Span(r.distance_mi - 400.123456789, 19_999.5))
+        return Route(geometry, r.distance_mi, r.duration_s, spans, "via I-35, US-287")
+
+    def test_the_same_trip_in_the_same_hour_is_routed_once(self) -> None:
+        stub = StubRouting([self.here_like()], via_routes=False)
+        first = cached_find_routes(stub, REQUEST)
+        calls = len(stub.calls)
+
+        again = cached_find_routes(stub, replace(REQUEST, departure=DEPARTURE.replace(minute=59)))
+
+        assert len(stub.calls) == calls
+        assert again == first
+
+    def test_a_cached_route_is_exactly_what_the_provider_returned(self) -> None:
+        stub = StubRouting([self.here_like()])
+        first = cached_find_routes(stub, REQUEST)
+
+        again = cached_find_routes(stub, REQUEST)
+
+        assert again.routes[0] == self.here_like()
+        assert again.warnings == first.warnings
+        assert again.via_fallback_used == first.via_fallback_used
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            replace(REQUEST, departure=DEPARTURE + timedelta(hours=1)),
+            replace(REQUEST, load_lb=80_000),
+            replace(REQUEST, destination=LatLon(DENVER.lat, DENVER.lon + 0.001)),
+        ],
+    )
+    def test_another_hour_load_or_place_is_routed_again(self, changed: RouteRequest) -> None:
+        assert cache_key(changed) != cache_key(REQUEST)
+
+    def test_failures_are_not_cached(self) -> None:
+        class Down:
+            calls = 0
+
+            def routes(self, request: RouteRequest, alternatives: int) -> list[Route]:
+                self.calls += 1
+                raise NoRoute("none")
+
+        down = Down()
+        for _ in range(2):
+            with pytest.raises(NoRoute):
+                cached_find_routes(down, REQUEST)
+
+        assert down.calls == 2

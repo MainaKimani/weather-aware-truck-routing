@@ -464,8 +464,15 @@ For the assessment, the project succeeds if:
 
 ## 12. Open questions
 
-- **Q3.** Is a paid routing tier acceptable if the free tier's alternatives are poor for long
-  trips? (See RFC §5.)
+None open.
+
+**Resolved (2026-10-14)**
+
+- ~~Q3~~ No paid routing tier: HERE stays on its **free tier** (4,000 transactions a month each
+  for routing and autosuggest). The app stops calling a service at 90% of its allowance and
+  says so until the month resets; routes and place suggestions are cached to stretch it
+  (RFC §5.1, §9). HERE's first real request returned five alternatives for Dallas → Denver,
+  so the free tier's alternatives are good enough for long trips.
 
 **Resolved (2026-10-11)**
 

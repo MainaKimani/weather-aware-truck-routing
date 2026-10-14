@@ -169,6 +169,11 @@ CACHES = cache_config(REDIS_URL)
 
 # Provider credentials. Open-Meteo needs no key.
 HERE_API_KEY = env.str("HERE_API_KEY", default="")
+# HERE's free monthly transactions for each service. The app stops calling a
+# service at 90% of its allowance (planner/providers/budget.py), so going
+# over never reaches the card on file.
+HERE_ROUTING_MONTHLY_ALLOWANCE = env.int("HERE_ROUTING_MONTHLY_ALLOWANCE", default=4000)
+HERE_AUTOSUGGEST_MONTHLY_ALLOWANCE = env.int("HERE_AUTOSUGGEST_MONTHLY_ALLOWANCE", default=4000)
 
 # "fake" runs on deterministic providers with no network or keys (tests,
 # local dev, demo mode); "real" uses HERE and Open-Meteo. FAKE_SCENARIO picks

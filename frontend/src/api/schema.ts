@@ -609,7 +609,7 @@ export interface operations {
     suggest_places: {
         parameters: {
             query: {
-                /** @description Partial place name; under 2 characters gives []. */
+                /** @description Partial place name; under 3 characters gives []. */
                 q: string;
             };
             header?: never;
@@ -646,6 +646,15 @@ export interface operations {
             };
             /** @description geocoding_unavailable */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description quota_reached: place search has used this month's allowance */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -783,6 +792,15 @@ export interface operations {
             };
             /** @description routing_unavailable or weather_unavailable */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description quota_reached: live routing has used this month's allowance */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1100,6 +1118,15 @@ export interface operations {
             };
             /** @description routing_unavailable or weather_unavailable */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description quota_reached: live routing has used this month's allowance */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

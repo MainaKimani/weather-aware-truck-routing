@@ -2,8 +2,9 @@
 
 Queries are normalised (trimmed, lower case, inner spaces collapsed) so
 "Dallas", " dallas " and "DALLAS" share one entry, and hashed for the key,
-since cache keys can't hold arbitrary user text. Results are kept 24 hours;
-failures aren't cached.
+since cache keys can't hold arbitrary user text. Results are kept 7 days,
+since places rarely change and every miss is a metered HERE call; failures
+aren't cached.
 """
 
 import hashlib
@@ -14,9 +15,9 @@ from django.core.cache import BaseCache, cache
 from planner.domain.types import LatLon
 from planner.providers.base import Geocoder, Place
 
-MIN_QUERY: Final = 2
+MIN_QUERY: Final = 3
 LIMIT: Final = 5
-TTL_S: Final = 24 * 3600
+TTL_S: Final = 7 * 24 * 3600
 SCHEMA_VERSION: Final = 1
 
 
@@ -40,7 +41,7 @@ def _decode(value: list[dict[str, Any]]) -> list[Place]:
 
 
 def suggest(geocoder: Geocoder, query: str, backend: BaseCache = cache) -> list[Place]:
-    """Up to five places for a partial query; fewer than 2 characters gives none."""
+    """Up to five places for a partial query; fewer than 3 characters gives none."""
     q = normalise(query)
     if len(q) < MIN_QUERY:
         return []
