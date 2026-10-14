@@ -16,7 +16,7 @@ HTTP, and liveness shouldn't depend on either.
 import logging
 from collections.abc import Callable
 
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from django.db import connection
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET
@@ -42,7 +42,9 @@ def healthz(request: HttpRequest) -> JsonResponse:
 
 
 def check_cache() -> None:
-    backend = type(cache).__module__
+    # `cache` is a proxy, whose own class lives in django.utils; the backend
+    # behind it is what tells Redis from local memory.
+    backend = type(caches["default"]).__module__
     if backend.startswith("django_redis"):
         from django_redis import get_redis_connection
 
