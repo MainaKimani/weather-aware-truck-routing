@@ -99,7 +99,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 29 (60 points).
+**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 64 (132 points).
 
 ## Open items
 
@@ -115,17 +115,6 @@ here when that task closes it.
 
 **Waiting on the owner**
 - PRD Q3: paid routing tier (see Blocked).
-
-**Branch housekeeping**
-- Unpushed: `feat/spot-113-119-accounts` (trip read and action endpoints, accounts, guest
-  claim, account deletion, purge, demo seed; from `main`) and `feat/spot-120-126-account-ui`
-  (the routed app, trip pages, recent trips, log-in and sign-up, My trips, trip actions,
-  account page; from `main` with the accounts branch merged in).
-- Merge order, so each PR shows only its own side:
-  1. `feat/spot-113-119-accounts` → `dev-backend` → `main`.
-  2. `feat/spot-120-126-account-ui` → `dev-frontend` → `main`; the backend commits are then
-     already there, so its diff is frontend, docs and CI only.
-  3. Merge `main` back into both dev branches.
 
 **Carried over to a later task**
 
