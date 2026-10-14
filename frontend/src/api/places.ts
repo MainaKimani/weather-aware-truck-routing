@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { api, unwrap } from './client'
 import type { Place } from './schema'
 
-export const MIN_QUERY = 2
+export const MIN_QUERY = 3
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /** Same normalisation as the backend, so "Dallas" and " dallas " share a cache entry. */
@@ -18,7 +18,7 @@ export const placeKeys = {
 /**
  * Place suggestions for a partial name. Debouncing the input is the
  * caller's job; this hook caches by query for a day, skips queries under
- * two characters, cancels superseded requests, and keeps showing the last
+ * three characters, cancels superseded requests, and keeps showing the last
  * results while the next ones load.
  */
 export function usePlaceSuggestions(query: string) {

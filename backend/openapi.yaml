@@ -14,7 +14,7 @@ paths:
         name: q
         schema:
           type: string
-        description: Partial place name; under 2 characters gives [].
+        description: Partial place name; under 3 characters gives [].
         required: true
       tags:
       - geocode

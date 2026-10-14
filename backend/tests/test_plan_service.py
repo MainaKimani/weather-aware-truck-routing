@@ -219,6 +219,20 @@ def test_weather_down_with_nothing_cached_fails() -> None:
         run(weather=weather)
 
 
+@pytest.mark.parametrize(("demo", "routing_calls"), [(False, 1), (True, 2)])
+def test_real_routing_is_cached_between_plans_and_the_fakes_are_not(
+    demo: bool, routing_calls: int
+) -> None:
+    routing, weather, clock = SlowRouting(), SlowWeather(), Clock()
+    providers = Providers(routing, weather, FakeGeocoder(), demo=demo)
+    store = ForecastStore(weather, clock=clock)
+
+    for _ in range(2):
+        plan_trip(REQUEST, providers, store, clock=clock)
+
+    assert routing.calls == routing_calls
+
+
 def test_routing_down_fails() -> None:
     with pytest.raises(RoutingUnavailable):
         run(routing=SlowRouting(down=True))

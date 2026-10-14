@@ -16,7 +16,7 @@ from planner.providers.http import HttpClient, HttpError
 AUTOSUGGEST_URL: Final = "https://autosuggest.search.hereapi.com/v1/autosuggest"
 US_CENTRE: Final = "39.8283,-98.5795"
 COUNTRIES: Final = "countryCode:USA,CAN,MEX"
-MIN_QUERY: Final = 2
+MIN_QUERY: Final = 3
 
 
 class HereGeocoder:
@@ -35,7 +35,7 @@ class HereGeocoder:
     def suggest(self, query: str, limit: int = 5) -> list[Place]:
         q = query.strip()
         if len(q) < MIN_QUERY:
-            return []  # no provider call for one character
+            return []  # no provider call for one or two characters
         params = {
             "q": q,
             "at": US_CENTRE,

@@ -609,7 +609,7 @@ export interface operations {
     suggest_places: {
         parameters: {
             query: {
-                /** @description Partial place name; under 2 characters gives []. */
+                /** @description Partial place name; under 3 characters gives []. */
                 q: string;
             };
             header?: never;

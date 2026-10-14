@@ -583,12 +583,13 @@ generated from it with `openapi-typescript`, so the contract can't drift silentl
 
 ### 7.1 `GET /api/v1/geocode/suggest?q=…`
 
-Proxies HERE autosuggest (hides the key, applies throttling, caches by query for 24 h).
+Proxies HERE autosuggest (hides the key, applies throttling, caches by query for 7 days).
 Returns up to five `[{label, lat, lon, tz}]`, where `tz` is the IANA zone or null. Queries are
 trimmed, lower-cased and whitespace-collapsed before the lookup and the cache key, so "Dallas"
-and " dallas " share an entry. Under 2 characters returns `[]` without calling HERE; over 100
-is `invalid_input`. The client debounces input by 250 ms. Each miss is a metered HERE call
-(§5.1); once the month's budget is spent the endpoint answers 503 `quota_reached`.
+and " dallas " share an entry. Under 3 characters returns `[]` without calling HERE; over 100
+is `invalid_input`. The client debounces input by 300 ms. Each miss is a metered HERE call
+(§5.1), hence the long cache, the three-character minimum and the debounce; once the month's
+budget is spent the endpoint answers 503 `quota_reached`.
 
 ### 7.2 `POST /api/v1/plans`
 
@@ -783,8 +784,8 @@ with the route summary.
 | Key | Value | TTL |
 |---|---|---|
 | `v{rules}:fc:{lat2}:{lon2}:{model_run_hour}` | 49+ h of hourly forecast for a snapped point | until next hourly refresh (≤ 60 min) |
-| `v{rules}:route:{hash(origin,dest,weight,departure_15min_bucket)}` | provider routes | 15 min |
-| `geo:{q}` | autosuggest results | 24 h |
+| `v{rules}:rt1:{hash(origin,dest,via,load,departure_hour)}` | the three distinct routes (geometry as a precision-6 polyline) | 6 h |
+| `geo1:{hash(q)}` | autosuggest results | 7 days |
 
 - **Snapping:** checkpoint forecasts are fetched at the point snapped to a 0.1° lattice (≈ 7 mi),
   about the resolution of the underlying models, which raises cache hits a lot. The
@@ -796,6 +797,9 @@ with the route summary.
   length, so checkpoints at any ETA and the heatmap's 0–48 h share the same cache entry.
 - Cache backend: Redis via `django-redis`; `LocMemCache` fallback for local dev without
   Docker.
+- **Routes are cached for real providers only.** Every HERE call is metered (§5.1), so a
+  repeat of the same trip in the same departure hour, including a replan, costs no routing
+  call. The fakes are free, and their geometry isn't on the polyline grid the cache stores.
 - **Quotas:** HERE calls are counted against a monthly budget in Postgres, not in the cache
   (§5.1): Redis may evict a key, and a lost counter would restart the month.
 

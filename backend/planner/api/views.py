@@ -332,7 +332,7 @@ class GeocodeSuggestView(APIView):
                 "q",
                 str,
                 required=True,
-                description="Partial place name; under 2 characters gives [].",
+                description="Partial place name; under 3 characters gives [].",
             )
         ],
         responses={

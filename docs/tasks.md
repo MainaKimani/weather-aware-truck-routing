@@ -52,6 +52,7 @@ link to their sections instead of repeating them.
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done        |
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-37  | HERE monthly budget guard                         | E3 Providers         | Backend · 2    | P0  | In review   |
+| SPOT-38  | Fewer HERE calls: route cache, place search       | E3 Providers         | Full stack · 2 | P0  | In review   |
 | SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Backend · 2    | P0  | To do       |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
@@ -101,7 +102,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 72 tasks · P0 120 points, P1 28 points. Done: 65 (135 points).
+**Totals:** 73 tasks · P0 122 points, P1 28 points. Done: 65 (135 points).
 
 ## Open items
 
@@ -835,7 +836,7 @@ Spec: RFC §5.1.
     `dynamicSpeedInfo` spans, parsed with no code changes. Labels "via US-287, I-25" (799 mi,
     12.6 h), "via I-70, I-35" (883 mi, 12.8 h), "via I-70, US-183", "via I-70, US-83",
     "via US-83, US-81". De-duplication kept 3, so the via-point fallback wasn't needed.
-  - HERE's polylines are precision 6.
+  - HERE's polylines are precision 6, which the route cache (SPOT-38) relies on.
   - Both acceptance criteria are met; the load pass-through was already tested. Done.
   - A full plan with real providers failed on weather, not routing: Open-Meteo answered 429
     (SPOT-39).
@@ -1103,6 +1104,35 @@ so going over is billed rather than refused.
 - Verified: 8 budget tests (cap, separate services, month rollover, UTC months, 20 threads
   racing for 5 calls, real providers charging and stopping), 4 meter tests, error mapping,
   and frontend tests for the plan failure, the dropdown and `transient`.
+
+### SPOT-38 · Fewer HERE calls: route cache, place search
+
+| Effort | Priority | Status | Depends on |
+|---|---|---|---|
+| Full stack · 2 | P0 | In review | SPOT-37 |
+
+Spec: RFC §7.1, §9.
+
+**Sub-tasks**
+- [x] Cache route results for real providers.
+- [x] Keep place suggestions longer (they were already cached for 24 h).
+- [x] Search places from 3 characters, not 2, and 300 ms after typing stops, not 250 ms.
+
+**Acceptance criteria**
+- Planning the same trip twice in the same departure hour makes one routing call.
+- A cached route is identical to what HERE returned.
+
+**Progress log**
+- 2026-10-14:
+  - `services/routing.cached_find_routes` keeps the three distinct routes for 6 h, keyed by
+    origin, destination, via points, load and departure hour. Geometry is stored as a
+    precision-6 polyline, exact for HERE's precision-6 data. Failures aren't cached.
+  - `plan_trip` caches only for real providers. The fakes are free and their geometry isn't on
+    the precision-6 grid, so caching them would change the golden plan.
+  - Place suggestions: kept 7 days instead of 24 h; minimum 3 characters in the backend
+    (service and adapter) and the frontend; debounce 300 ms.
+- Verified: cache hit within the hour, exact round trip, new key for another hour, load or
+  place, failures not cached, and plan-level caching for real providers only.
 
 ### SPOT-39 · Open-Meteo rate limits on real plans
 

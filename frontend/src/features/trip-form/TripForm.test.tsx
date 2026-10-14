@@ -108,7 +108,7 @@ describe('TripForm', () => {
 
     server.use(http.get(SUGGEST, () => apiError(502, 'geocoding_unavailable', 'Down.')))
     await user.clear(origin)
-    await user.type(origin, 'qq')
+    await user.type(origin, 'qqq')
     expect(
       await screen.findByText('Place search is unavailable. Try again shortly.'),
     ).toBeInTheDocument()

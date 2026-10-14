@@ -8,12 +8,12 @@ import { useCombobox } from 'downshift'
 import { useId } from 'react'
 
 import { ApiError } from '../../api/errors'
-import { usePlaceSuggestions } from '../../api/places'
+import { MIN_QUERY, usePlaceSuggestions } from '../../api/places'
 import type { Place } from '../../api/schema'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import type { PlaceValue } from './schema'
 
-export const DEBOUNCE_MS = 250
+export const DEBOUNCE_MS = 300
 
 interface PlaceComboboxProps {
   label: string
@@ -47,7 +47,7 @@ export function PlaceCombobox(props: PlaceComboboxProps) {
       },
     })
 
-  const searching = value.text.trim().length >= 2 && !value.place
+  const searching = value.text.trim().length >= MIN_QUERY && !value.place
   const showMenu = isOpen && searching
 
   return (
