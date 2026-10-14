@@ -53,7 +53,7 @@ link to their sections instead of repeating them.
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-37  | HERE monthly budget guard                         | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-38  | Fewer HERE calls: route cache, place search       | E3 Providers         | Full stack · 2 | P0  | Done        |
-| SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Full stack · 3 | P0  | In progress |
+| SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Full stack · 3 | P0  | Done        |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | Done        |
@@ -80,8 +80,8 @@ link to their sections instead of repeating them.
 | SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | Done        |
 | SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | Done        |
 | SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | In progress |
-| SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | To do       |
-| SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | To do       |
+| SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | In progress |
+| SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | In progress |
 | SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
@@ -102,7 +102,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 67 (139 points).
+**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 68 (142 points).
 
 ## Open items
 
@@ -110,21 +110,19 @@ Everything skipped, blocked or handed on, in one place. Each item is also in the
 of the task it came from, and as a sub-task on the task that will pick it up. Remove an item
 here when that task closes it.
 
-**Needs doing before the hosted check**
-- **SPOT-39: the live check of real plans and heatmaps.** The rate budget and its handling are
-  built and tested; the back-to-back real run is waiting on Open-Meteo's forecast API, which
-  was timing out on 2026-10-14. It blocks the hosted half of SPOT-92.
+**Waiting on the owner**
+- **SPOT-100/101: create the hosted services.** The configuration is in the repo
+  (`render.yaml`, `frontend/vercel.json`, `.github/workflows/ops.yml`); the accounts, secrets
+  and uptime pinger are set up by hand following `docs/deploy.md`.
 
 **Carried over to a later task**
 
 | From | What's left | Picked up in |
 |---|---|---|
-| SPOT-45 | Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite + host); point host checks at `/healthz` and `/readyz`. | SPOT-100 |
-| SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis. | SPOT-100 |
+| SPOT-45 | Confirm `NUM_PROXIES=2` against real traffic: the request log's `client` should be the visitor's address. | SPOT-100 |
+| SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis (Upstash). | SPOT-100 |
 | SPOT-10 | Choose a licence. | SPOT-102 |
-| SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
-| SPOT-118 | Schedule `manage.py purge_trips` daily on the host. | SPOT-100 |
-| SPOT-37 | Set `HERE_API_KEY` as a host secret (and the allowance settings if HERE's change); the migration adds the usage table. | SPOT-100 |
+| SPOT-10 | Run `make up` once with Docker (no Docker on the dev machine; Render's build is the first image build). | SPOT-100 |
 | SPOT-31 | Replace the synthetic routing and autosuggest fixtures with trimmed real responses (the full Dallas → Denver response is 1.2 MB). | Unassigned |
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
@@ -1141,7 +1139,7 @@ Spec: RFC §7.1, §9.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 3 | P0 | In progress | SPOT-34, SPOT-35 |
+| Full stack · 3 | P0 | Done | SPOT-34, SPOT-35 |
 
 Spec: RFC §5.2, §8, §9, §11.
 
@@ -1153,7 +1151,7 @@ Spec: RFC §5.2, §8, §9, §11.
 - [x] Handle 429 and a full budget: keep what was fetched, serve stale, else 503 `weather_busy`
   with `Retry-After`; the UI waits and retries.
 - [x] Decide whether the paid API key is needed: no, stay on the free tier (owner, 2026-10-14).
-- [ ] Live check: real plans and heatmaps back to back.
+- [x] Live check: real plans and heatmaps back to back (owner, 2026-10-14).
 
 **Acceptance criteria**
 - Real-provider plans for Dallas → Denver and Los Angeles → New York, and their heatmaps,
@@ -1200,6 +1198,8 @@ Spec: RFC §5.2, §8, §9, §11.
 - **Left: the live check.** Open-Meteo's forecast API was degraded during the run: an HTTP 503,
   then 10 s read timeouts on 100-point batches; a single point took 15 s and 50 points over
   60 s, while its homepage and geocoding API answered in 2 s. To rerun once it recovers.
+- 2026-10-14: PR #19 merged into `dev-backend` and PR #20 into `main`, with CI green. The owner
+  ran the live check afterwards and confirmed it passes. Done.
 
 ---
 
@@ -2650,15 +2650,19 @@ Spec: PRD §8.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 2 | P0 | To do | SPOT-45 |
+| DevOps · 2 | P0 | In progress | SPOT-45 |
+
+Runbook: `docs/deploy.md`.
 
 **Sub-tasks**
-- [ ] Dockerfile (gunicorn 3 workers × 4 threads, non-root user); Render or Fly.io service with
-  managed Postgres and Redis; health checks on `/healthz` and `/readyz`.
-- [ ] Migrations as a release step; daily scheduled job for `purge_trips`; run `seed_demo`.
-- [ ] Always-on instance for the review window; secrets set in the host.
-- [ ] Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite plus the host's proxy) so
-  throttles key on the client IP (carried over from SPOT-45).
+- [x] Dockerfile (gunicorn, non-root user); Render service (`render.yaml`) with Neon Postgres
+  and Upstash Redis; health check on `/healthz`, `/readyz` checked by hand after deploys.
+- [x] Migrations on start (no release step on the free plan); daily `purge_trips` and on-demand
+  `seed_demo` in GitHub Actions (`ops.yml`).
+- [ ] Create the services and set the secrets (owner, following the runbook).
+- [ ] Keep the instance awake for the review window: an uptime pinger on `/healthz`.
+- [x] Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite plus the host's proxy) so
+  throttles key on the client IP (carried over from SPOT-45). Set to 2; confirm on real traffic.
 - [ ] Run the forecast cache and `/readyz` against real Redis (carried over from SPOT-35;
   only tested on local memory, no Docker here).
 - [ ] Run `make up` once with Docker to confirm the compose stack (left over from SPOT-10).
@@ -2668,24 +2672,57 @@ Spec: PRD §8.
 - `manage.py check --deploy` clean.
 
 **Progress log**
-- _Not started._
+- 2026-10-14: hosts chosen by the owner: Render (API) + Neon (Postgres) + Upstash (Redis) +
+  Vercel, all on free tiers, all in US East. Fly.io no longer has a free tier; Render's own
+  free Postgres is deleted after 30 days; Supabase pauses after a week idle.
+  - `backend/Dockerfile`: two stages, `uv sync --frozen --no-dev` into `/venv`, then
+    `python:3.12-slim` as a non-root user. Starts with `migrate` then gunicorn,
+    `WEB_CONCURRENCY` workers (2, for the free 512 MB) of 4 threads. `collectstatic` runs at
+    build with the production settings and placeholder values.
+  - WhiteNoise serves the admin's static files in production only (hashed, cached for a year).
+  - `HealthCheckMiddleware` answers `/healthz` before anything reads the Host header, since a
+    host's checker may call the container by its internal address.
+  - `ALLAUTH_TRUSTED_PROXY_COUNT` follows `NUM_PROXIES`: allauth reads X-Forwarded-For itself
+    for its login rate limits and was left at 0.
+  - The request log line carries `client`, the address rate limits key on, to check
+    `NUM_PROXIES` against real traffic.
+  - Production allows `RENDER_EXTERNAL_HOSTNAME` automatically and sends email to the logs
+    (no SMTP server; password reset would have failed with a 500).
+  - `render.yaml` blueprint, and `.github/workflows/ops.yml` for `purge_trips` (daily) and
+    `seed_demo` (by hand), connecting to Neon directly; Render's free plan has no cron.
+- Decisions:
+  - Render's health check is `/healthz`. Checking `/readyz` every few seconds would keep Neon
+    awake (100 free compute-hours a month) and spend Upstash's 500K free commands.
+  - The keep-awake pinger also uses `/healthz`, so Neon can sleep between real requests.
+  - Neon's direct connection, not its pooler: Django keeps persistent connections.
+- Verified locally (no Docker here): `collectstatic` with production settings, then gunicorn
+  with production settings: `/healthz` with a foreign Host is 200; plain HTTP redirects to
+  HTTPS; with two proxies in X-Forwarded-For the logged `client` is the visitor's; the admin
+  loads with its hashed CSS (cached a year); `manage.py check --deploy` is clean. The first
+  real image build is Render's.
+- Left: the owner creates the services (runbook), then `/readyz` against Neon and Upstash,
+  the 1 h idle check, and `client` in the logs.
 
 ### SPOT-101 · Deploy frontend
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 1 | P0 | To do | SPOT-100 |
+| DevOps · 1 | P0 | In progress | SPOT-100 |
 
 **Sub-tasks**
-- [ ] Vercel build; rewrite `/api/*` to the Django service (one origin, first-party cookies);
-  SPA fallback routing.
+- [x] Vercel build; rewrite `/api/*` to the Django service (one origin, first-party cookies);
+  SPA fallback routing (`frontend/vercel.json`).
+- [ ] Create the Vercel project (owner, `docs/deploy.md` step 4) and set its host in Render.
 
 **Acceptance criteria**
 - Hosted URL plans a real trip from a clean browser profile, in Safari as well as Chrome
   (catches cookie problems).
 
 **Progress log**
-- _Not started._
+- 2026-10-14: `frontend/vercel.json`: Vite build to `dist`; `/api/*` rewritten to
+  `https://weather-aware-truck-routing-api.onrender.com/api/*`; every other path falls back to
+  `index.html` for the router. If Render names the service differently, the destination
+  changes with it.
 
 ### SPOT-102 · README
 
