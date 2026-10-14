@@ -1,13 +1,20 @@
 """Cache-first forecasts for many points (RFC §9, §18.2-18.4).
 
-- Points are snapped to a lattice (0.1 deg for checkpoints, 0.25 deg for the
-  heatmap grid), so nearby plans share entries.
-- Keys carry the rules version, a payload schema version and the hour, so
-  bumping either version or reaching a new hour misses every old entry.
+- Points are snapped to a 0.25 deg lattice, for checkpoints and the heatmap
+  grid alike, so nearby plans share entries and a trip's heatmap reuses its
+  checkpoints' forecasts. Every point is an Open-Meteo call against a free
+  tier of 600 a minute, which a finer checkpoint lattice would exhaust: a
+  10 mi Dallas -> Denver plan needs 131 points at 0.25 deg, 217 at 0.1 deg.
+  Long trips can put the heatmap on a coarser lattice (services/corridor.py).
+- Keys carry the rules version, a payload schema version and the hour of the
+  fetch. An entry is fresh for 3 hours (the US models Open-Meteo serves update
+  every 1 to 6 hours), so lookups read this hour's key and the two before.
+  Bumping either version misses every old entry.
 - Single-flight: the first request for a cold key takes a lock (`cache.add`,
   which is Redis SET NX) and fetches; others wait up to 2 s for its value.
-- Stale-while-revalidate: entries live 3 h past their hour. If the provider
-  fails, the newest of those is served and the result is flagged stale.
+- Stale-while-revalidate: entries live 3 h past their freshness. If the
+  provider fails, the newest of those is served and the result is flagged
+  stale.
 """
 
 import time
@@ -25,10 +32,11 @@ from planner.domain.version import RULES_VERSION
 from planner.providers.base import ProviderError, WeatherProvider, WeatherUnavailable
 
 SCHEMA_VERSION: Final = 1
-CHECKPOINT_STEP_DEG: Final = 0.1
 GRID_STEP_DEG: Final = 0.25
+CHECKPOINT_STEP_DEG: Final = GRID_STEP_DEG
 HOURS_BEFORE: Final = 1
 FORECAST_HOURS: Final = 1 + 24 * 10  # an hour ago to ten days ahead
+FRESH_HOURS: Final = 3
 STALE_HOURS: Final = 3
 LOCK_TTL_S: Final = 15
 LOCK_WAIT_S: Final = 2.0
@@ -101,7 +109,9 @@ class ForecastStore:
     def get(self, points: Sequence[LatLon], step_deg: float) -> ForecastLookup:
         hour = _hour(self._clock())
         wanted = list(dict.fromkeys(snap(p, step_deg) for p in points))
-        found: dict[LatLon, tuple[ForecastSeries, datetime]] = self._read(wanted, hour)
+        found: dict[LatLon, tuple[ForecastSeries, datetime]] = self._read_back(
+            wanted, hour, range(FRESH_HOURS)
+        )
         hits = len(found)
 
         missing = [p for p in wanted if p not in found]
@@ -134,7 +144,8 @@ class ForecastStore:
 
         stale = False
         if failed:
-            for p, value in self._read_stale(failed, hour).items():
+            back = range(FRESH_HOURS, FRESH_HOURS + STALE_HOURS)
+            for p, value in self._read_back(failed, hour, back).items():
                 found[p] = value
                 stale = True
             if not any(p in found for p in wanted):
@@ -160,11 +171,12 @@ class ForecastStore:
         keys = {cache_key(p, hour): p for p in points}
         return {keys[k]: _decode(v) for k, v in self._cache.get_many(list(keys)).items()}
 
-    def _read_stale(
-        self, points: list[LatLon], hour: datetime
+    def _read_back(
+        self, points: list[LatLon], hour: datetime, hours_back: range
     ) -> dict[LatLon, tuple[ForecastSeries, datetime]]:
+        """Each point's newest entry fetched `hours_back` hours before `hour`."""
         out: dict[LatLon, tuple[ForecastSeries, datetime]] = {}
-        for back in range(1, STALE_HOURS + 1):
+        for back in hours_back:
             remaining = [p for p in points if p not in out]
             if not remaining:
                 break
@@ -188,8 +200,8 @@ class ForecastStore:
         start = hour - timedelta(hours=HOURS_BEFORE)
         fetched_at = self._clock()
         results = self._weather.hourly(points, start, FORECAST_HOURS)
-        # Fresh until the next hour, then kept STALE_HOURS more as a fallback.
-        ttl = int((hour + timedelta(hours=1 + STALE_HOURS) - fetched_at).total_seconds())
+        # Fresh for FRESH_HOURS from this hour, then kept STALE_HOURS more as a fallback.
+        ttl = (hour + timedelta(hours=FRESH_HOURS + STALE_HOURS) - fetched_at).total_seconds()
         out: dict[LatLon, tuple[ForecastSeries, datetime]] = {}
         to_store: dict[str, dict[str, Any]] = {}
         for p, series in zip(points, results, strict=True):
@@ -197,5 +209,5 @@ class ForecastStore:
                 continue  # don't cache a gap; the next request tries again
             out[p] = (series, fetched_at)
             to_store[cache_key(p, hour)] = _encode(series, fetched_at)
-        self._cache.set_many(to_store, timeout=max(ttl, 1))
+        self._cache.set_many(to_store, timeout=max(int(ttl), 1))
         return out

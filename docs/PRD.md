@@ -314,7 +314,8 @@ the routes, and suggests a later departure.
 
 ### 7.8 Corridor heatmap
 
-- Covers the area around all returned routes (a buffer of about 40 miles either side).
+- Covers the area around all returned routes (a buffer of about 30 miles either side, narrowed
+  from 40 to fit the free weather service's per-minute limit; RFC §8).
 - Shows **composite risk for the user's load**, computed with the same rules as checkpoints, at
   each forecast hour from 0 (current hour) to 48.
 - Slider from 0 to 48 h, labelled with the actual clock time. Play/pause button to animate.

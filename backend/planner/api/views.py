@@ -43,7 +43,7 @@ from planner.repositories import (
     summaries,
     trip_for_key,
 )
-from planner.services.corridor import corridor_grid
+from planner.services.corridor import DEMO_POINT_CAP, POINT_CAP, corridor_grid
 from planner.services.forecasts import ForecastStore
 from planner.services.geocoding import suggest
 from planner.services.plan import plan_trip
@@ -311,8 +311,13 @@ class TripHeatmapView(APIView):
         saved = load_heatmap(trip, include_metrics=include_metrics)
         if saved is not None:
             return Response(saved)
-        weather = get_providers().weather
-        grid = corridor_grid(route_lines(trip), trip.load_lb, ForecastStore(weather))
+        providers = get_providers()
+        grid = corridor_grid(
+            route_lines(trip),
+            trip.load_lb,
+            ForecastStore(providers.weather),
+            cap=DEMO_POINT_CAP if providers.demo else POINT_CAP,
+        )
         # Kept with its metrics, so asking for them later reads the same copy.
         computed = HeatmapSerializer(grid, context={"include_metrics": True}).data
         return Response(save_heatmap(trip, computed, include_metrics=include_metrics))

@@ -766,13 +766,16 @@ errors: [{code, message, param}]}`), which the client reads separately from the 
 ## 8. Corridor grid
 
 1. Take the union of all route polylines, simplified (Douglas–Peucker, ~1 km tolerance).
-2. Buffer by 40 miles (on a local equirectangular projection; accurate enough at this scale,
-   and no GEOS/PostGIS dependency).
+2. Buffer by 30 miles (on a local equirectangular projection; accurate enough at this scale,
+   and no GEOS/PostGIS dependency). It was 40 until 2026-10-14; 30 keeps a regional trip's
+   cold heatmap inside one minute of Open-Meteo's free tier (§5.2): Dallas → Denver is 453
+   points at 30 mi and was 603 at 40.
 3. Generate points on a **fixed global lattice** (default 0.25°) that fall inside the buffer.
    A fixed lattice means two plans in the same region share grid points, so the forecast cache
    hits.
-4. **Point cap:** if more than ~700 points, step the lattice up (0.25° → 0.5°) until under the
-   cap. This bounds latency and quota on coast-to-coast trips.
+4. **Point cap:** if more than 500 points, step the lattice up (0.25° → 0.5° → 1°) until under
+   the cap, which keeps a cold heatmap under the free tier's 600 calls a minute. Demo data costs
+   nothing, so its cap stays at 700 and the demo trip keeps the 0.25° lattice.
 5. Batch-fetch hourly forecasts for hours 0–48 (cache-first, §9), classify every point-hour with
    `domain.risk.classify` using the plan's load, and return.
 
@@ -783,13 +786,18 @@ with the route summary.
 
 | Key | Value | TTL |
 |---|---|---|
-| `v{rules}:fc:{lat2}:{lon2}:{model_run_hour}` | 49+ h of hourly forecast for a snapped point | until next hourly refresh (≤ 60 min) |
+| `v{rules}:fc1:{lat2}:{lon2}:{fetch_hour}` | 10 days of hourly forecast for a snapped point | fresh 3 h, then kept 3 h more as a stale fallback |
 | `v{rules}:rt1:{hash(origin,dest,via,load,departure_hour)}` | the three distinct routes (geometry as a precision-6 polyline) | 6 h |
 | `geo1:{hash(q)}` | autosuggest results | 7 days |
 
-- **Snapping:** checkpoint forecasts are fetched at the point snapped to a 0.1° lattice (≈ 7 mi),
-  about the resolution of the underlying models, which raises cache hits a lot. The
-  checkpoint keeps its true position for display.
+- **Snapping:** checkpoint forecasts are fetched at the point snapped to the heatmap's 0.25°
+  lattice (≈ 17 mi), so a trip's heatmap reuses them and nearby plans share entries. It was
+  0.1° until 2026-10-14; the coarser lattice cuts a 10 mi Dallas → Denver plan from 217
+  Open-Meteo calls to 131 (§5.2), at the cost of some of HRRR's 3 km detail. The checkpoint
+  keeps its true position for display.
+- **Freshness:** an entry stays fresh for 3 hours after its fetch hour, since the US models
+  behind `best_match` update every 1 to 6 hours; lookups read this hour's key and the two
+  before. `forecast_as_of` in responses says how old the data is.
 - **Batching:** missing points are fetched in batches of ≤ 100 locations per Open-Meteo request,
   run in parallel on a bounded thread pool (8 workers) using `httpx` with timeouts (connect 3 s,
   read 10 s) and one retry with jitter on 5xx or timeout.
@@ -1060,7 +1068,7 @@ in earlier drafts of this RFC; they are now part of the design and have tasks in
   (`CONN_MAX_AGE` with health checks) avoid a connection per request; a pooler such as
   PgBouncer is the next step if instance count grows.
 - **Bounded cost per request.** At most 3 routes; the checkpoint count is set by route length
-  and the minimum interval (10 mi); heatmap points are capped (~700, §8); outbound
+  and the minimum interval (10 mi); heatmap points are capped (500, §8); outbound
   concurrency is a fixed pool of 8 per request. One request can't fan out without limit.
 - **More users, more cache hits.** Snapping checkpoints and grid points to fixed lattices
   (§9) means users planning in the same region share forecast entries, so upstream calls grow

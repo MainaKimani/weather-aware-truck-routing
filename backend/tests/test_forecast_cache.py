@@ -14,6 +14,8 @@ from planner.services import forecasts
 from planner.services.forecasts import (
     CHECKPOINT_STEP_DEG,
     FORECAST_HOURS,
+    FRESH_HOURS,
+    STALE_HOURS,
     ForecastStore,
     cache_key,
 )
@@ -83,8 +85,8 @@ def test_nearby_points_share_one_lattice_entry() -> None:
 
     lookup = store(weather).get(near, CHECKPOINT_STEP_DEG)
 
-    assert weather.calls == [[LatLon(32.8, -96.8)]]
-    assert all(lookup.for_point(p) is lookup.series[LatLon(32.8, -96.8)] for p in near)
+    assert weather.calls == [[LatLon(32.75, -96.75)]]
+    assert all(lookup.for_point(p) is lookup.series[LatLon(32.75, -96.75)] for p in near)
 
 
 def test_concurrent_requests_for_a_cold_key_make_one_upstream_call() -> None:
@@ -113,7 +115,7 @@ def test_provider_down_serves_stale_entry_flagged() -> None:
     s = store(weather, clock)
     fresh = s.get(POINTS, CHECKPOINT_STEP_DEG)
 
-    clock.t = NOW + timedelta(hours=2)  # past freshness, within the stale window
+    clock.t = NOW + timedelta(hours=FRESH_HOURS)  # past freshness, within the stale window
     weather.down = True
     lookup = s.get(POINTS, CHECKPOINT_STEP_DEG)
 
@@ -130,26 +132,30 @@ def test_provider_down_with_nothing_cached_is_an_error() -> None:
         store(weather).get(POINTS, CHECKPOINT_STEP_DEG)
 
 
-def test_stale_window_ends_after_three_hours() -> None:
+def test_stale_window_ends_three_hours_after_freshness() -> None:
     weather, clock = CountingWeather(), Clock()
     s = store(weather, clock)
     s.get(POINTS, CHECKPOINT_STEP_DEG)
 
-    clock.t = NOW + timedelta(hours=5)
+    clock.t = NOW + timedelta(hours=FRESH_HOURS + STALE_HOURS)
     weather.down = True
 
     with pytest.raises(WeatherUnavailable):
         s.get(POINTS, CHECKPOINT_STEP_DEG)
 
 
-def test_new_hour_refetches() -> None:
+def test_entries_are_fresh_for_three_hours_then_refetched() -> None:
     weather, clock = CountingWeather(), Clock()
     s = store(weather, clock)
     s.get(POINTS, CHECKPOINT_STEP_DEG)
 
-    clock.t = NOW + timedelta(hours=1)
-    s.get(POINTS, CHECKPOINT_STEP_DEG)
+    clock.t = NOW + timedelta(hours=FRESH_HOURS - 1)
+    lookup = s.get(POINTS, CHECKPOINT_STEP_DEG)
+    assert len(weather.calls) == 1
+    assert not lookup.stale and lookup.oldest_fetch == NOW
 
+    clock.t = NOW + timedelta(hours=FRESH_HOURS)
+    s.get(POINTS, CHECKPOINT_STEP_DEG)
     assert len(weather.calls) == 2
 
 
@@ -197,7 +203,7 @@ def test_waiter_whose_own_fetch_fails_serves_stale_or_raises() -> None:
     fresh = stocked.get([point], 0.1)
 
     # Past freshness; someone else holds the lock and never delivers; the provider is down.
-    clock.t = NOW + timedelta(hours=2)
+    clock.t = NOW + timedelta(hours=FRESH_HOURS)
     cache.add(f"lock:{cache_key(point, clock.t.replace(minute=0))}", 1, 30)
     weather.down = True
     lookup = stocked.get([point], 0.1)
