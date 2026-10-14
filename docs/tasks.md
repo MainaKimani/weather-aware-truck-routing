@@ -53,7 +53,7 @@ link to their sections instead of repeating them.
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-37  | HERE monthly budget guard                         | E3 Providers         | Backend · 2    | P0  | Done        |
 | SPOT-38  | Fewer HERE calls: route cache, place search       | E3 Providers         | Full stack · 2 | P0  | Done        |
-| SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Full stack · 3 | P0  | In progress |
+| SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Full stack · 3 | P0  | Done        |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | Done        |
@@ -102,18 +102,13 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 67 (139 points).
+**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 68 (142 points).
 
 ## Open items
 
 Everything skipped, blocked or handed on, in one place. Each item is also in the progress log
 of the task it came from, and as a sub-task on the task that will pick it up. Remove an item
 here when that task closes it.
-
-**Needs doing before the hosted check**
-- **SPOT-39: the live check of real plans and heatmaps.** The rate budget and its handling are
-  built and tested; the back-to-back real run is waiting on Open-Meteo's forecast API, which
-  was timing out on 2026-10-14. It blocks the hosted half of SPOT-92.
 
 **Carried over to a later task**
 
@@ -1141,7 +1136,7 @@ Spec: RFC §7.1, §9.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 3 | P0 | In progress | SPOT-34, SPOT-35 |
+| Full stack · 3 | P0 | Done | SPOT-34, SPOT-35 |
 
 Spec: RFC §5.2, §8, §9, §11.
 
@@ -1153,7 +1148,7 @@ Spec: RFC §5.2, §8, §9, §11.
 - [x] Handle 429 and a full budget: keep what was fetched, serve stale, else 503 `weather_busy`
   with `Retry-After`; the UI waits and retries.
 - [x] Decide whether the paid API key is needed: no, stay on the free tier (owner, 2026-10-14).
-- [ ] Live check: real plans and heatmaps back to back.
+- [x] Live check: real plans and heatmaps back to back (owner, 2026-10-14).
 
 **Acceptance criteria**
 - Real-provider plans for Dallas → Denver and Los Angeles → New York, and their heatmaps,
@@ -1200,6 +1195,8 @@ Spec: RFC §5.2, §8, §9, §11.
 - **Left: the live check.** Open-Meteo's forecast API was degraded during the run: an HTTP 503,
   then 10 s read timeouts on 100-point batches; a single point took 15 s and 50 points over
   60 s, while its homepage and geocoding API answered in 2 s. To rerun once it recovers.
+- 2026-10-14: PR #19 merged into `dev-backend` and PR #20 into `main`, with CI green. The owner
+  ran the live check afterwards and confirmed it passes. Done.
 
 ---
 
