@@ -7,7 +7,7 @@ import { AppProviders } from '../../app/AppProviders'
 import { useTimelineStore } from '../../state/timeline'
 import { demoPlan } from '../../test/fixtures/demoPlan'
 import { freshClient } from '../../test/render'
-import { HourSlider, PLAY_STEP_MS } from './HourSlider'
+import { HourSlider, NO_TRIP_HINT, PLAY_STEP_MS } from './HourSlider'
 
 function renderSlider(plan?: Plan) {
   const client = freshClient()
@@ -134,5 +134,28 @@ describe('playback', () => {
 
     expect(hour()).toBe(30)
     expect(useTimelineStore.getState().playing).toBe(false)
+  })
+})
+
+describe('before a trip is planned', () => {
+  const play = () => screen.getByRole('button', { name: 'Play forecast' })
+
+  it('disables playback and the slider, and describes why', () => {
+    renderSlider()
+
+    expect(play()).toBeDisabled()
+    expect(slider()).toBeDisabled()
+    expect(play()).toHaveAccessibleDescription(NO_TRIP_HINT)
+    expect(slider()).toHaveAccessibleDescription(NO_TRIP_HINT)
+    // Shown on hover by CSS; it's in the page either way.
+    expect(screen.getByRole('tooltip', { hidden: true })).toHaveTextContent(NO_TRIP_HINT)
+  })
+
+  it('enables both once a trip with routes is on screen', () => {
+    renderSlider(demoPlan)
+
+    expect(play()).toBeEnabled()
+    expect(slider()).toBeEnabled()
+    expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull()
   })
 })
