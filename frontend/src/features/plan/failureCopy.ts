@@ -22,6 +22,12 @@ export function failureCopy(error: ApiError): FailureCopy {
         title: 'Routing is unavailable',
         detail: "We couldn't reach the routing service (HERE). Try again in a moment.",
       }
+    case 'quota_reached':
+      return {
+        title: 'Live routing is paused until next month',
+        detail:
+          "This month's allowance of routing requests (HERE) is used up. Routing comes back on the 1st (UTC). Saved trips still open.",
+      }
     case 'weather_unavailable':
       return {
         title: 'Weather data is unavailable',

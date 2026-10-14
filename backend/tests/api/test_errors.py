@@ -6,7 +6,7 @@ from django.http import Http404
 from rest_framework import exceptions
 
 from planner.api.errors import exception_handler, flatten
-from planner.providers.base import GeocodingUnavailable, ProviderError
+from planner.providers.base import GeocodingUnavailable, ProviderError, QuotaReached
 
 
 def handle(exc: Exception) -> tuple[int, dict[str, Any]]:
@@ -66,6 +66,13 @@ class TestHandler:
 
         status, data = handle(ProviderError("boom"))
         assert status == 502 and data["error"]["code"] == "provider_error"
+
+    def test_a_spent_quota_is_503_and_names_the_service(self) -> None:
+        status, data = handle(QuotaReached("here_routing: budget of 3600 spent", "routing"))
+
+        assert status == 503 and data["error"]["code"] == "quota_reached"
+        assert data["error"]["message"].startswith("Live routing has used this month's allowance")
+        assert "3600" not in data["error"]["message"]
 
     def test_unexpected_errors_are_left_to_django(self) -> None:
         assert exception_handler(RuntimeError("bug"), {}) is None

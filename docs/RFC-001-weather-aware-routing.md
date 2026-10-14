@@ -317,7 +317,18 @@ different routes, which is the sort of thing a truck-focused reviewer will notic
   de-duplicate again. If still fewer than 3, return what we have with
   `warnings: ["only_n_routes_found"]`.
 - The provider sits behind a `RoutingProvider` protocol, so switching to Mapbox or ORS is one
-  new adapter. *(PRD Q3: if HERE's free tier is a problem, this is where it changes.)*
+  new adapter.
+- **Free tier only (PRD Q3, resolved 2026-10-14).** HERE's Base Plan gives 4,000 free
+  transactions a month for each service, routing and autosuggest counted separately; anything
+  over is billed to the card on file. The app stops calling a service once it has used 90% of
+  its allowance (3,600), until the next calendar month in UTC; requests then fail with 503
+  `quota_reached`. The count is a Postgres row per service per month (`ProviderUsage`), taken
+  with one conditional UPDATE so concurrent workers can't overspend, and every request counts,
+  retries included. Allowances are settings (`HERE_ROUTING_MONTHLY_ALLOWANCE`,
+  `HERE_AUTOSUGGEST_MONTHLY_ALLOWANCE`); usage is visible in the Django admin.
+- The first real request (Dallas → Denver, 80,000 lb, 2026-10-14) returned 5 routes with
+  geometry, distance and `dynamicSpeedInfo` spans; 3 survived de-duplication, so no via-point
+  fallback was needed. HERE's flexible polylines came back at precision 6.
 
 ### 5.2 Weather: Open-Meteo (chosen)
 
@@ -576,7 +587,8 @@ Proxies HERE autosuggest (hides the key, applies throttling, caches by query for
 Returns up to five `[{label, lat, lon, tz}]`, where `tz` is the IANA zone or null. Queries are
 trimmed, lower-cased and whitespace-collapsed before the lookup and the cache key, so "Dallas"
 and " dallas " share an entry. Under 2 characters returns `[]` without calling HERE; over 100
-is `invalid_input`. The client debounces input by 250 ms.
+is `invalid_input`. The client debounces input by 250 ms. Each miss is a metered HERE call
+(§5.1); once the month's budget is spent the endpoint answers 503 `quota_reached`.
 
 ### 7.2 `POST /api/v1/plans`
 
@@ -784,6 +796,8 @@ with the route summary.
   length, so checkpoints at any ETA and the heatmap's 0–48 h share the same cache entry.
 - Cache backend: Redis via `django-redis`; `LocMemCache` fallback for local dev without
   Docker.
+- **Quotas:** HERE calls are counted against a monthly budget in Postgres, not in the cache
+  (§5.1): Redis may evict a key, and a lost counter would restart the month.
 
 ## 10. Frontend design
 
@@ -900,6 +914,7 @@ Saturday 20:00".
 | No route between points | 422 `no_route` | Inline error on the form |
 | Fewer than 3 distinct routes | 200 + `warnings` | Note above the route list |
 | Routing provider down / timeout | 502 `routing_unavailable` | Error state with retry |
+| HERE monthly budget spent | 503 `quota_reached` | "Live routing is paused until next month", no retry; place search says the same in its dropdown |
 | Weather down for some points | 200, those checkpoints `UNKNOWN`, warning | Unknown shown in grey, note on route |
 | Weather down, stale cache available | 200 with `stale: true` | "Forecast from N h ago" banner |
 | Weather down entirely | 502 `weather_unavailable` | Error with retry; no risk shown as Low |
@@ -1145,9 +1160,8 @@ is the tested one.
 
 ## 20. Open questions
 
-Carried from the PRD:
-
-1. Paid routing tier acceptable if HERE's free alternatives are weak?
+Resolved 2026-10-14: HERE stays on the **free tier**, with a monthly budget that stops calls at
+90% of each service's allowance (§5.1).
 
 Resolved 2026-10-11: risk uses **gusts**; Hours of Service is an **optional toggle, off by
 default**, with the 11 h, 14 h, 30 min and 60/70 h rules (§6.2.1); plans are saved as trips for

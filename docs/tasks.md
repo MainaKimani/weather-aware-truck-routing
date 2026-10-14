@@ -45,12 +45,14 @@ link to their sections instead of repeating them.
 | SPOT-25  | Route metrics                                     | E2 Domain            | Backend · 2    | P0  | Done        |
 | SPOT-26  | Ranking and recommendation reason                 | E2 Domain            | Backend · 2    | P0  | Done        |
 | SPOT-30  | Provider protocols, fakes and demo scenarios      | E3 Providers         | Backend · 3    | P0  | Done        |
-| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | Blocked     |
+| SPOT-31  | HERE truck routing adapter                        | E3 Providers         | Backend · 3    | P0  | Done        |
 | SPOT-32  | Route alternatives: dedupe and via-point fallback | E3 Providers         | Backend · 3    | P0  | Done        |
 | SPOT-33  | HERE autosuggest adapter                          | E3 Providers         | Backend · 1    | P0  | Done        |
 | SPOT-34  | Open-Meteo forecast adapter                       | E3 Providers         | Backend · 3    | P0  | Done        |
 | SPOT-35  | Forecast cache                                    | E3 Providers         | Backend · 3    | P0  | Done        |
 | SPOT-36  | Provider resilience                               | E3 Providers         | Backend · 2    | P0  | Done        |
+| SPOT-37  | HERE monthly budget guard                         | E3 Providers         | Backend · 2    | P0  | In review   |
+| SPOT-39  | Open-Meteo rate limits on real plans              | E3 Providers         | Backend · 2    | P0  | To do       |
 | SPOT-40  | Plan service orchestration                        | E4 API               | Backend · 3    | P0  | Done        |
 | SPOT-41  | `POST /api/v1/plans` endpoint                     | E4 API               | Backend · 2    | P0  | Done        |
 | SPOT-42  | Corridor grid and heatmap endpoint                | E4 API               | Backend · 3    | P0  | Done        |
@@ -99,7 +101,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 70 tasks · P0 116 points, P1 28 points. Done: 64 (132 points).
+**Totals:** 72 tasks · P0 120 points, P1 28 points. Done: 65 (135 points).
 
 ## Open items
 
@@ -107,14 +109,9 @@ Everything skipped, blocked or handed on, in one place. Each item is also in the
 of the task it came from, and as a sub-task on the task that will pick it up. Remove an item
 here when that task closes it.
 
-**Blocked**
-- **SPOT-31 (and SPOT-33's live check): no HERE API key.** Both adapters pass against
-  synthetic fixtures shaped to HERE's documented responses; neither has made a real request.
-  Needs the PRD Q3 decision (HERE's Base Plan needs a card; free allowance unconfirmed), then
-  a key in `HERE_API_KEY` and one real Dallas → Denver request.
-
-**Waiting on the owner**
-- PRD Q3: paid routing tier (see Blocked).
+**Needs doing before the hosted check**
+- **SPOT-39: Open-Meteo rejects real plans with HTTP 429.** Found on the first plan with real
+  providers; every earlier test used fake weather. It blocks the hosted half of SPOT-92.
 
 **Carried over to a later task**
 
@@ -125,6 +122,8 @@ here when that task closes it.
 | SPOT-10 | Choose a licence. | SPOT-102 |
 | SPOT-10 | Run `make up` once with Docker. | SPOT-100 |
 | SPOT-118 | Schedule `manage.py purge_trips` daily on the host. | SPOT-100 |
+| SPOT-37 | Set `HERE_API_KEY` as a host secret (and the allowance settings if HERE's change); the migration adds the usage table. | SPOT-100 |
+| SPOT-31 | Replace the synthetic routing and autosuggest fixtures with trimmed real responses (the full Dallas → Denver response is 1.2 MB). | Unassigned |
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
 
@@ -784,7 +783,7 @@ Spec: PRD §7.6, RFC §6.6.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Backend · 3 | P0 | Blocked | SPOT-30 |
+| Backend · 3 | P0 | Done | SPOT-30 |
 
 Spec: RFC §5.1.
 
@@ -793,7 +792,7 @@ Spec: RFC §5.1.
   `alternatives=4`, polyline, summary and duration/length spans.
 - [x] Parse to domain `Route`; reject responses missing geometry or durations.
 - [x] Recorded-fixture tests with `respx`.
-- [ ] Verify quota and free-tier terms; note result in progress log (PRD Q3).
+- [x] Verify quota and free-tier terms; note result in progress log (PRD Q3).
 
 **Acceptance criteria**
 - A real Dallas → Denver request returns ≥ 2 routes with geometry, distance and spans.
@@ -830,6 +829,16 @@ Spec: RFC §5.1.
   usage inside the free allocation, or a different router.
 - 2026-10-12: PR #3 merged into `dev-backend` with CI green. Blocked: the acceptance check needs
   a real HERE request, which needs a key and the PRD Q3 decision on the paid plan.
+- 2026-10-14: the owner set up a HERE account on the free Base Plan: 4,000 transactions a month
+  each for routing and autosuggest. PRD Q3 resolved: free tier only, guarded by SPOT-37.
+  - **Real request**, Dallas → Denver at 80,000 lb: 5 routes, each with geometry, distance and
+    `dynamicSpeedInfo` spans, parsed with no code changes. Labels "via US-287, I-25" (799 mi,
+    12.6 h), "via I-70, I-35" (883 mi, 12.8 h), "via I-70, US-183", "via I-70, US-83",
+    "via US-83, US-81". De-duplication kept 3, so the via-point fallback wasn't needed.
+  - HERE's polylines are precision 6.
+  - Both acceptance criteria are met; the load pass-through was already tested. Done.
+  - A full plan with real providers failed on weather, not routing: Open-Meteo answered 429
+    (SPOT-39).
 
 ### SPOT-32 · Route alternatives: dedupe and via-point fallback
 
@@ -901,6 +910,8 @@ Spec: RFC §5.1.
   documented response.
 - 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done against the fixture; the live
   check goes with SPOT-31's.
+- 2026-10-14: live check done. "Dallas, TX", "Denver", "Los Angeles" and "New York" each return
+  the city first with the right IANA zone ("Dallas, TX" → `America/Chicago`).
 
 ### SPOT-34 · Open-Meteo forecast adapter
 
@@ -1045,6 +1056,79 @@ Spec: RFC §18.3.
 - Tests zero the retry pause (`tests/providers/conftest.py`), so the suite stays at about 10 s;
   one test checks the real jitter range.
 - 2026-10-12: PR #3 merged into `dev-backend` with CI green. Done.
+
+### SPOT-37 · HERE monthly budget guard
+
+| Effort | Priority | Status | Depends on |
+|---|---|---|---|
+| Backend · 2 | P0 | In review | SPOT-36 |
+
+Spec: RFC §5.1, §9, §11.
+
+HERE's free tier is 4,000 transactions a month per service, and the account has a card on file,
+so going over is billed rather than refused.
+
+**Sub-tasks**
+- [x] Count HERE requests per service per calendar month (UTC) in Postgres.
+- [x] Stop calling a service at 90% of its allowance (3,600); fail with 503 `quota_reached`.
+- [x] Count every request, retries included; don't retry once the budget is spent.
+- [x] Say so in the UI: plan failure without a retry button, and in the place-search dropdown.
+- [x] Show usage in the Django admin.
+
+**Acceptance criteria**
+- Concurrent requests never take the count past the cap.
+- At the cap, no request reaches HERE and the user is told why.
+
+**Progress log**
+- 2026-10-14:
+  - `providers/budget.py`: `MonthlyBudget.spend()` takes one call with a conditional UPDATE
+    (`count < cap`) on a `ProviderUsage` row (service, month), so two workers can't both take
+    the last call. Over the cap it raises `QuotaReached`, mapped to 503 `quota_reached`.
+  - `HttpClient` takes an optional `meter`, charged before every request, retry included. A
+    refused first request isn't made and frees a half-open breaker trial; a refused retry
+    re-raises the original error.
+  - The registry gives `HereRouting` and `HereGeocoder` separate budgets
+    (`here_routing`, `here_autosuggest`), from `HERE_ROUTING_MONTHLY_ALLOWANCE` and
+    `HERE_AUTOSUGGEST_MONTHLY_ALLOWANCE` (default 4,000 each).
+  - Frontend: `quota_reached` isn't retried automatically; the plan failure says routing is
+    paused until the 1st and drops the retry button; the place dropdown says search is paused.
+- Decisions:
+  - Postgres, not Redis: Redis may evict a key, and a lost counter restarts the month.
+  - 90% leaves room for requests we can't count, such as someone testing the key by hand.
+  - Calendar month in UTC. HERE's billing month wasn't checked; if it differs, the 10% margin
+    covers the overlap.
+  - No fallback to demo data at the cap: a fake route presented as live would mislead.
+- Also: tests now force fake providers whatever `backend/.env` says. The first suite run after
+  adding a key to `.env` made one real HERE request.
+- Verified: 8 budget tests (cap, separate services, month rollover, UTC months, 20 threads
+  racing for 5 calls, real providers charging and stopping), 4 meter tests, error mapping,
+  and frontend tests for the plan failure, the dropdown and `transient`.
+
+### SPOT-39 · Open-Meteo rate limits on real plans
+
+| Effort | Priority | Status | Depends on |
+|---|---|---|---|
+| Backend · 2 | P0 | To do | SPOT-34, SPOT-35 |
+
+Spec: RFC §5.2, §9.
+
+**Sub-tasks**
+- [ ] Confirm how Open-Meteo's free tier counts calls (per location? does the 241-hour window
+  weigh more?).
+- [ ] Bring a plan's burst under the limit: fewer hours per point, batches in sequence rather
+  than in parallel, or both.
+- [ ] Retry 429 with a back-off, or serve stale forecasts.
+- [ ] Decide whether the paid API key is needed.
+
+**Acceptance criteria**
+- Real-provider plans for Dallas → Denver and Los Angeles → New York, and their heatmaps,
+  succeed back to back.
+
+**Progress log**
+- 2026-10-14: found while checking SPOT-31. Dallas → Denver asks for 218 points × 241 hours
+  in 3 batches of up to 100, sent in parallel, and Open-Meteo answered 429 on two plans in a
+  row. A single 100-point batch succeeds on its own. `HttpClient` doesn't retry 4xx, so a 429
+  fails the plan unless a stale copy is cached.
 
 ---
 
@@ -2450,7 +2534,7 @@ Spec: RFC §10.4.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| Full stack · 2 | P0 | In progress | SPOT-100, SPOT-101 |
+| Full stack · 2 | P0 | In progress | SPOT-100, SPOT-101, SPOT-39 |
 
 Spec: PRD §8.
 

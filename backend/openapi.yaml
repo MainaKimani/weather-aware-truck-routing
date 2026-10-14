@@ -48,6 +48,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: geocoding_unavailable
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'quota_reached: place search has used this month''s allowance'
   /api/v1/me:
     get:
       operationId: get_me
@@ -173,6 +179,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: routing_unavailable or weather_unavailable
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'quota_reached: live routing has used this month''s allowance'
   /api/v1/trips:
     get:
       operationId: list_trips
@@ -480,6 +492,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: routing_unavailable or weather_unavailable
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: 'quota_reached: live routing has used this month''s allowance'
 components:
   schemas:
     Checkpoint:

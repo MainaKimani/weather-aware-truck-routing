@@ -69,6 +69,19 @@ class GeocodingUnavailable(ProviderError):
     code = "geocoding_unavailable"
 
 
+class QuotaReached(ProviderError):
+    """This month's budget for a metered service is spent, so it wasn't called.
+
+    `service` names it for the user ("routing", "place search").
+    """
+
+    code = "quota_reached"
+
+    def __init__(self, message: str, service: str) -> None:
+        super().__init__(message)
+        self.service = service
+
+
 class NoRoute(ProviderError):
     """The provider answered, but there's no truck route between the points."""
 

@@ -2,6 +2,9 @@
 
 Trips are records of what the planner said at the time, so the admin can
 read them, flag them and delete them, but not edit what was planned.
+
+Provider usage shows how much of each metered service's monthly budget is
+spent. It's read-only: the counts are what HERE has been sent.
 """
 
 from typing import Any
@@ -10,7 +13,7 @@ from django.contrib import admin
 from django.db.models import QuerySet
 from django.http import HttpRequest
 
-from planner.models import Trip, TripRoute
+from planner.models import ProviderUsage, Trip, TripRoute
 
 
 class GuestFilter(admin.SimpleListFilter):
@@ -87,4 +90,18 @@ class TripAdmin(admin.ModelAdmin[Trip]):
         return trip.user.email if trip.user else f"guest {str(trip.guest_id)[:8]}"
 
     def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+
+@admin.register(ProviderUsage)
+class ProviderUsageAdmin(admin.ModelAdmin[ProviderUsage]):
+    list_display = ("service", "month", "count", "updated_at")
+    list_filter = ("service",)
+    ordering = ("-month", "service")
+    readonly_fields = ("service", "month", "count", "updated_at")
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(self, request: HttpRequest, obj: ProviderUsage | None = None) -> bool:
         return False

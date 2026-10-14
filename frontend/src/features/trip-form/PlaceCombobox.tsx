@@ -7,6 +7,7 @@
 import { useCombobox } from 'downshift'
 import { useId } from 'react'
 
+import { ApiError } from '../../api/errors'
 import { usePlaceSuggestions } from '../../api/places'
 import type { Place } from '../../api/schema'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
@@ -97,7 +98,9 @@ export function PlaceCombobox(props: PlaceComboboxProps) {
         {showMenu && items.length === 0 && (
           <li className="px-3 py-1.5 text-muted" aria-disabled="true">
             {suggestions.isError
-              ? 'Place search is unavailable. Try again shortly.'
+              ? suggestions.error instanceof ApiError && suggestions.error.code === 'quota_reached'
+                ? "Place search is paused until next month: this month's allowance is used up."
+                : 'Place search is unavailable. Try again shortly.'
               : suggestions.isFetching || query !== value.text
                 ? 'Searching…'
                 : 'No matches'}

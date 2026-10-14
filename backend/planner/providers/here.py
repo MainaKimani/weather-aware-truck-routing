@@ -8,7 +8,7 @@ length and duration would give one span per section, and ETAs would lose
 every speed change along the route.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Final
 
 from planner.domain.eta import require_aware
@@ -26,11 +26,17 @@ def _fmt(p: LatLon) -> str:
 
 
 class HereRouting:
-    def __init__(self, api_key: str, http: HttpClient | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        http: HttpClient | None = None,
+        meter: Callable[[], None] | None = None,
+    ) -> None:
+        """`meter` is charged before each request (see providers/budget.py); unused with `http`."""
         if not api_key:
             raise ValueError("HERE_API_KEY is required for real routing")
         self._key = api_key
-        self._http = http or HttpClient("HERE routing")
+        self._http = http or HttpClient("HERE routing", meter=meter)
 
     def params(self, request: RouteRequest, alternatives: int) -> list[tuple[str, str]]:
         params = [

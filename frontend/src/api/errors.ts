@@ -11,6 +11,7 @@ export type KnownErrorCode =
   | 'routing_unavailable'
   | 'weather_unavailable'
   | 'geocoding_unavailable'
+  | 'quota_reached'
   | 'rate_limited'
   | 'not_found'
   | 'network_error'
@@ -46,8 +47,12 @@ export class ApiError extends Error {
     this.retryAfterS = retryAfterS
   }
 
-  /** Worth retrying automatically: the request may succeed unchanged. */
+  /**
+   * Worth retrying automatically: the request may succeed unchanged. A spent
+   * monthly allowance (quota_reached, a 503) won't come back until next month.
+   */
   get transient(): boolean {
+    if (this.code === 'quota_reached') return false
     return this.code === 'network_error' || this.status === 502 || this.status === 503
   }
 }

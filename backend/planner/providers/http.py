@@ -8,6 +8,10 @@
   skipped for 30 s, so an outage fails fast instead of every request waiting
   out its timeouts. The next call after that is a trial: success closes the
   breaker, failure opens it for another 30 s.
+- Meter (optional): called before every request, the retry included, so a
+  metered service is charged for each request it receives. When the meter
+  refuses (raises a ProviderError), the first request isn't made, and a
+  failed request isn't retried.
 
 Breakers are per process and shared by name, because adapters are created
 per request. This is the API's only in-process state (RFC §18.2).
@@ -89,6 +93,11 @@ class CircuitBreaker:
             self._opened_at = None
             self._trial_running = False
 
+    def release(self) -> None:
+        """A call that was allowed but never made: let the next one be the trial."""
+        with self._lock:
+            self._trial_running = False
+
     def record_failure(self) -> None:
         with self._lock:
             self._failures += 1
@@ -121,17 +130,25 @@ class HttpClient:
         client: httpx.Client | None = None,
         breaker: CircuitBreaker | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        meter: Callable[[], None] | None = None,
     ) -> None:
         self.name = name
         self._client = client or httpx.Client(timeout=TIMEOUT)
         self._breaker = breaker or breaker_for(name)
         self._sleep = sleep
+        self._meter = meter
 
     def get_json(self, url: str, params: Any) -> Any:
         """GET and parse JSON. Logs one line per call; never the URL's query (keys)."""
         if not self._breaker.allow():
             self._log(logging.WARNING, "circuit_open", 0, 0.0)
             raise CircuitOpen(f"{self.name}: temporarily unavailable (circuit open)")
+        try:
+            self._charge()
+        except ProviderError:
+            self._breaker.release()
+            self._log(logging.WARNING, "over_budget", 0, 0.0)
+            raise
         started = time.perf_counter()
         attempts = [0]
         try:
@@ -178,11 +195,22 @@ class HttpClient:
             attempts[0] += 1
             return self._get_once(url, params)
         except HttpError as exc:
-            if not exc.retryable:
+            if not exc.retryable or not self._may_charge():
                 raise
         self._sleep(random.uniform(*RETRY_PAUSE_S))  # noqa: S311 - jitter, not security
         attempts[0] += 1
         return self._get_once(url, params)
+
+    def _charge(self) -> None:
+        if self._meter is not None:
+            self._meter()
+
+    def _may_charge(self) -> bool:
+        try:
+            self._charge()
+        except ProviderError:
+            return False
+        return True
 
     def _get_once(self, url: str, params: Any) -> Any:
         try:

@@ -9,7 +9,10 @@ interface PlanFailureProps {
   retrying: boolean
 }
 
-/** Why the plan failed and what to do, with a retry (held back while rate limited). */
+/**
+ * Why the plan failed and what to do, with a retry (held back while rate
+ * limited, and left out when the month's routing allowance is spent).
+ */
 export function PlanFailure({ error, onRetry, retrying }: PlanFailureProps) {
   const { title, detail } = failureCopy(error)
   const wait = useCountdown(error.code === 'rate_limited' ? (error.retryAfterS ?? 60) : 0, error)
@@ -23,14 +26,16 @@ export function PlanFailure({ error, onRetry, retrying }: PlanFailureProps) {
           If it keeps happening, quote request <span className="font-mono">{error.requestId}</span>.
         </p>
       )}
-      <button
-        type="button"
-        onClick={onRetry}
-        disabled={retrying || wait > 0}
-        className="mt-2 rounded-md border border-line bg-surface px-2.5 py-1 font-medium hover:bg-surface-raised disabled:opacity-60"
-      >
-        {wait > 0 ? `Try again in ${String(wait)} s` : 'Try again'}
-      </button>
+      {error.code !== 'quota_reached' && (
+        <button
+          type="button"
+          onClick={onRetry}
+          disabled={retrying || wait > 0}
+          className="mt-2 rounded-md border border-line bg-surface px-2.5 py-1 font-medium hover:bg-surface-raised disabled:opacity-60"
+        >
+          {wait > 0 ? `Try again in ${String(wait)} s` : 'Try again'}
+        </button>
+      )}
     </div>
   )
 }
