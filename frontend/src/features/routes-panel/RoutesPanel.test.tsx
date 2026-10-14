@@ -33,6 +33,19 @@ function routeNamed(plan: Plan, name: string) {
 const card = (name: string) => screen.getByRole('listitem', { name: new RegExp(`^${name}`) })
 
 describe('route cards', () => {
+  it('select their route from a click anywhere on the card, not just its title', async () => {
+    renderPanel(demoPlan)
+    const other = demoPlan.routes[1]
+    act(() => {
+      useUiStore.getState().showPlan(demoPlan.routes[0].id)
+    })
+
+    await userEvent.click(within(card(other.name)).getByText('Distance'))
+
+    expect(useUiStore.getState().selectedRouteId).toBe(other.id)
+    expect(within(card(other.name)).getByRole('button', { pressed: true })).toBeInTheDocument()
+  })
+
   it('list the routes best first, with the badge and reason on the recommended one', () => {
     renderPanel(demoPlan)
 
