@@ -9,7 +9,7 @@ its network), cookies are Secure, and HSTS tells browsers to stay on HTTPS.
 from django.core.exceptions import ImproperlyConfigured
 
 from config.settings.base import *  # noqa: F403
-from config.settings.base import env
+from config.settings.base import ALLOWED_HOSTS, MIDDLEWARE, env
 
 REQUIRED = (
     "DJANGO_SECRET_KEY",
@@ -41,3 +41,29 @@ SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31_536_000)  # a ye
 SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 SECURE_HSTS_PRELOAD = False
 SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
+
+# Render sets the service's own hostname; it's always allowed, for direct
+# requests such as the admin's.
+_render_host = env.str("RENDER_EXTERNAL_HOSTNAME", default="")
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS = [*ALLOWED_HOSTS, _render_host]
+
+# WhiteNoise serves the collected static files (the admin's) from the app,
+# right after SecurityMiddleware as its docs ask. Local runs use Django's own
+# static serving and have no collected files, so it's added here only.
+MIDDLEWARE = [
+    *MIDDLEWARE[: MIDDLEWARE.index("django.middleware.security.SecurityMiddleware") + 1],
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    *MIDDLEWARE[MIDDLEWARE.index("django.middleware.security.SecurityMiddleware") + 1 :],
+]
+
+# Collected and compressed at image build time, with hashed names that can be
+# cached for good.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
+# No mail service yet: allauth's only email (password reset, which the SPA
+# doesn't offer) goes to the logs instead of failing on a missing SMTP server.
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

@@ -1,0 +1,41 @@
+# Render blueprint for the API (docs/deploy.md). Render reads this from the
+# repo root when the service is created with "New > Blueprint", and redeploys
+# on every push to main.
+services:
+  - type: web
+    name: weather-aware-truck-routing-api
+    runtime: docker
+    plan: free
+    # US East, next to the Neon (aws-us-east-1) and Upstash (us-east-1)
+    # databases and Vercel's default region, so each hop stays short.
+    region: virginia
+    branch: main
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    # Liveness only: /readyz touches Postgres and Redis, and checking it every
+    # few seconds would keep Neon awake and spend Upstash's free commands.
+    healthCheckPath: /healthz
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      # The Vercel site's host; Render's own hostname is added automatically.
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      # https://<site>.vercel.app,https://<this service>.onrender.com (the admin)
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      # Neon's direct (not -pooler) connection string, with sslmode=require.
+      - key: DATABASE_URL
+        sync: false
+      # Upstash's rediss:// URL.
+      - key: REDIS_URL
+        sync: false
+      - key: HERE_API_KEY
+        sync: false
+      - key: DEMO_PASSWORD
+        sync: false
+      # Vercel's rewrite, then Render's proxy, each add to X-Forwarded-For.
+      - key: NUM_PROXIES
+        value: "2"
+      - key: WEB_CONCURRENCY
+        value: "2"
