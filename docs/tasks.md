@@ -80,8 +80,8 @@ link to their sections instead of repeating them.
 | SPOT-90  | End-to-end smoke test                             | E9 Hardening         | Full stack · 2 | P0  | Done        |
 | SPOT-91  | Accessibility pass                                | E9 Hardening         | Frontend · 2   | P0  | Done        |
 | SPOT-92  | Performance check against budgets                 | E9 Hardening         | Full stack · 2 | P0  | In progress |
-| SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | In progress |
-| SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | In progress |
+| SPOT-100 | Deploy backend and Redis                          | E10 Delivery         | DevOps · 2     | P0  | Done        |
+| SPOT-101 | Deploy frontend                                   | E10 Delivery         | DevOps · 1     | P0  | Done        |
 | SPOT-102 | README                                            | E10 Delivery         | Docs · 2       | P0  | In review   |
 | SPOT-103 | Loom walkthrough                                  | E10 Delivery         | Docs · 2       | P0  | To do       |
 | SPOT-110 | Trip models, constraints, migrations and admin    | E11 Trips & accounts | Backend · 3    | P0  | Done        |
@@ -102,7 +102,7 @@ link to their sections instead of repeating them.
 | SPOT-125 | Trip actions UI                                   | E11 Trips & accounts | Frontend · 2   | P1  | Done        |
 | SPOT-126 | Account page                                      | E11 Trips & accounts | Frontend · 1   | P1  | Done        |
 
-**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 68 (142 points).
+**Totals:** 73 tasks · P0 123 points, P1 28 points. Done: 70 (145 points).
 
 ## Open items
 
@@ -111,18 +111,15 @@ of the task it came from, and as a sub-task on the task that will pick it up. Re
 here when that task closes it.
 
 **Waiting on the owner**
-- **SPOT-100/101: create the hosted services.** The configuration is in the repo
-  (`render.yaml`, `frontend/vercel.json`, `.github/workflows/ops.yml`); the accounts, secrets
-  and uptime pinger are set up by hand following `docs/deploy.md`.
+- **SPOT-92: the free tier misses the latency budgets** by 2–5×. Decide between a paid Render
+  instance, code changes, or recording the miss as a known limitation.
 
 **Carried over to a later task**
 
 | From | What's left | Picked up in |
 |---|---|---|
-| SPOT-45 | Confirm `NUM_PROXIES=2` against real traffic: the request log's `client` should be the visitor's address. | SPOT-100 |
-| SPOT-35 | Forecast cache and `/readyz` only tested on local memory; run against real Redis (Upstash). | SPOT-100 |
-| SPOT-10 | Choose a licence. | SPOT-102 |
-| SPOT-10 | Run `make up` once with Docker (no Docker on the dev machine; Render's build is the first image build). | SPOT-100 |
+| SPOT-10 | Run `make up` once with Docker (no Docker on the dev machine; the production image builds on Render). | Unassigned |
+| SPOT-100 | Sign-in fails with `csrf_failed` if it's submitted before the page's first `/api/v1/me` call has set the CSRF cookie (seen when a script submits at once; on the free tier that call can take seconds). The client should make sure it has a token before an unsafe request. | Unassigned |
 | SPOT-31 | Replace the synthetic routing and autosuggest fixtures with trimmed real responses (the full Dallas → Denver response is 1.2 MB). | Unassigned |
 | SPOT-72 | Pan/zoom trace with all 773 checkpoints (LA → NY every 10 mi); only render time was measured, in a throttled window. | SPOT-92 |
 | SPOT-81 | Frame times while dragging the slider (≤ 16 ms); measured per-step main-thread cost only, the window was throttled. | SPOT-92 |
@@ -2641,6 +2638,29 @@ Spec: PRD §8.
 - 2026-10-12: with the routed app and account pages (SPOT-120–126), the main chunk is
   171.0 KB gzipped, from 131.6 KB: react-router and the new pages. Still no PRD budget; the
   pages beyond the planner could be split out if one is set.
+- 2026-10-14: hosted numbers, through the Vercel site as a guest (10 mi, 80,000 lb):
+
+  | Trip | Cold plan | Warm plan (×2) | Cold heatmap | Saved heatmap |
+  |---|---|---|---|---|
+  | Los Angeles → Dallas, 1,435 mi, 436 checkpoints | 11.2 s | 4.8, 4.6 s | 11.4 s (174 pts, 0.5°) | 1.0 s |
+  | New York → Dallas, 1,555 mi, 476 checkpoints | 15.5 s | 7.2, 5.9 s | 12.8 s (157 pts, 0.5°) | 0.9 s |
+  | Seattle → Denver | no response in 120 s | | | |
+
+  - **Both budgets are missed** (p95 < 6 s cold, < 1.5 s warm), by 2–5×. Only two trips
+    completed, too few for a real p95; the run was stopped by the Seattle → Denver hang, and
+    the API was healthy right after. Render's logs around 14:38–14:40 UTC should say whether a
+    worker was killed (`WORKER TIMEOUT`, out of memory).
+  - **The cause is the free instance's CPU.** The same warm plan (247 checkpoints, local
+    Postgres, in-memory cache) takes 0.15 s on the dev laptop and 2.1 s under a 10% CPU quota
+    (`systemd-run -p CPUQuota=10%`), about what Render's free plan gives; scaled to 436
+    checkpoints that's ~3.7 s of the hosted 4.7 s.
+  - Where the CPU goes (warm, profiled): saving the trip ~22% (psycopg converting long lists to
+    Postgres arrays), decoding cached forecasts ~24% (all 241 hours of every point, though a
+    plan reads a few), sampling checkpoints ~20%, serialising the response ~17%.
+  - **Bundle** (gzipped): main 169.5 KB, map chunk 13.8 KB, MapLibre 280.8 KB plus its worker
+    144.0 KB (lazy), CSS 6.2 KB + 10.4 KB.
+- Left: frame times in a visible Chrome (slider on a saved trip; pan/zoom with Los Angeles →
+  New York's 773 checkpoints), and the owner's decision on the latency miss.
 
 ---
 
@@ -2650,7 +2670,7 @@ Spec: PRD §8.
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 2 | P0 | In progress | SPOT-45 |
+| DevOps · 2 | P0 | Done | SPOT-45 |
 
 Runbook: `docs/deploy.md`.
 
@@ -2659,13 +2679,14 @@ Runbook: `docs/deploy.md`.
   and Upstash Redis; health check on `/healthz`, `/readyz` checked by hand after deploys.
 - [x] Migrations on start (no release step on the free plan); daily `purge_trips` and on-demand
   `seed_demo` in GitHub Actions (`ops.yml`).
-- [ ] Create the services and set the secrets (owner, following the runbook).
-- [ ] Keep the instance awake for the review window: an uptime pinger on `/healthz`.
+- [x] Create the services and set the secrets (owner, following the runbook).
+- [x] Keep the instance awake for the review window: an uptime pinger on `/healthz`.
 - [x] Set `NUM_PROXIES` to the real proxy chain (Vercel rewrite plus the host's proxy) so
   throttles key on the client IP (carried over from SPOT-45). Set to 2; confirm on real traffic.
-- [ ] Run the forecast cache and `/readyz` against real Redis (carried over from SPOT-35;
+- [x] Run the forecast cache and `/readyz` against real Redis (carried over from SPOT-35;
   only tested on local memory, no Docker here).
-- [ ] Run `make up` once with Docker to confirm the compose stack (left over from SPOT-10).
+- [ ] Run `make up` once with Docker to confirm the compose stack (left over from SPOT-10;
+  moved to Open items, unassigned: there's no Docker on the dev machine).
 
 **Acceptance criteria**
 - Hosted API answers the first request after 1 h idle in under 3 s.
@@ -2702,17 +2723,29 @@ Runbook: `docs/deploy.md`.
   real image build is Render's.
 - Left: the owner creates the services (runbook), then `/readyz` against Neon and Upstash,
   the 1 h idle check, and `client` in the logs.
+- 2026-10-14: live at `https://weather-aware-truck-routing-api-xnow.onrender.com` (Render
+  added `-xnow`; the Vercel rewrite was updated, PR #26).
+  - `/readyz` first failed on the cache: `REDIS_URL` was wrong, and the check never pinged
+    Redis, so the log hid why. Fixed the check (PR #25); after the URL was corrected, every
+    check is `ok`.
+  - Sign-in through the site first failed with `csrf_failed`: the Vercel entry in
+    `CSRF_TRUSTED_ORIGINS` didn't match browsers' `Origin` exactly (requests carrying only a
+    Referer passed, since Django compares that by host). The owner corrected the value, and
+    ran `seed_demo` with the published demo password.
+  - Verified on the live site: signing in as `demo@example.com` through the login page works
+    and shows the 4 demo trips. The owner confirmed the pinger keeps the instance warm and the
+    logged `client` is the visitor's address with `NUM_PROXIES=2`. Done.
 
 ### SPOT-101 · Deploy frontend
 
 | Effort | Priority | Status | Depends on |
 |---|---|---|---|
-| DevOps · 1 | P0 | In progress | SPOT-100 |
+| DevOps · 1 | P0 | Done | SPOT-100 |
 
 **Sub-tasks**
 - [x] Vercel build; rewrite `/api/*` to the Django service (one origin, first-party cookies);
   SPA fallback routing (`frontend/vercel.json`).
-- [ ] Create the Vercel project (owner, `docs/deploy.md` step 4) and set its host in Render.
+- [x] Create the Vercel project (owner, `docs/deploy.md` step 4) and set its host in Render.
 
 **Acceptance criteria**
 - Hosted URL plans a real trip from a clean browser profile, in Safari as well as Chrome
@@ -2725,6 +2758,9 @@ Runbook: `docs/deploy.md`.
   changes with it.
 - 2026-10-14: Render named the service `weather-aware-truck-routing-api-xnow.onrender.com`
   (the plain name was taken); the rewrite and the runbook point there now.
+- 2026-10-14: live at `https://weather-aware-truck-routing-five.vercel.app`. Planning as a guest,
+  opening a shared trip and signing in to the demo account work through the site, after the
+  `CSRF_TRUSTED_ORIGINS` fix in SPOT-100. Done.
 
 ### SPOT-102 · README
 
